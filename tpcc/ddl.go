@@ -93,7 +93,6 @@ CREATE TABLE IF NOT EXISTS history%d (
 	h_c_id INT NOT NULL,
 	h_c_d_id INT NOT NULL,
 	h_c_w_id INT NOT NULL,
-	h_d_w_id INT NOT NULL,
 	h_d_id INT NOT NULL,
 	h_w_id INT NOT NULL,
 	h_date TIMESTAMP,

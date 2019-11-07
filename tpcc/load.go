@@ -3,23 +3,21 @@ package tpcc
 import (
 	"context"
 	"fmt"
-	"time"
+	"math/rand"
+	"strconv"
 
 	"github.com/siddontang/go-tpc/pkg/load"
 )
 
 const (
-	maxItems              = 100000
-	stockPerWarehouse     = 100000
-	districtPerWarehouse  = 10
-	customerPerWarehouse  = 30000
-	customerPerDistrict   = 3000
-	orderPerWarehouse     = 30000
-	historyPerWarehouse   = 30000
-	newOrderPerWarehouse  = 9000
-	orderLinePerWarehouse = 300000
-	minOrderLinePerOrder  = 5
-	maxOrderLinePerOrder  = 15
+	maxItems             = 100000
+	stockPerWarehouse    = 100000
+	districtPerWarehouse = 10
+	customerPerDistrict  = 3000
+	orderPerDistrict     = 3000
+	newOrderPerDistrict  = 900
+
+	timeFormat = "2006-01-02 15:04:05"
 )
 
 func (w *Workloader) loadItem(ctx context.Context, tableID int) error {
@@ -163,7 +161,7 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 		cState := randState(s.R, s.Buf)
 		cZip := randZip(s.R, s.Buf)
 		cPhone := randNumbers(s.R, s.Buf, 16, 16)
-		cSince := time.Now().Format("2006-01-02 15:04:05")
+		cSince := w.initLoadTime
 		cCredit := "GC"
 		if s.R.Intn(10) == 0 {
 			cCredit = "BC"
@@ -188,19 +186,128 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 	return l.Flush(ctx)
 }
 
-func (w *Workloader) loadHistory(ctx context.Context, tableID int, warehouse int, district int, customer int) error {
+func (w *Workloader) loadHistory(ctx context.Context, tableID int, warehouse int, district int) error {
+	s := w.base.GetState(ctx)
 
-	return nil
+	hint := fmt.Sprintf(`INSERT INTO history%d h_c_d, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES `, tableID)
+
+	l := load.NewBatchLoader(s.Conn, hint)
+
+	// 1 customer has 1 row
+	for i := 0; i < customerPerDistrict; i++ {
+		s.Buf.Reset()
+
+		hCID := i + 1
+		hCDID := district
+		hCWID := warehouse
+		hDID := district
+		hWID := warehouse
+		hDate := w.initLoadTime
+		hAmount := 10.00
+		hData := randChars(s.R, s.Buf, 12, 24)
+
+		v := fmt.Sprintf(`(%d, %d, %d, %d, %d, '%s', %f, '%s')`,
+			hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
+		if err := l.InsertValue(ctx, v); err != nil {
+			return err
+		}
+	}
+	return l.Flush(ctx)
 }
 
-func (w *Workloader) loadOrder(ctx context.Context, tableID int, warehouse int, district int) error {
-	return nil
+func (w *Workloader) loadOrder(ctx context.Context, tableID int, warehouse int, district int) ([]int, error) {
+	s := w.base.GetState(ctx)
+
+	hint := fmt.Sprintf(`INSERT INTO order%d (o_id, o_c_id, o_d_id, o_w_id, o_entry_d
+o_carrier_id, o_ol_cnt, o_all_local) VALUES `, tableID)
+
+	l := load.NewBatchLoader(s.Conn, hint)
+
+	cids := rand.Perm(orderPerDistrict)
+	s.R.Shuffle(len(cids), func(i, j int) {
+		cids[i], cids[j] = cids[j], cids[i]
+	})
+	olCnts := make([]int, orderPerDistrict)
+	for i := 0; i < orderPerDistrict; i++ {
+		s.Buf.Reset()
+
+		oID := i + 1
+		oCID := cids[i] + 1
+		oDID := district
+		oWID := warehouse
+		oEntryD := w.initLoadTime
+		oCarrierID := "NULL"
+		if oID < 2101 {
+			oCarrierID = strconv.FormatInt(int64(randInt(s.R, 1, 10)), 64)
+		}
+		oOLCnt := randInt(s.R, 5, 15)
+		olCnts[i] = oOLCnt
+		oAllLocal := 1
+
+		v := fmt.Sprintf(`(%d, %d, %d, %d, '%s', %s, %d, %d)`, oID, oCID, oDID, oWID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+		if err := l.InsertValue(ctx, v); err != nil {
+			return nil, err
+		}
+	}
+
+	return olCnts, l.Flush(ctx)
 }
 
-func (w *Workloader) loadOrderLine(ctx context.Context, tableID int, warehouse int, district int, order int) error {
-	return nil
+func (w *Workloader) loadOrderLine(ctx context.Context, tableID int, warehouse int, district int, olCnts []int) error {
+	s := w.base.GetState(ctx)
+
+	hint := fmt.Sprintf(`INSERT INTO order_line%d (ol_o_id, ol_d_id, ol_w_id, ol_number
+ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VALUES `, tableID)
+
+	l := load.NewBatchLoader(s.Conn, hint)
+
+	for i := 0; i < orderPerDistrict; i++ {
+		for j := 0; j < olCnts[i]; j++ {
+			olOID := i + 1
+			olDID := district
+			olWID := warehouse
+			olNumber := olCnts[i]
+			olIID := randInt(s.R, 1, 100000)
+			olSupplyWID := warehouse
+			olDeliveryD := "NULL"
+			if olOID < 2101 {
+				olDeliveryD = w.initLoadTime
+			}
+			olQuantity := 5
+			olAmount := 0.00
+			if olOID < 2101 {
+				olAmount = float64(randInt(s.R, 1, 999999)) / 100.0
+			}
+			olDistInfo := randChars(s.R, s.Buf, 24, 24)
+			v := fmt.Sprintf(`(%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s')`,
+				olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
+				olDeliveryD, olQuantity, olAmount, olDistInfo)
+			if err := l.InsertValue(ctx, v); err != nil {
+				return err
+			}
+		}
+	}
+
+	return l.Flush(ctx)
 }
 
 func (w *Workloader) loadNewOrder(ctx context.Context, tableID int, warehouse int, district int) error {
-	return nil
+	s := w.base.GetState(ctx)
+
+	hint := fmt.Sprintf(`INSERT INTO new_oder%d (no_o_id, no_d_id, no_w_id) VALUES `, tableID)
+
+	l := load.NewBatchLoader(s.Conn, hint)
+
+	for i := 0; i < newOrderPerDistrict; i++ {
+		noOID := 2101 + i
+		noDID := district
+		noWID := warehouse
+
+		v := fmt.Sprintf(`(%d, %d, %d)`, noOID, noDID, noWID)
+		if err := l.InsertValue(ctx, v); err != nil {
+			return err
+		}
+	}
+
+	return l.Flush(ctx)
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/siddontang/go-tpc/pkg/workload"
 )
@@ -24,13 +25,15 @@ type Workloader struct {
 	cfg *Config
 
 	createTableWg sync.WaitGroup
+	initLoadTime  string
 }
 
 // NewWorkloader creates the tpc-c workloader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	w := &Workloader{
-		base: workload.BaseWorkloader{DB: db},
-		cfg:  cfg,
+		base:         workload.BaseWorkloader{DB: db},
+		cfg:          cfg,
+		initLoadTime: time.Now().Format(timeFormat),
 	}
 	w.createTableWg.Add(cfg.Threads)
 	return w
@@ -97,28 +100,45 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		}
 		// load stock
 		if err := w.loadStock(ctx, tableID, warehouse); err != nil {
-			return fmt.Errorf("load stock%d in %d failed %v", tableID, warehouse, err)
+			return fmt.Errorf("load stock%d at warehouse %d failed %v", tableID, warehouse, err)
 		}
 
 		// load distict
 		if err := w.loadDistrict(ctx, tableID, warehouse); err != nil {
-			return fmt.Errorf("load district%d with %d failed %v", tableID, warehouse, err)
+			return fmt.Errorf("load district%d at wareshouse %d failed %v", tableID, warehouse, err)
 
 		}
 	}
 
-	// districts := w.cfg.Tables * w.cfg.Scales * 10
-	// for i := threadID % w.cfg.Threads; i < districts; i += w.cfg.Threads {
-	// 	tableID := i / (w.cfg.Scales * 10)
-	// 	warehouse := (i / 10) % w.cfg.Scales
-	// 	district := i % 10
+	districts := w.cfg.Tables * w.cfg.Warehouses * districtPerWarehouse
+	var err error
+	for i := threadID % w.cfg.Threads; i < districts; i += w.cfg.Threads {
+		tableID := i / (w.cfg.Warehouses * districtPerWarehouse)
+		warehouse := (i / districtPerWarehouse) % w.cfg.Warehouses
+		district := i % districtPerWarehouse
 
-	// 	// load customer
-	// 	// load hisotry
-	// 	// load order
-	// 	// loader order-line
-	// 	// load new-order
-	// }
+		// load customer
+		if err = w.loadCustomer(ctx, tableID, warehouse, district); err != nil {
+			return fmt.Errorf("load customer%d at warehouse %d district %d failed %v", tableID, warehouse, district, err)
+		}
+		// load hisotry
+		if err = w.loadHistory(ctx, tableID, warehouse, district); err != nil {
+			return fmt.Errorf("load history%d at warehouse %d district %d failed %v", tableID, warehouse, district, err)
+		}
+		// load order
+		var olCnts []int
+		if olCnts, err = w.loadOrder(ctx, tableID, warehouse, district); err != nil {
+			return fmt.Errorf("load order%d at warehouse %d district %d failed %v", tableID, warehouse, district, err)
+		}
+		// loader new-order
+		if err = w.loadNewOrder(ctx, tableID, warehouse, district); err != nil {
+			return fmt.Errorf("load new_order%d at warehouse %d district %d failed %v", tableID, warehouse, district, err)
+		}
+		// load order-line
+		if err = w.loadOrderLine(ctx, tableID, warehouse, district, olCnts); err != nil {
+			return fmt.Errorf("load order_line%d at warehouse %d district %d failed %v", tableID, warehouse, district, err)
+		}
+	}
 
 	return nil
 }

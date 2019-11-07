@@ -113,9 +113,9 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	districts := w.cfg.Tables * w.cfg.Warehouses * districtPerWarehouse
 	var err error
 	for i := threadID % w.cfg.Threads; i < districts; i += w.cfg.Threads {
-		tableID := i / (w.cfg.Warehouses * districtPerWarehouse)
-		warehouse := (i / districtPerWarehouse) % w.cfg.Warehouses
-		district := i % districtPerWarehouse
+		tableID := i/(w.cfg.Warehouses*districtPerWarehouse) + 1
+		warehouse := (i/districtPerWarehouse)%w.cfg.Warehouses + 1
+		district := i%districtPerWarehouse + 1
 
 		// load customer
 		if err = w.loadCustomer(ctx, tableID, warehouse, district); err != nil {

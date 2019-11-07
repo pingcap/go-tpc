@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS customer%d (
 		return err
 	}
 
+	// TODO: do we need to use a UUID instead of auto increment ID
+	// to avoid hot append write?
 	query = `
 CREATE TABLE IF NOT EXISTS history%d (
 	id INT NOT NULL AUTO_INCREMENT,
@@ -143,7 +145,7 @@ CREATE TABLE IF NOT EXISTS order%d (
 		ol_d_id INT NOT NULL,
 		ol_w_id INT NOT NULL,
 		ol_number INT NOT NULL,
-		ol_l_id INT NOT NULL,
+		ol_i_id INT NOT NULL,
 		ol_supply_w_id INT,
 		ol_delivery_d TIMESTAMP,
 		ol_quantity INT,

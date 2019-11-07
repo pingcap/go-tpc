@@ -12,15 +12,17 @@ import (
 )
 
 var (
-	dbName     string
-	host       string
-	port       int
-	user       string
-	password   string
-	threads    int
-	driver     string
-	totalTime  time.Duration
-	totalCount int
+	dbName      string
+	host        string
+	port        int
+	user        string
+	password    string
+	threads     int
+	driver      string
+	totalTime   time.Duration
+	totalCount  int
+	dropData    bool
+	ignoreError bool
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -60,6 +62,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", "", "Database driver: mysql")
 	rootCmd.PersistentFlags().DurationVar(&totalTime, "time", 10*time.Minute, "Total execution time")
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 1000000, "Total execution count")
+	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
+	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
 
 	cobra.EnablePrefixMatching = true
 

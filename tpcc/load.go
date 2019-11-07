@@ -21,12 +21,14 @@ const (
 )
 
 func (w *Workloader) loadItem(ctx context.Context, tableID int) error {
+	fmt.Printf("load to item%d\n", tableID)
 	s := w.base.GetState(ctx)
 	hint := fmt.Sprintf("INSERT INTO item%d (i_id, i_im_id, i_name, i_price, i_data) VALUES ", tableID)
 	l := load.NewBatchLoader(s.Conn, hint)
 
 	for i := 0; i < maxItems; i++ {
 		s.Buf.Reset()
+
 		iImID := randInt(s.R, 1, 10000)
 		iPrice := float64(randInt(s.R, 100, 10000)) / float64(100.0)
 		iName := randChars(s.R, s.Buf, 14, 24)
@@ -43,6 +45,7 @@ func (w *Workloader) loadItem(ctx context.Context, tableID int) error {
 }
 
 func (w *Workloader) loadWarhouse(ctx context.Context, tableID int, warehouse int) error {
+	fmt.Printf("load to warehouse%d in warehouse %d\n", tableID, warehouse)
 	s := w.base.GetState(ctx)
 	hint := fmt.Sprintf("INSERT INTO warehouse%d (w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) VALUES ", tableID)
 	l := load.NewBatchLoader(s.Conn, hint)
@@ -64,6 +67,8 @@ func (w *Workloader) loadWarhouse(ctx context.Context, tableID int, warehouse in
 }
 
 func (w *Workloader) loadStock(ctx context.Context, tableID int, warehouse int) error {
+	fmt.Printf("load to stock%d in warehouse %d\n", tableID, warehouse)
+
 	s := w.base.GetState(ctx)
 
 	hint := fmt.Sprintf(`INSERT INTO stock%d (s_i_id, s_w_id, s_quantity, 
@@ -74,6 +79,7 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 
 	for i := 0; i < stockPerWarehouse; i++ {
 		s.Buf.Reset()
+
 		sIID := i + 1
 		sWID := warehouse
 		sQuantity := randInt(s.R, 10, 100)
@@ -102,6 +108,8 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 }
 
 func (w *Workloader) loadDistrict(ctx context.Context, tableID int, warehouse int) error {
+	fmt.Printf("load to district%d in warehouse %d\n", tableID, warehouse)
+
 	s := w.base.GetState(ctx)
 
 	hint := fmt.Sprintf(`INSERT INTO district%d (d_id, d_w_id, d_name, d_street_1, d_street_2, 
@@ -110,6 +118,8 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `, tableID)
 	l := load.NewBatchLoader(s.Conn, hint)
 
 	for i := 0; i < districtPerWarehouse; i++ {
+		s.Buf.Reset()
+
 		dID := i + 1
 		dWID := warehouse
 		dName := randChars(s.R, s.Buf, 6, 10)
@@ -133,10 +143,12 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `, tableID)
 }
 
 func (w *Workloader) loadCustomer(ctx context.Context, tableID int, warehouse int, district int) error {
+	fmt.Printf("load to customer%d in warehouse %d district %d\n", tableID, warehouse, district)
+
 	s := w.base.GetState(ctx)
 
 	hint := fmt.Sprintf(`INSERT INTO customer%d (c_id, c_d_id, c_w_id, c_last, c_middle, c_first, 
-c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_redit_limt,
+c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_credit_lim,
 c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VALUES `, tableID)
 
 	l := load.NewBatchLoader(s.Conn, hint)
@@ -187,9 +199,11 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 }
 
 func (w *Workloader) loadHistory(ctx context.Context, tableID int, warehouse int, district int) error {
+	fmt.Printf("load to history%d in warehouse %d district %d\n", tableID, warehouse, district)
+
 	s := w.base.GetState(ctx)
 
-	hint := fmt.Sprintf(`INSERT INTO history%d h_c_d, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES `, tableID)
+	hint := fmt.Sprintf(`INSERT INTO history%d (h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES `, tableID)
 
 	l := load.NewBatchLoader(s.Conn, hint)
 
@@ -216,9 +230,11 @@ func (w *Workloader) loadHistory(ctx context.Context, tableID int, warehouse int
 }
 
 func (w *Workloader) loadOrder(ctx context.Context, tableID int, warehouse int, district int) ([]int, error) {
+	fmt.Printf("load to order%d in warehouse %d district %d\n", tableID, warehouse, district)
+
 	s := w.base.GetState(ctx)
 
-	hint := fmt.Sprintf(`INSERT INTO order%d (o_id, o_c_id, o_d_id, o_w_id, o_entry_d
+	hint := fmt.Sprintf(`INSERT INTO order%d (o_id, o_c_id, o_d_id, o_w_id, o_entry_d, 
 o_carrier_id, o_ol_cnt, o_all_local) VALUES `, tableID)
 
 	l := load.NewBatchLoader(s.Conn, hint)
@@ -238,7 +254,7 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `, tableID)
 		oEntryD := w.initLoadTime
 		oCarrierID := "NULL"
 		if oID < 2101 {
-			oCarrierID = strconv.FormatInt(int64(randInt(s.R, 1, 10)), 64)
+			oCarrierID = strconv.FormatInt(int64(randInt(s.R, 1, 10)), 10)
 		}
 		oOLCnt := randInt(s.R, 5, 15)
 		olCnts[i] = oOLCnt
@@ -253,25 +269,54 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `, tableID)
 	return olCnts, l.Flush(ctx)
 }
 
-func (w *Workloader) loadOrderLine(ctx context.Context, tableID int, warehouse int, district int, olCnts []int) error {
+func (w *Workloader) loadNewOrder(ctx context.Context, tableID int, warehouse int, district int) error {
+	fmt.Printf("load to new_order%d in warehouse %d district %d\n", tableID, warehouse, district)
+
 	s := w.base.GetState(ctx)
 
-	hint := fmt.Sprintf(`INSERT INTO order_line%d (ol_o_id, ol_d_id, ol_w_id, ol_number
+	hint := fmt.Sprintf(`INSERT INTO new_order%d (no_o_id, no_d_id, no_w_id) VALUES `, tableID)
+
+	l := load.NewBatchLoader(s.Conn, hint)
+
+	for i := 0; i < newOrderPerDistrict; i++ {
+		s.Buf.Reset()
+
+		noOID := 2101 + i
+		noDID := district
+		noWID := warehouse
+
+		v := fmt.Sprintf(`(%d, %d, %d)`, noOID, noDID, noWID)
+		if err := l.InsertValue(ctx, v); err != nil {
+			return err
+		}
+	}
+
+	return l.Flush(ctx)
+}
+
+func (w *Workloader) loadOrderLine(ctx context.Context, tableID int, warehouse int, district int, olCnts []int) error {
+	fmt.Printf("load to order_line%d in warehouse %d district %d\n", tableID, warehouse, district)
+
+	s := w.base.GetState(ctx)
+
+	hint := fmt.Sprintf(`INSERT INTO order_line%d (ol_o_id, ol_d_id, ol_w_id, ol_number,
 ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VALUES `, tableID)
 
 	l := load.NewBatchLoader(s.Conn, hint)
 
 	for i := 0; i < orderPerDistrict; i++ {
 		for j := 0; j < olCnts[i]; j++ {
+			s.Buf.Reset()
+
 			olOID := i + 1
 			olDID := district
 			olWID := warehouse
-			olNumber := olCnts[i]
+			olNumber := j + 1
 			olIID := randInt(s.R, 1, 100000)
 			olSupplyWID := warehouse
 			olDeliveryD := "NULL"
 			if olOID < 2101 {
-				olDeliveryD = w.initLoadTime
+				olDeliveryD = fmt.Sprintf(`'%s'`, w.initLoadTime)
 			}
 			olQuantity := 5
 			olAmount := 0.00
@@ -285,27 +330,6 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 			if err := l.InsertValue(ctx, v); err != nil {
 				return err
 			}
-		}
-	}
-
-	return l.Flush(ctx)
-}
-
-func (w *Workloader) loadNewOrder(ctx context.Context, tableID int, warehouse int, district int) error {
-	s := w.base.GetState(ctx)
-
-	hint := fmt.Sprintf(`INSERT INTO new_oder%d (no_o_id, no_d_id, no_w_id) VALUES `, tableID)
-
-	l := load.NewBatchLoader(s.Conn, hint)
-
-	for i := 0; i < newOrderPerDistrict; i++ {
-		noOID := 2101 + i
-		noDID := district
-		noWID := warehouse
-
-		v := fmt.Sprintf(`(%d, %d, %d)`, noOID, noDID, noWID)
-		if err := l.InsertValue(ctx, v); err != nil {
-			return err
 		}
 	}
 

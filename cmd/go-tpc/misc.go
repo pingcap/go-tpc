@@ -16,6 +16,11 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 
 	switch action {
 	case "prepare":
+		if dropData {
+			if err := w.Cleanup(ctx, index); err != nil {
+				return err
+			}
+		}
 		return w.Prepare(ctx, index)
 	case "cleanup":
 		return w.Cleanup(ctx, index)
@@ -23,6 +28,10 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 
 	for i := 0; i < count; i++ {
 		if err := w.Run(ctx, index); err != nil {
+			if ignoreError {
+				fmt.Printf("execute %s failed, err %v\n", action, err)
+				continue
+			}
 			return err
 		}
 	}
@@ -39,6 +48,7 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 			defer wg.Done()
 			if err := execute(ctx, w, action, index); err != nil {
 				fmt.Printf("execute %s failed, err %v\n", action, err)
+				return
 			}
 		}(i)
 	}

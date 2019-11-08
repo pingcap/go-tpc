@@ -3,6 +3,7 @@ package measurement
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,7 +42,7 @@ func (m *measurement) output() {
 	sort.Strings(keys)
 
 	for _, op := range keys {
-		fmt.Printf("%-6s - %s\n", op, m.opMeasurement[op].Summary())
+		fmt.Printf("%-6s - %s\n", strings.ToUpper(op), m.opMeasurement[op].Summary())
 	}
 }
 
@@ -82,7 +83,7 @@ func Measure(op string, lan time.Duration, err error) {
 	}
 
 	if err != nil {
-		op = fmt.Sprintf("%s-ERR", op)
+		op = fmt.Sprintf("%s_ERR", op)
 	}
 
 	globalMeasure.measure(op, lan)

@@ -3,7 +3,6 @@ package measurement
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"sort"
 	"sync"
 	"time"
@@ -15,8 +14,6 @@ type histogram struct {
 	buckets     []int
 	count       int64
 	sum         int64
-	min         int64
-	max         int64
 	startTime   time.Time
 }
 
@@ -25,21 +22,18 @@ type histInfo struct {
 	count   int64
 	ops     float64
 	avg     int64
-	min     int64
-	max     int64
+	p95     int64
 	p99     int64
 	p999    int64
-	p9999   int64
 }
 
 func newHistogram() *histogram {
 	h := new(histogram)
 	h.startTime = time.Now()
 	// Unit 1ms
-	h.buckets = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 20, 24, 28, 32, 48, 64, 96, 128, 192, 256, 512, 1000, 1500, 2000, 4000, 8000, 16000}
+	h.buckets = []int{1, 2, 4, 8, 9, 12, 16, 20, 24, 32, 40, 48, 64, 80,
+		96, 112, 128, 160, 192, 256, 512, 1000, 1500, 2000, 4000, 8000, 16000}
 	h.bucketCount = make([]int64, len(h.buckets))
-	h.min = math.MaxInt64
-	h.max = math.MinInt64
 	return h
 }
 
@@ -58,13 +52,6 @@ func (h *histogram) Measure(latency time.Duration) {
 	h.count += 1
 
 	h.bucketCount[i] += 1
-	if h.min > n {
-		h.min = n
-	}
-
-	if h.max < n {
-		h.max = n
-	}
 }
 
 func (h *histogram) Summary() string {
@@ -75,11 +62,9 @@ func (h *histogram) Summary() string {
 	buf.WriteString(fmt.Sprintf("Count: %d, ", res.count))
 	buf.WriteString(fmt.Sprintf("OPS: %.1f, ", res.ops))
 	buf.WriteString(fmt.Sprintf("Avg(ms): %d, ", res.avg))
-	buf.WriteString(fmt.Sprintf("Min(ms): %d, ", res.min))
-	buf.WriteString(fmt.Sprintf("Max(ms): %d, ", res.max))
+	buf.WriteString(fmt.Sprintf("95th(ms): %d, ", res.p95))
 	buf.WriteString(fmt.Sprintf("99th(ms): %d, ", res.p99))
-	buf.WriteString(fmt.Sprintf("99.9th(ms): %d, ", res.p999))
-	buf.WriteString(fmt.Sprintf("99.99th(ms): %d", res.p9999))
+	buf.WriteString(fmt.Sprintf("99.9th(ms): %d", res.p999))
 
 	return buf.String()
 }
@@ -87,34 +72,32 @@ func (h *histogram) Summary() string {
 func (h *histogram) getInfo() histInfo {
 	elapsed := time.Now().Sub(h.startTime).Seconds()
 
+	per95 := int64(0)
 	per99 := int64(0)
 	per999 := int64(0)
-	per9999 := int64(0)
 	opCount := int64(0)
 
 	h.m.RLock()
 	defer h.m.RUnlock()
 
-	min := h.min
-	max := h.max
 	sum := h.sum
 	count := h.count
 
 	avg := int64(float64(sum) / float64(count))
 
-	for i, count := range h.bucketCount {
-		opCount += count
+	for i, hc := range h.bucketCount {
+		opCount += hc
 		per := float64(opCount) / float64(count)
+		if per95 == 0 && per >= 0.95 {
+			per95 = int64(h.buckets[i])
+		}
+
 		if per99 == 0 && per >= 0.99 {
 			per99 = int64(h.buckets[i])
 		}
 
 		if per999 == 0 && per >= 0.999 {
 			per999 = int64(h.buckets[i])
-		}
-
-		if per9999 == 0 && per >= 0.9999 {
-			per9999 = int64(h.buckets[i])
 		}
 	}
 
@@ -124,11 +107,9 @@ func (h *histogram) getInfo() histInfo {
 		count:   count,
 		ops:     ops,
 		avg:     avg,
-		min:     min,
-		max:     max,
+		p95:     per95,
 		p99:     per99,
 		p999:    per999,
-		p9999:   per9999,
 	}
 	return info
 }

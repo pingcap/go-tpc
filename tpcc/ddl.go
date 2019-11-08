@@ -6,7 +6,7 @@ import (
 )
 
 func (w *Workloader) createTableDDL(ctx context.Context, query string, tableID int, tableName string, action string) error {
-	s := w.base.GetState(ctx)
+	s := w.getState(ctx)
 	fmt.Printf("%s %s%d\n", action, tableName, tableID)
 	if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf(query, tableID)); err != nil {
 		return err
@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS stock%d (
 }
 
 func (w *Workloader) dropTable(ctx context.Context, tableID int) error {
-	s := w.base.GetState(ctx)
+	s := w.getState(ctx)
 	tables := []string{
 		"warehouse", "history", "new_order", "order_line", "order", "customer", "district", "stock", "item",
 	}

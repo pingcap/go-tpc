@@ -9,10 +9,6 @@ import (
 	"github.com/siddontang/go-tpc/pkg/util"
 )
 
-type contextKey string
-
-const stateKey = contextKey("tpc")
-
 // TpcState saves state for each thread
 type TpcState struct {
 	Conn *sql.Conn
@@ -22,14 +18,9 @@ type TpcState struct {
 	Buf *util.BufAllocator
 }
 
-// BaseWorkloader is a base workloader for other TPC workloaders depend on
-type BaseWorkloader struct {
-	DB *sql.DB
-}
-
-// InitThread implements Workloader interface
-func (w BaseWorkloader) InitThread(ctx context.Context, threadID int) context.Context {
-	conn, err := w.DB.Conn(ctx)
+// NewTpcState creates a base TpcState
+func NewTpcState(ctx context.Context, db *sql.DB) *TpcState {
+	conn, err := db.Conn(ctx)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -41,17 +32,5 @@ func (w BaseWorkloader) InitThread(ctx context.Context, threadID int) context.Co
 		R:    r,
 		Buf:  util.NewBufAllocator(),
 	}
-
-	return context.WithValue(ctx, stateKey, s)
-}
-
-// CleanupThread implements Workloader interface
-func (w BaseWorkloader) CleanupThread(ctx context.Context, threadID int) {
-	s := ctx.Value(stateKey).(*TpcState)
-	s.Conn.Close()
-}
-
-// GetState gets the base state
-func (w BaseWorkloader) GetState(ctx context.Context) *TpcState {
-	return ctx.Value(stateKey).(*TpcState)
+	return s
 }

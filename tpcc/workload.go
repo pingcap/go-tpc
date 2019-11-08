@@ -7,8 +7,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/siddontang/go-tpc/pkg/measurement"
 	"github.com/siddontang/go-tpc/pkg/workload"
 )
+
+type contextKey string
+
+const stateKey = contextKey("tpcc")
+
+type txn struct {
+	name   string
+	action func(ctx context.Context, threadID int) error
+	weight int
+	// keyingTime time.Duration
+	// thinkingTime time.Duration
+}
+
+type tpccState struct {
+	*workload.TpcState
+	index int
+	decks []int
+}
 
 // Config is the configuration for tpcc workload
 type Config struct {
@@ -20,20 +39,30 @@ type Config struct {
 
 // Workloader is TPCC workload
 type Workloader struct {
-	base workload.BaseWorkloader
+	db *sql.DB
 
 	cfg *Config
 
 	createTableWg sync.WaitGroup
 	initLoadTime  string
+
+	txns []txn
 }
 
 // NewWorkloader creates the tpc-c workloader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	w := &Workloader{
-		base:         workload.BaseWorkloader{DB: db},
+		db:           db,
 		cfg:          cfg,
 		initLoadTime: time.Now().Format(timeFormat),
+	}
+
+	w.txns = []txn{
+		{name: "new_order", action: w.runNewOrder, weight: 10},
+		{name: "payment", action: w.runNewOrder, weight: 10},
+		{name: "order_status", action: w.runNewOrder, weight: 1},
+		{name: "delivery", action: w.runNewOrder, weight: 1},
+		{name: "stock_level", action: w.runNewOrder, weight: 1},
 	}
 	w.createTableWg.Add(cfg.Threads)
 	return w
@@ -46,12 +75,28 @@ func (w *Workloader) Name() string {
 
 // InitThread implements Workloader interface
 func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Context {
-	return w.base.InitThread(ctx, threadID)
+	s := &tpccState{
+		TpcState: workload.NewTpcState(ctx, w.db),
+		index:    0,
+		decks:    make([]int, 0, 23),
+	}
+
+	for index, txn := range w.txns {
+		for i := 0; i < txn.weight; i++ {
+			s.decks = append(s.decks, index)
+		}
+	}
+
+	s.index = len(s.decks) - 1
+
+	ctx = context.WithValue(ctx, stateKey, s)
+	return ctx
 }
 
 // CleanupThread implements Workloader interface
 func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
-	w.base.CleanupThread(ctx, threadID)
+	s := w.getState(ctx)
+	s.Conn.Close()
 }
 
 // Prepare implements Workloader interface
@@ -143,9 +188,30 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	return nil
 }
 
+func (w *Workloader) getState(ctx context.Context) *tpccState {
+	s := ctx.Value(stateKey).(*tpccState)
+	return s
+}
+
 // Run implements Workloader interface
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
-	return nil
+	s := w.getState(ctx)
+	if s.index == len(s.decks) {
+		s.index = 0
+		s.R.Shuffle(len(s.decks), func(i, j int) {
+			s.decks[i], s.decks[j] = s.decks[j], s.decks[i]
+		})
+	}
+
+	txnIndex := s.decks[s.R.Intn(len(s.decks))]
+	txn := w.txns[txnIndex]
+
+	start := time.Now()
+	err := txn.action(ctx, threadID)
+
+	measurement.Measure(txn.name, time.Now().Sub(start), err)
+
+	return err
 }
 
 // Cleanup implements Workloader interface

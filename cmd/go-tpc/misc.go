@@ -29,6 +29,11 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 	}
 
 	for i := 0; i < count; i++ {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
 		if err := w.Run(ctx, index); err != nil {
 			if ignoreError {
 				fmt.Printf("execute %s failed, err %v\n", action, err)

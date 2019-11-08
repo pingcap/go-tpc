@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/siddontang/go-tpc/pkg/measurement"
 	"github.com/siddontang/go-tpc/pkg/workload"
 )
 
@@ -43,6 +45,24 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	var wg sync.WaitGroup
 
 	wg.Add(threads)
+
+	outputCtx, outputCancel := context.WithCancel(ctx)
+	ch := make(chan struct{}, 1)
+	go func() {
+		ticker := time.NewTicker(outputInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-outputCtx.Done():
+				ch <- struct{}{}
+				return
+			case <-ticker.C:
+				measurement.Output()
+			}
+		}
+	}()
+
 	for i := 0; i < threads; i++ {
 		go func(index int) {
 			defer wg.Done()
@@ -54,4 +74,10 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	}
 
 	wg.Wait()
+	outputCancel()
+
+	<-ch
+
+	fmt.Printf("Finished\n")
+	measurement.Output()
 }

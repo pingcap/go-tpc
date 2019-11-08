@@ -55,5 +55,6 @@ func (b *BatchLoader) Flush(ctx context.Context) error {
 	_, err := b.conn.ExecContext(ctx, b.buf.String())
 	b.count = 0
 	b.buf.Reset()
+
 	return err
 }

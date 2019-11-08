@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -12,17 +15,18 @@ import (
 )
 
 var (
-	dbName      string
-	host        string
-	port        int
-	user        string
-	password    string
-	threads     int
-	driver      string
-	totalTime   time.Duration
-	totalCount  int
-	dropData    bool
-	ignoreError bool
+	dbName         string
+	host           string
+	port           int
+	user           string
+	password       string
+	threads        int
+	driver         string
+	totalTime      time.Duration
+	totalCount     int
+	dropData       bool
+	ignoreError    bool
+	outputInterval time.Duration
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -64,6 +68,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 1000000, "Total execution count")
 	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
+	rootCmd.PersistentFlags().DurationVar(&outputInterval, "interval", 10*time.Second, "Output interval time")
 
 	cobra.EnablePrefixMatching = true
 
@@ -71,6 +76,32 @@ func main() {
 
 	var cancel context.CancelFunc
 	globalCtx, cancel = context.WithTimeout(context.Background(), totalTime)
+
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
+	closeDone := make(chan struct{}, 1)
+	go func() {
+		sig := <-sc
+		fmt.Printf("\nGot signal [%v] to exit.\n", sig)
+		cancel()
+
+		select {
+		case <-sc:
+			// send signal again, return directly
+			fmt.Printf("\nGot signal [%v] again to exit.\n", sig)
+			os.Exit(1)
+		case <-time.After(10 * time.Second):
+			fmt.Print("\nWait 10s for closed, force exit\n")
+			os.Exit(1)
+		case <-closeDone:
+			return
+		}
+	}()
 
 	rootCmd.Execute()
 

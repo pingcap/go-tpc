@@ -1,0 +1,134 @@
+package measurement
+
+import (
+	"bytes"
+	"fmt"
+	"math"
+	"sort"
+	"sync"
+	"time"
+)
+
+type histogram struct {
+	m           sync.RWMutex
+	bucketCount []int64
+	buckets     []int
+	count       int64
+	sum         int64
+	min         int64
+	max         int64
+	startTime   time.Time
+}
+
+type histInfo struct {
+	elapsed float64
+	count   int64
+	ops     float64
+	avg     int64
+	min     int64
+	max     int64
+	p99     int64
+	p999    int64
+	p9999   int64
+}
+
+func newHistogram() *histogram {
+	h := new(histogram)
+	h.startTime = time.Now()
+	// Unit 1ms
+	h.buckets = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 20, 24, 28, 32, 48, 64, 96, 128, 192, 256, 512, 1000, 1500, 2000, 4000, 8000, 16000}
+	h.bucketCount = make([]int64, len(h.buckets))
+	h.min = math.MaxInt64
+	h.max = math.MinInt64
+	return h
+}
+
+func (h *histogram) Measure(latency time.Duration) {
+	n := int64(latency / time.Millisecond)
+
+	i := sort.SearchInts(h.buckets, int(n))
+	if i >= len(h.buckets) {
+		i = len(h.buckets) - 1
+	}
+
+	h.m.Lock()
+	defer h.m.Unlock()
+
+	h.sum += n
+	h.count += 1
+
+	h.bucketCount[i] += 1
+	if h.min > n {
+		h.min = n
+	}
+
+	if h.max < n {
+		h.max = n
+	}
+}
+
+func (h *histogram) Summary() string {
+	res := h.getInfo()
+
+	buf := new(bytes.Buffer)
+	buf.WriteString(fmt.Sprintf("Takes(s): %.1f, ", res.elapsed))
+	buf.WriteString(fmt.Sprintf("Count: %d, ", res.count))
+	buf.WriteString(fmt.Sprintf("OPS: %.1f, ", res.ops))
+	buf.WriteString(fmt.Sprintf("Avg(ms): %d, ", res.avg))
+	buf.WriteString(fmt.Sprintf("Min(ms): %d, ", res.min))
+	buf.WriteString(fmt.Sprintf("Max(ms): %d, ", res.max))
+	buf.WriteString(fmt.Sprintf("99th(ms): %d, ", res.p99))
+	buf.WriteString(fmt.Sprintf("99.9th(ms): %d, ", res.p999))
+	buf.WriteString(fmt.Sprintf("99.99th(ms): %d", res.p9999))
+
+	return buf.String()
+}
+
+func (h *histogram) getInfo() histInfo {
+	elapsed := time.Now().Sub(h.startTime).Seconds()
+
+	per99 := int64(0)
+	per999 := int64(0)
+	per9999 := int64(0)
+	opCount := int64(0)
+
+	h.m.RLock()
+	defer h.m.RUnlock()
+
+	min := h.min
+	max := h.max
+	sum := h.sum
+	count := h.count
+
+	avg := int64(float64(sum) / float64(count))
+
+	for i, count := range h.bucketCount {
+		opCount += count
+		per := float64(opCount) / float64(count)
+		if per99 == 0 && per >= 0.99 {
+			per99 = int64(h.buckets[i])
+		}
+
+		if per999 == 0 && per >= 0.999 {
+			per999 = int64(h.buckets[i])
+		}
+
+		if per9999 == 0 && per >= 0.9999 {
+			per9999 = int64(h.buckets[i])
+		}
+	}
+
+	ops := float64(count) / elapsed
+	info := histInfo{
+		elapsed: elapsed,
+		count:   count,
+		ops:     ops,
+		avg:     avg,
+		min:     min,
+		max:     max,
+		p99:     per99,
+		p999:    per999,
+		p9999:   per9999,
+	}
+	return info
+}

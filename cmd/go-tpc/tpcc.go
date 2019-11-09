@@ -22,7 +22,7 @@ func registerTpcc(root *cobra.Command) {
 		Use: "tpcc",
 	}
 
-	cmd.PersistentFlags().IntVar(&tpccConfig.Tables, "tables", 1, "Number of tables")
+	cmd.PersistentFlags().IntVar(&tpccConfig.Parts, "parts", 1, "Number to partition warehouses")
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 
 	var cmdPrepare = &cobra.Command{

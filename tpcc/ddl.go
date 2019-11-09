@@ -5,19 +5,27 @@ import (
 	"fmt"
 )
 
-func (w *Workloader) createTableDDL(ctx context.Context, query string, tableID int, tableName string, action string) error {
+func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName string, action string) error {
 	s := w.getState(ctx)
-	fmt.Printf("%s %s%d\n", action, tableName, tableID)
-	if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf(query, tableID)); err != nil {
+	fmt.Printf("%s %s\n", action, tableName)
+	if _, err := s.Conn.ExecContext(ctx, query); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (w *Workloader) createTable(ctx context.Context, tableID int) error {
+func (w *Workloader) appendPartition(query string, partKeys string) string {
+	if w.cfg.Parts <= 1 {
+		return query
+	}
+
+	return fmt.Sprintf("%s\n PARTITION BY HASH(%s)\n PARTITIONS %d", query, partKeys, w.cfg.Parts)
+}
+
+func (w *Workloader) createTable(ctx context.Context) error {
 	// Warehouse
 	query := `
-CREATE TABLE IF NOT EXISTS warehouse%d (
+CREATE TABLE IF NOT EXISTS warehouse (
 	w_id INT NOT NULL,
 	w_name VARCHAR(10),
 	w_street_1 VARCHAR(20),
@@ -30,13 +38,15 @@ CREATE TABLE IF NOT EXISTS warehouse%d (
 	PRIMARY KEY (w_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "warehouse", "creating"); err != nil {
+	query = w.appendPartition(query, "w_id")
+
+	if err := w.createTableDDL(ctx, query, "warehouse", "creating"); err != nil {
 		return err
 	}
 
 	// District
 	query = `
-CREATE TABLE IF NOT EXISTS district%d (
+CREATE TABLE IF NOT EXISTS district (
 	d_id INT NOT NULL,
 	d_w_id INT NOT NULL,
 	d_name VARCHAR(10),
@@ -51,13 +61,15 @@ CREATE TABLE IF NOT EXISTS district%d (
 	PRIMARY KEY (d_w_id, d_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "district", "creating"); err != nil {
+	query = w.appendPartition(query, "d_w_id")
+
+	if err := w.createTableDDL(ctx, query, "district", "creating"); err != nil {
 		return err
 	}
 
 	// Customer
 	query = `
-CREATE TABLE IF NOT EXISTS customer%d (
+CREATE TABLE IF NOT EXISTS customer (
 	c_id INT NOT NULL, 
 	c_d_id INT NOT NULL,
 	c_w_id INT NOT NULL, 
@@ -83,15 +95,15 @@ CREATE TABLE IF NOT EXISTS customer%d (
 	INDEX idx_customer (c_w_id, c_d_id, c_last, c_first)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "customer", "creating"); err != nil {
+	query = w.appendPartition(query, "c_w_id")
+
+	if err := w.createTableDDL(ctx, query, "customer", "creating"); err != nil {
 		return err
 	}
 
-	// TODO: do we need to use a UUID instead of auto increment ID
-	// to avoid hot append write?
 	query = `
-CREATE TABLE IF NOT EXISTS history%d (
-	id INT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS history (
+	row_id BINARY(16) NOT NULL,
 	h_c_id INT NOT NULL,
 	h_c_d_id INT NOT NULL,
 	h_c_w_id INT NOT NULL,
@@ -100,29 +112,33 @@ CREATE TABLE IF NOT EXISTS history%d (
 	h_date TIMESTAMP,
 	h_amount DECIMAL(6, 2),
 	h_data VARCHAR(24),
-	PRIMARY KEY(id),
+	PRIMARY KEY(h_w_id, row_id),
 	INDEX idx_history_customer (h_c_w_id, h_c_d_id, h_c_id),
 	INDEX idx_history_district (h_w_id, h_d_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "history", "creating"); err != nil {
+	query = w.appendPartition(query, "h_w_id")
+
+	if err := w.createTableDDL(ctx, query, "history", "creating"); err != nil {
 		return err
 	}
 
 	query = `
-CREATE TABLE IF NOT EXISTS new_order%d (
+CREATE TABLE IF NOT EXISTS new_order (
 	no_o_id INT NOT NULL,
 	no_d_id INT NOT NULL,
 	no_w_id INT NOT NULL,
 	PRIMARY KEY(no_w_id, no_d_id, no_o_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "new_order", "creating"); err != nil {
+	query = w.appendPartition(query, "no_w_id")
+	if err := w.createTableDDL(ctx, query, "new_order", "creating"); err != nil {
 		return err
 	}
 
+	// because order is a keyword, so here we use orders instead
 	query = `
-CREATE TABLE IF NOT EXISTS order%d (
+CREATE TABLE IF NOT EXISTS orders (
 	o_id INT NOT NULL,
 	o_d_id INT NOT NULL,
 	o_w_id INT NOT NULL,
@@ -135,12 +151,13 @@ CREATE TABLE IF NOT EXISTS order%d (
 	INDEX idx_order (o_w_id, o_d_id, o_c_id, o_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "order", "creating"); err != nil {
+	query = w.appendPartition(query, "o_w_id")
+	if err := w.createTableDDL(ctx, query, "orders", "creating"); err != nil {
 		return err
 	}
 
 	query = `
-	CREATE TABLE IF NOT EXISTS order_line%d (
+	CREATE TABLE IF NOT EXISTS order_line (
 		ol_o_id INT NOT NULL,
 		ol_d_id INT NOT NULL,
 		ol_w_id INT NOT NULL,
@@ -155,26 +172,13 @@ CREATE TABLE IF NOT EXISTS order%d (
 		INDEX idx_order_line_stock (ol_supply_w_id, ol_d_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "order_line", "creating"); err != nil {
+	query = w.appendPartition(query, "ol_w_id")
+	if err := w.createTableDDL(ctx, query, "order_line", "creating"); err != nil {
 		return err
 	}
 
 	query = `
-CREATE TABLE IF NOT EXISTS item%d (
-	i_id INT NOT NULL,
-	i_im_id INT,
-	i_name VARCHAR(24),
-	i_price DECIMAL(5, 2),
-	i_data VARCHAR(50),
-	PRIMARY KEY(i_id)
-)`
-
-	if err := w.createTableDDL(ctx, query, tableID, "item", "creating"); err != nil {
-		return err
-	}
-
-	query = `
-CREATE TABLE IF NOT EXISTS stock%d (
+CREATE TABLE IF NOT EXISTS stock (
 	s_i_id INT NOT NULL,
 	s_w_id INT NOT NULL,
 	s_quantity INT,
@@ -196,7 +200,22 @@ CREATE TABLE IF NOT EXISTS stock%d (
 	INDEX idx_stock_item (s_i_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, tableID, "stock", "creating"); err != nil {
+	query = w.appendPartition(query, "s_w_id")
+	if err := w.createTableDDL(ctx, query, "stock", "creating"); err != nil {
+		return err
+	}
+
+	query = `
+CREATE TABLE IF NOT EXISTS item (
+	i_id INT NOT NULL,
+	i_im_id INT,
+	i_name VARCHAR(24),
+	i_price DECIMAL(5, 2),
+	i_data VARCHAR(50),
+	PRIMARY KEY(i_id)
+)`
+
+	if err := w.createTableDDL(ctx, query, "item", "creating"); err != nil {
 		return err
 	}
 
@@ -204,18 +223,23 @@ CREATE TABLE IF NOT EXISTS stock%d (
 		// TODO: Add foreign key constraint
 	}
 
+	if w.cfg.Parts > 1 {
+		// TODO: add PARTITION
+
+	}
+
 	return nil
 }
 
-func (w *Workloader) dropTable(ctx context.Context, tableID int) error {
+func (w *Workloader) dropTable(ctx context.Context) error {
 	s := w.getState(ctx)
 	tables := []string{
-		"warehouse", "history", "new_order", "order_line", "order", "customer", "district", "stock", "item",
+		"warehouse", "history", "new_order", "order_line", "orders", "customer", "district", "stock", "item",
 	}
 
 	for _, tbl := range tables {
-		fmt.Printf("dropping %s%d\n", tbl, tableID)
-		if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s%d", tbl, tableID)); err != nil {
+		fmt.Printf("DROP TABLE IF EXISTS %s\n", tbl)
+		if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s", tbl)); err != nil {
 			return err
 		}
 	}

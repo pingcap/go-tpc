@@ -12,6 +12,7 @@ func executeTpcc(action string, args []string) {
 	defer closeDB()
 
 	tpccConfig.Threads = threads
+	tpccConfig.Isolation = isolationLevel
 	w := tpcc.NewWorkloader(globalDB, &tpccConfig)
 
 	executeWorkload(globalCtx, w, action)

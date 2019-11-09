@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
 	// mysql package
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -27,6 +28,8 @@ var (
 	dropData       bool
 	ignoreError    bool
 	outputInterval time.Duration
+	isolationLevel int
+	silence        bool
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -68,7 +71,11 @@ func main() {
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 1000000, "Total execution count")
 	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
+	rootCmd.PersistentFlags().BoolVar(&silence, "silence", true, "Don't print error when running workload")
 	rootCmd.PersistentFlags().DurationVar(&outputInterval, "interval", 10*time.Second, "Output interval time")
+	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted, 
+2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 
+5: Snapshot, 6: Serializable, 7: Linerizable`)
 
 	cobra.EnablePrefixMatching = true
 

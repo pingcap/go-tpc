@@ -35,6 +35,7 @@ type Config struct {
 	Parts      int
 	Warehouses int
 	UseFK      bool
+	Isolation  int
 }
 
 // Workloader is TPCC workload
@@ -59,10 +60,10 @@ func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 
 	w.txns = []txn{
 		{name: "new_order", action: w.runNewOrder, weight: 10},
-		{name: "payment", action: w.runNewOrder, weight: 10},
-		{name: "order_status", action: w.runNewOrder, weight: 1},
-		{name: "delivery", action: w.runNewOrder, weight: 1},
-		{name: "stock_level", action: w.runNewOrder, weight: 1},
+		{name: "payment", action: w.runPayment, weight: 10},
+		{name: "order_status", action: w.runOrderStatus, weight: 1},
+		{name: "delivery", action: w.runDelivery, weight: 1},
+		{name: "stock_level", action: w.runStockLevel, weight: 1},
 	}
 	w.createTableWg.Add(cfg.Threads)
 	return w

@@ -35,8 +35,11 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 		default:
 		}
 		if err := w.Run(ctx, index); err != nil {
-			if ignoreError {
+			if !silence {
 				fmt.Printf("execute %s failed, err %v\n", action, err)
+			}
+			if ignoreError {
+
 				continue
 			}
 			return err

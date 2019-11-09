@@ -100,9 +100,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		return items[i].olIID < items[j].olIID
 	})
 
-	tx, err := s.Conn.BeginTx(ctx, &sql.TxOptions{
-		Isolation: sql.IsolationLevel(w.cfg.Isolation),
-	})
+	tx, err := w.beginTx(ctx)
 	if err != nil {
 		return err
 	}

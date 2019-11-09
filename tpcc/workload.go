@@ -222,3 +222,11 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 	}
 	return nil
 }
+
+func (w *Workloader) beginTx(ctx context.Context) (*sql.Tx, error) {
+	s := w.getState(ctx)
+	tx, err := s.Conn.BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.IsolationLevel(w.cfg.Isolation),
+	})
+	return tx, err
+}

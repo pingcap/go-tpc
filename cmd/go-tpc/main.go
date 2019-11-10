@@ -71,7 +71,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 1000000, "Total execution count")
 	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
-	rootCmd.PersistentFlags().BoolVar(&silence, "silence", true, "Don't print error when running workload")
+	rootCmd.PersistentFlags().BoolVar(&silence, "silence", false, "Don't print error when running workload")
 	rootCmd.PersistentFlags().DurationVar(&outputInterval, "interval", 10*time.Second, "Output interval time")
 	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted, 
 2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 

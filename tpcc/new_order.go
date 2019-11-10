@@ -31,9 +31,11 @@ type orderItem struct {
 	olNumber    int
 	olQuantity  int
 	olAmount    float64
-	iPrice      float64
-	iName       string
-	iData       string
+	olDeliveryD sql.NullString
+
+	iPrice float64
+	iName  string
+	iData  string
 }
 
 type newOrderData struct {

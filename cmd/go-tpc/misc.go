@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,20 +30,22 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 	}
 
 	for i := 0; i < count; i++ {
+		err := w.Run(ctx, index)
+
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
 		}
-		if err := w.Run(ctx, index); err != nil {
-			if !silence {
+
+		if err != nil {
+			// For TiDB, we may meet too many conflict errors, so here just ignore it
+			if !silence && !strings.Contains(err.Error(), "conflict") {
 				fmt.Printf("execute %s failed, err %v\n", action, err)
 			}
-			if ignoreError {
-
-				continue
+			if !ignoreError {
+				return err
 			}
-			return err
 		}
 	}
 

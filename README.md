@@ -17,5 +17,7 @@ make
 ./bin/go-tpc tpcc --warehouses 4 run
 # Cleanup 
 ./bin/go-tpc tpcc --warehouses 4 cleanup
+# Check consistency 
+./bin/go-tpc tpcc --warehouses 4 check
 ```
 

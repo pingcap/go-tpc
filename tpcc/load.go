@@ -129,7 +129,7 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 		dState := randState(s.R, s.Buf)
 		dZip := randZip(s.R, s.Buf)
 		dTax := randTax(s.R)
-		dYtd := 300000.00
+		dYtd := 30000.00
 		dNextOID := 3001
 
 		v := fmt.Sprintf(`(%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d)`, dID, dWID,

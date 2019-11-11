@@ -66,7 +66,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 	// rows is zero).
 
 	var diff float64
-	query := "SELECT POWER((o_nexi_o_id -1 - max(o_id)), 2) + POWER((o_nexi_o_id -1 - max(no_o_id)), 2) FROM district, order, new_order, warehouse WHERE d_w_id = o_w_id AND d_w_id = no_w_id AND d_id = o_d_id AND d_id = no_d_id group by d_w_id"
+	query := "SELECT POWER((d_next_o_id -1 - max(o_id)), 2) + POWER((d_next_o_id -1 - max(no_o_id)), 2) diff FROM district, orders, new_order WHERE d_w_id = o_w_id AND d_w_id = no_w_id AND d_id = o_d_id AND d_id = no_d_id group by d_w_id"
 
 	rows, err := s.Conn.QueryContext(ctx, query)
 	if err != nil {

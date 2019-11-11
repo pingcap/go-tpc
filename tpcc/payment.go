@@ -127,7 +127,7 @@ district WHERE d_w_id = ? AND d_id = ?`
 		// OPEN c_byname_p
 
 		if nameCnt%2 == 1 {
-			nameCnt = nameCnt + 1
+			nameCnt++
 		}
 
 		query = `SELECT c_id FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_last = ? ORDER BY c_first`

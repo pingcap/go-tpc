@@ -8,16 +8,16 @@ import (
 // Check implements Workloader interface
 func (w *Workloader) Check(ctx context.Context, threadID int) error {
 	// refer 3.3.2
-	s := w.getState(ctx)
-
 	checks := []func(ctx context.Context, warehouse int) error{
 		w.checkCondition1,
 	}
 
-	warehouse := randInt(s.R, 1, w.cfg.Warehouses)
-	for i := 0; i < len(checks); i++ {
-		if err := checks[i](ctx, warehouse); err != nil {
-			return fmt.Errorf("check condition %d failed %v", i+1, err)
+	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {
+		warehouse := i%w.cfg.Warehouses + 1
+		for i := 0; i < len(checks); i++ {
+			if err := checks[i](ctx, warehouse); err != nil {
+				return fmt.Errorf("check condition %d failed %v", i+1, err)
+			}
 		}
 	}
 

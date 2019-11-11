@@ -55,7 +55,7 @@ func (w *Workloader) runOrderStatus(ctx context.Context, thread int) error {
 		// 	FROM customer WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id ORDER BY c_first;
 		// OPEN c_name;
 		if nameCnt%2 == 1 {
-			nameCnt += 1
+			nameCnt++
 		}
 
 		query = `SELECT c_balance, c_first, c_middle, c_id FROM customer

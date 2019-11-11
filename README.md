@@ -12,7 +12,7 @@ make
 
 ```bash
 # Create 4 warehouses and use 4 partitions by HASH 
-./bin/go-tpc tpcc --warehouses 4 --part 4 prepare
+./bin/go-tpc tpcc --warehouses 4 --parts 4 prepare
 # Run TPCC workloads
 ./bin/go-tpc tpcc --warehouses 4 run
 # Cleanup 

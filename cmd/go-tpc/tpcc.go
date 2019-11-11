@@ -50,7 +50,15 @@ func registerTpcc(root *cobra.Command) {
 		},
 	}
 
-	cmd.AddCommand(cmdRun, cmdPrepare, cmdCleanup)
+	var cmdCheck = &cobra.Command{
+		Use:   "check",
+		Short: "Check data consistency for the workload",
+		Run: func(cmd *cobra.Command, args []string) {
+			executeTpcc("check", args)
+		},
+	}
+
+	cmd.AddCommand(cmdRun, cmdPrepare, cmdCleanup, cmdCheck)
 
 	root.AddCommand(cmd)
 }

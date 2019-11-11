@@ -210,6 +210,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 
 	measurement.Measure(txn.name, time.Now().Sub(start), err)
 
+	// TODO: add check
 	return err
 }
 

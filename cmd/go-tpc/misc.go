@@ -27,6 +27,8 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 		return w.Prepare(ctx, index)
 	case "cleanup":
 		return w.Cleanup(ctx, index)
+	case "check":
+		return w.Check(ctx, index)
 	}
 
 	for i := 0; i < count; i++ {

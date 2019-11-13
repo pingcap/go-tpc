@@ -287,7 +287,7 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 	
 	query := `SELECT count(*) 
 	FROM (  SELECT  c.c_id, c.c_d_id, c.c_w_id, c.c_balance c1, 
-				   (SELECT sum(ol_amount) FROM orders ]] .. straight_join_hint .. [[ order_line 
+				   (SELECT sum(ol_amount) FROM orders straight_join_hint order_line 
 					 WHERE OL_W_ID=O_W_ID 
 					   AND OL_D_ID = O_D_ID 
 					   AND OL_O_ID = O_ID 
@@ -331,7 +331,7 @@ func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error 
 	var diff float64
 	
 	query := `SELECT count(*) FROM (SELECT  c.c_id, c.c_d_id, c.c_balance c1, c_ytd_payment, 
-		(SELECT sum(ol_amount) FROM orders ]] .. straight_join_hint .. [[ order_line 
+		(SELECT sum(ol_amount) FROM orders straight_join_hint order_line 
 		WHERE OL_W_ID=O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D IS NOT NULL AND 
 		O_W_ID=c.c_w_id AND O_D_ID=c.C_D_ID AND O_C_ID=c.C_ID) sm FROM customer c WHERE  c.c_w_id= ?) t1 
 		WHERE c1+c_ytd_payment <> sm`

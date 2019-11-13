@@ -80,7 +80,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("POWER((o_nexi_o_id -1 - max(o_id)), 2) + POWER((o_nexi_o_id -1 - max(no_o_id)), 2) != 0 in district %d, but got %f",district, diff)
+			return fmt.Errorf("POWER((o_nexi_o_id -1 - max(o_id)), 2) + POWER((o_nexi_o_id -1 - max(no_o_id)), 2) != 0 in warehouse %d, but got %f",warehouse, diff)
 		}
 	}
 
@@ -110,7 +110,7 @@ func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("POWER((o_nexi_o_id -1 - max(o_id)), 2) + POWER((o_nexi_o_id -1 - max(no_o_id)), 2) != 0 in district %d, but got %f",district, diff)
+			return fmt.Errorf("POWER((o_nexi_o_id -1 - max(o_id)), 2) + POWER((o_nexi_o_id -1 - max(no_o_id)), 2) != 0 in warehouse %d, but got %f",warehouse, diff)
 		}
 	}
 

@@ -11,6 +11,8 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 	checks := []func(ctx context.Context, warehouse int) error{
 		w.checkCondition1,
 		w.checkCondition2,
+		w.checkCondition3,
+		w.checkCondition4,
 	}
 
 	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {
@@ -110,7 +112,37 @@ func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("POWER((o_nexi_o_id -1 - max(o_id)), 2) + POWER((o_nexi_o_id -1 - max(no_o_id)), 2) != 0 in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("max(no_o_id)-min(no_o_id)+1 - count(*) in warehouse %d, but got %f",warehouse, diff)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
+	s := w.getState(ctx)
+
+	var diff float64
+	
+	query := "SELECT count(*) FROM (SELECT o_d_id, SUM(o_ol_cnt) sm1, MAX(cn) as cn FROM orders,(SELECT ol_d_id, COUNT(*) cn FROM order_line WHERE ol_w_id= ? GROUP BY ol_d_id) ol WHERE o_w_id= ? AND ol_d_id=o_d_id GROUP BY o_d_id) t1 WHERE sm1<>cn"
+
+	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
+	if err != nil {
+		return fmt.Errorf("Exec %s failed %v", query, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&diff); err != nil {
+			return err
+		}
+
+		if diff != 0 {
+			return fmt.Errorf("max(no_o_id)-min(no_o_id)+1 - count(*) in warehouse %d, but got %f",warehouse, diff)
 		}
 	}
 

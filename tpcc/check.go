@@ -68,9 +68,9 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 	// rows is zero).
 
 	var diff float64
-	query := "SELECT POWER((d_next_o_id -1 - max(o_id)), 2) + POWER((d_next_o_id -1 - max(no_o_id)), 2) diff FROM district, orders, new_order WHERE d_w_id = o_w_id AND d_w_id = no_w_id AND d_id = o_d_id AND d_id = no_d_id AND d_w_id = ? group by d_w_id"
+	query := "SELECT POWER((o_nexi_o_id -1 - mo), 2) + POWER((o_nexi_o_id -1 - mno), 2) diff FROM district dis, (SELECT o_d_id,max(o_id) mo FROM orders WHERE o_w_id=%d GROUP BY o_d_id) q, (select no_d_id,max(no_o_id) mno from new_order where no_w_id=%d group by no_d_id) no where d_w_id=%d and q.o_d_id=dis.d_id and no.no_d_id=dis.d_id"
 
-	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
+	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse, warehouse)
 	if err != nil {
 		return fmt.Errorf("Exec %s failed %v", query, err)
 	}

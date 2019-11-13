@@ -68,7 +68,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 	// rows is zero).
 
 	var diff float64
-	query := "SELECT POWER((o_next_o_id -1 - mo), 2) + POWER((o_next_o_id -1 - mno), 2) diff FROM district dis, (SELECT o_d_id,max(o_id) mo FROM orders WHERE o_w_id= ? GROUP BY o_d_id) q, (select no_d_id,max(no_o_id) mno from new_order where no_w_id= ? group by no_d_id) no where d_w_id= ? and q.o_d_id=dis.d_id and no.no_d_id=dis.d_id"
+	query := "SELECT POWER((d_next_o_id -1 - mo), 2) + POWER((d_next_o_id -1 - mno), 2) diff FROM district dis, (SELECT o_d_id,max(o_id) mo FROM orders WHERE o_w_id= ? GROUP BY o_d_id) q, (select no_d_id,max(no_o_id) mno from new_order where no_w_id= ? group by no_d_id) no where d_w_id= ? and q.o_d_id=dis.d_id and no.no_d_id=dis.d_id"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse, warehouse)
 	if err != nil {
@@ -82,7 +82,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("POWER((o_next_o_id -1 - max(o_id)), 2) + POWER((o_next_o_id -1 - max(no_o_id)), 2) != 0 in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("POWER((d_next_o_id -1 - mo), 2) + POWER((d_next_o_id -1 - mno),2) != 0 in warehouse %d, but got %f",warehouse, diff)
 		}
 	}
 

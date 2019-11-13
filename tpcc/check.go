@@ -14,11 +14,11 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 		w.checkCondition3,
 		w.checkCondition4,
 		w.checkCondition5,
-		w.checkCondition7,
+		// w.checkCondition7,
 		w.checkCondition8,
 		w.checkCondition9,
-		w.checkCondition10,
-		w.checkCondition12,
+		// w.checkCondition10,
+		// w.checkCondition12,
 	}
 
 	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {

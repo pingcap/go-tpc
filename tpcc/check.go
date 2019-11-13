@@ -74,7 +74,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 	// rows is zero).
 
 	var diff float64
-	query := "SELECT POWER((d_next_o_id -1 - mo), 2) + POWER((d_next_o_id -1 - mno), 2) diff FROM district dis, (SELECT o_d_id,max(o_id) mo FROM orders WHERE o_w_id= ? GROUP BY o_d_id) q, (select no_d_id,max(no_o_id) mno from new_order where no_w_id= ? group by no_d_id) no where d_w_id= ? and q.o_d_id=dis.d_id and no.no_d_id=dis.d_id"
+	query := "SELECT POWER((d_next_o_id -1 - mo), 2) + POWER((d_next_o_id -1 - mno), 2) diff FROM district dis, (SELECT o_d_id,max(o_id) mo FROM orders WHERE o_w_id= ? GROUP BY o_d_id) q, (select no_d_id,max(no_o_id) mno from new_order where no_w_id= ? group by no_d_id) no where d_w_id = ? and q.o_d_id=dis.d_id and no.no_d_id=dis.d_id"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse, warehouse)
 	if err != nil {
@@ -104,7 +104,7 @@ func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
 
 	var diff float64
 	
-	query := "SELECT max(no_o_id)-min(no_o_id)+1 - count(*) diff from new_order where no_w_id= ? group by no_d_id"
+	query := "SELECT max(no_o_id)-min(no_o_id)+1 - count(*) diff from new_order where no_w_id = ? group by no_d_id"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
@@ -134,7 +134,7 @@ func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
 
 	var diff float64
 	
-	query := "SELECT count(*) FROM (SELECT o_d_id, SUM(o_ol_cnt) sm1, MAX(cn) as cn FROM orders,(SELECT ol_d_id, COUNT(*) cn FROM order_line WHERE ol_w_id= ? GROUP BY ol_d_id) ol WHERE o_w_id= ? AND ol_d_id=o_d_id GROUP BY o_d_id) t1 WHERE sm1<>cn"
+	query := "SELECT count(*) FROM (SELECT o_d_id, SUM(o_ol_cnt) sm1, MAX(cn) as cn FROM orders,(SELECT ol_d_id, COUNT(*) cn FROM order_line WHERE ol_w_id = ? GROUP BY ol_d_id) ol WHERE o_w_id = ? AND ol_d_id=o_d_id GROUP BY o_d_id) t1 WHERE sm1<>cn"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
 	if err != nil {
@@ -165,7 +165,7 @@ func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
 
 	var diff float64
 	
-	query := "SELECT count(*)  FROM orders LEFT JOIN new_order ON (no_w_id=o_w_id AND o_d_id=no_d_id AND o_id=no_o_id) where o_w_id= ? and ((o_carrier_id IS NULL and no_o_id IS  NULL) OR (o_carrier_id IS NOT NULL and no_o_id IS NOT NULL  )) "
+	query := "SELECT count(*)  FROM orders LEFT JOIN new_order ON (no_w_id=o_w_id AND o_d_id=no_d_id AND o_id=no_o_id) where o_w_id = ? and ((o_carrier_id IS NULL and no_o_id IS  NULL) OR (o_carrier_id IS NOT NULL and no_o_id IS NOT NULL  )) "
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
@@ -195,7 +195,7 @@ func (w *Workloader) checkCondition7(ctx context.Context, warehouse int) error {
 
 	var diff float64
 	
-	query := "SELECT count(*) FROM orders, order_line WHERE o_id=ol_o_id AND o_d_id=ol_d_id AND ol_w_id=o_w_id AND o_w_id= ? AND ((ol_delivery_d IS NULL and o_carrier_id IS NOT NULL) or (o_carrier_id IS NULL and ol_delivery_d IS NOT NULL ))"
+	query := "SELECT count(*) FROM orders, order_line WHERE o_id=ol_o_id AND o_d_id=ol_d_id AND ol_w_id=o_w_id AND o_w_id = ? AND ((ol_delivery_d IS NULL and o_carrier_id IS NOT NULL) or (o_carrier_id IS NULL and ol_delivery_d IS NOT NULL ))"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
@@ -225,7 +225,7 @@ func (w *Workloader) checkCondition8(ctx context.Context, warehouse int) error {
 
 	var diff float64
 	
-	query := "SELECT count(*) cn FROM (SELECT w_id,w_ytd,SUM(h_amount) sm FROM history,warehouse WHERE h_w_id=w_id and w_id= ? GROUP BY w_id) t1 WHERE w_ytd<>sm"
+	query := "SELECT count(*) cn FROM (SELECT w_id,w_ytd,SUM(h_amount) sm FROM history,warehouse WHERE h_w_id=w_id and w_id = ? GROUP BY w_id) t1 WHERE w_ytd<>sm"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
@@ -255,7 +255,7 @@ func (w *Workloader) checkCondition9(ctx context.Context, warehouse int) error {
 
 	var diff float64
 	
-	query := "SELECT COUNT(*) FROM (select d_id,d_w_id,sum(d_ytd) s1 from district group by d_id,d_w_id) d,(select h_d_id,h_w_id,sum(h_amount) s2 from history WHERE  h_w_id= ? group by h_d_id, h_w_id) h WHERE h_d_id=d_id AND d_w_id=h_w_id and d_w_id= ? and s1<>s2"
+	query := "SELECT COUNT(*) FROM (select d_id,d_w_id,sum(d_ytd) s1 from district group by d_id,d_w_id) d,(select h_d_id,h_w_id,sum(h_amount) s2 from history WHERE  h_w_id = ? group by h_d_id, h_w_id) h WHERE h_d_id=d_id AND d_w_id=h_w_id and d_w_id= ? and s1<>s2"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
 	if err != nil {
@@ -333,7 +333,7 @@ func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error 
 	query := `SELECT count(*) FROM (SELECT  c.c_id, c.c_d_id, c.c_balance c1, c_ytd_payment, 
 		(SELECT sum(ol_amount) FROM orders STRAIGHT_JOIN order_line 
 		WHERE OL_W_ID=O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D IS NOT NULL AND 
-		O_W_ID=c.c_w_id AND O_D_ID=c.C_D_ID AND O_C_ID=c.C_ID) sm FROM customer c WHERE  c.c_w_id= ?) t1 
+		O_W_ID=c.c_w_id AND O_D_ID=c.C_D_ID AND O_C_ID=c.C_ID) sm FROM customer c WHERE  c.c_w_id = ?) t1 
 		WHERE c1+c_ytd_payment <> sm`
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {

@@ -33,7 +33,7 @@ func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
 		//  FROM new_order
 		//  WHERE no_d_id = :d_id AND no_w_id = :w_id ORDER BY no_o_id ASC;
 		var noOID int
-		query := "SELECT no_o_id FROM new_order WHERE no_d_id = ? AND no_w_id = ? ORDER BY no_o_id ASC LIMIT 1"
+		query := "SELECT no_o_id FROM new_order WHERE no_d_id = ? AND no_w_id = ? ORDER BY no_o_id ASC LIMIT 1 FOR UPDATE"
 		if err := tx.QueryRowContext(ctx, query, dID, d.wID).Scan(&noOID); err != nil {
 			if err == sql.ErrNoRows {
 				continue
@@ -80,7 +80,7 @@ func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
 		// UPDATE customer SET c_balance = c_balance + :ol_total WHERE c_id = :c_id AND c_d_id = :d_id AND
 		// 	c_w_id = :w_id;
 
-		query = "UPDATE customer SET c_balance = c_balance + ? WHERE c_id = ? AND c_d_id = ? AND c_w_id = ?"
+		query = "UPDATE customer SET c_balance = c_balance + ?, c_delivery_cnt = c_delivery_cnt + 1 WHERE c_id = ? AND c_d_id = ? AND c_w_id = ?"
 		if _, err := tx.ExecContext(ctx, query, olTotal, oCID, dID, d.wID); err != nil {
 			return fmt.Errorf("Exec %s failed %v", query, err)
 		}

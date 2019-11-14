@@ -36,6 +36,8 @@ type orderItem struct {
 	iPrice float64
 	iName  string
 	iData  string
+
+	remoteWarehouse bool
 }
 
 type newOrderData struct {
@@ -92,6 +94,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 			items[i].olSupplyWID = d.wID
 		} else {
 			items[i].olSupplyWID = w.otherWarehouse(ctx, d.wID)
+			items[i].remoteWarehouse = true
 			allLocal = 0
 		}
 
@@ -193,10 +196,9 @@ WHERE s_i_id = ? AND s_w_id = ? FOR UPDATE`, d.dID)
 			return fmt.Errorf("Exec %s failed %v", query, err)
 		}
 
-		if distInfo.sQuantity > item.olQuantity {
-			distInfo.sQuantity = distInfo.sQuantity - item.olQuantity
-		} else {
-			distInfo.sQuantity = distInfo.sQuantity - item.olQuantity + 91
+		distInfo.sQuantity = distInfo.sQuantity - item.olQuantity
+		if distInfo.sQuantity < item.olQuantity+10 {
+			distInfo.sQuantity += +91
 		}
 
 		// Process 8
@@ -204,8 +206,12 @@ WHERE s_i_id = ? AND s_w_id = ? FOR UPDATE`, d.dID)
 		// UPDATE stock SET s_quantity = :s_quantity
 		//  WHERE s_i_id = :ol_i_id
 		// 	AND s_w_id = :ol_supply_w_id;
-		query = "UPDATE stock SET s_quantity = ? WHERE s_i_id = ? AND s_w_id = ?"
-		if _, err := tx.ExecContext(ctx, query, distInfo.sQuantity, item.olIID, item.olSupplyWID); err != nil {
+		remoteCnt := 0
+		if item.remoteWarehouse {
+			remoteCnt = 1
+		}
+		query = "UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?"
+		if _, err := tx.ExecContext(ctx, query, distInfo.sQuantity, item.olQuantity, remoteCnt, item.olIID, item.olSupplyWID); err != nil {
 			return fmt.Errorf("Exec %s failed %v", query, err)
 		}
 

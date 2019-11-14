@@ -314,13 +314,15 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 			olNumber := j + 1
 			olIID := randInt(s.R, 1, 100000)
 			olSupplyWID := warehouse
-			olDeliveryD := "NULL"
+			olQuantity := 5
+
+			var olAmount float64
+			var olDeliveryD string
 			if olOID < 2101 {
 				olDeliveryD = fmt.Sprintf(`'%s'`, w.initLoadTime)
-			}
-			olQuantity := 5
-			olAmount := 0.00
-			if olOID < 2101 {
+				olAmount = 0.00
+			} else {
+				olDeliveryD = "NULL"
 				olAmount = float64(randInt(s.R, 1, 999999)) / 100.0
 			}
 			olDistInfo := randChars(s.R, s.Buf, 24, 24)

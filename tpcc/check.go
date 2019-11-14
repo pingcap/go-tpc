@@ -200,7 +200,7 @@ func (w *Workloader) checkCondition6(ctx context.Context, warehouse int) error {
 	query := `
 SELECT COUNT(*) FROM
 (SELECT o_ol_cnt, order_line_count FROM orders
-	JOIN (SELECT ol_w_id, ol_d_id, ol_o_id, count(*) order_line_count FROM order_line GROUP BY ol_w_id, ol_d_id, ol_o_id ORDER by ol_w_id, ol_d_id, ol_o_id) AS order_line
+	LEFT JOIN (SELECT ol_w_id, ol_d_id, ol_o_id, count(*) order_line_count FROM order_line GROUP BY ol_w_id, ol_d_id, ol_o_id ORDER by ol_w_id, ol_d_id, ol_o_id) AS order_line
 	ON orders.o_w_id = order_line.ol_w_id AND orders.o_d_id = order_line.ol_d_id AND orders.o_id = order_line.ol_o_id
 	WHERE orders.o_w_id = ?) AS T
 WHERE T.o_ol_cnt != T.order_line_count`

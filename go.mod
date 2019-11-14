@@ -1,4 +1,4 @@
-module github.com/siddontang/go-tpc
+module github.com/pingcap/go-tpc
 
 go 1.13
 

@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/siddontang/go-tpc/pkg/util"
+	"github.com/pingcap/go-tpc/pkg/util"
 )
 
 // randInt return a random int in [min, max]

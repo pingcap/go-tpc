@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/siddontang/go-tpc/tpcc"
+	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
 )
 

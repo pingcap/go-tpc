@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/siddontang/go-tpc/pkg/measurement"
-	"github.com/siddontang/go-tpc/pkg/workload"
+	"github.com/pingcap/go-tpc/pkg/measurement"
+	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
 func execute(ctx context.Context, w workload.Workloader, action string, index int) error {

@@ -90,7 +90,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("POWER((d_next_o_id -1 - mo), 2) + POWER((d_next_o_id -1 - mno),2) != 0 in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("POWER((d_next_o_id -1 - mo), 2) + POWER((d_next_o_id -1 - mno),2) != 0 in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -105,7 +105,7 @@ func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := "SELECT max(no_o_id)-min(no_o_id)+1 - count(*) diff from new_order where no_w_id = ? group by no_d_id"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
@@ -120,7 +120,7 @@ func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("max(no_o_id)-min(no_o_id)+1 - count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("max(no_o_id)-min(no_o_id)+1 - count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -135,7 +135,7 @@ func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := "SELECT count(*) FROM (SELECT o_d_id, SUM(o_ol_cnt) sm1, MAX(cn) as cn FROM orders,(SELECT ol_d_id, COUNT(*) cn FROM order_line WHERE ol_w_id = ? GROUP BY ol_d_id) ol WHERE o_w_id = ? AND ol_d_id=o_d_id GROUP BY o_d_id) t1 WHERE sm1<>cn"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
@@ -150,7 +150,7 @@ func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -161,12 +161,11 @@ func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
 	return nil
 }
 
-
 func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := "SELECT count(*)  FROM orders LEFT JOIN new_order ON (no_w_id=o_w_id AND o_d_id=no_d_id AND o_id=no_o_id) where o_w_id = ? and ((o_carrier_id IS NULL and no_o_id IS  NULL) OR (o_carrier_id IS NOT NULL and no_o_id IS NOT NULL  )) "
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
@@ -181,7 +180,7 @@ func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -201,7 +200,7 @@ func (w *Workloader) checkCondition7(ctx context.Context, warehouse int) error {
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := "SELECT count(*) FROM orders, order_line WHERE o_id=ol_o_id AND o_d_id=ol_d_id AND ol_w_id=o_w_id AND o_w_id = ? AND ((ol_delivery_d IS NULL and o_carrier_id IS NOT NULL) or (o_carrier_id IS NULL and ol_delivery_d IS NOT NULL ))"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
@@ -216,7 +215,7 @@ func (w *Workloader) checkCondition7(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -231,7 +230,7 @@ func (w *Workloader) checkCondition8(ctx context.Context, warehouse int) error {
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := "SELECT count(*) cn FROM (SELECT w_id,w_ytd,SUM(h_amount) sm FROM history,warehouse WHERE h_w_id=w_id and w_id = ? GROUP BY w_id) t1 WHERE w_ytd<>sm"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
@@ -246,7 +245,7 @@ func (w *Workloader) checkCondition8(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -261,7 +260,7 @@ func (w *Workloader) checkCondition9(ctx context.Context, warehouse int) error {
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := "SELECT COUNT(*) FROM (select d_id,d_w_id,sum(d_ytd) s1 from district group by d_id,d_w_id) d,(select h_d_id,h_w_id,sum(h_amount) s2 from history WHERE  h_w_id = ? group by h_d_id, h_w_id) h WHERE h_d_id=d_id AND d_w_id=h_w_id and d_w_id= ? and s1<>s2"
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
@@ -276,7 +275,7 @@ func (w *Workloader) checkCondition9(ctx context.Context, warehouse int) error {
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -291,7 +290,7 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := `SELECT count(*) 
 	FROM (  SELECT  c.c_id, c.c_d_id, c.c_w_id, c.c_balance c1, 
 				   (SELECT sum(ol_amount) FROM orders STRAIGHT_JOIN order_line 
@@ -321,7 +320,7 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -341,7 +340,7 @@ func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error 
 	s := w.getState(ctx)
 
 	var diff float64
-	
+
 	query := `SELECT count(*) FROM (SELECT  c.c_id, c.c_d_id, c.c_balance c1, c_ytd_payment, 
 		(SELECT sum(ol_amount) FROM orders STRAIGHT_JOIN order_line 
 		WHERE OL_W_ID=O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D IS NOT NULL AND 
@@ -359,7 +358,7 @@ func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error 
 		}
 
 		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f",warehouse, diff)
+			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
 		}
 	}
 
@@ -369,7 +368,3 @@ func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error 
 
 	return nil
 }
-
-
-
-

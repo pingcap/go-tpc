@@ -67,7 +67,7 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 		d.cDID = d.dID
 	} else {
 		d.cWID = w.otherWarehouse(ctx, d.wID)
-		d.dID = randInt(s.R, 1, districtPerWarehouse)
+		d.cDID = randInt(s.R, 1, districtPerWarehouse)
 	}
 
 	tx, err := w.beginTx(ctx)
@@ -159,7 +159,7 @@ district WHERE d_w_id = ? AND d_id = ?`
 	query = `SELECT c_first, c_middle, c_last, c_street_1, c_street_2, c_city, c_state, c_zip, c_phone,
 c_credit, c_credit_lim, c_discount, c_balance, c_since FROM customer WHERE c_w_id = ? AND c_d_id = ? 
 AND c_id = ? FOR UPDATE`
-	if err := tx.QueryRowContext(ctx, query, d.cWID, d.cDID, d.dID).Scan(&d.cFirst, &d.cMiddle, &d.cLast,
+	if err := tx.QueryRowContext(ctx, query, d.cWID, d.cDID, d.cID).Scan(&d.cFirst, &d.cMiddle, &d.cLast,
 		&d.cStreet1, &d.cStreet2, &d.cCity, &d.cState, &d.cZip, &d.cPhone, &d.cCredit, &d.cCreditLim,
 		&d.cDiscount, &d.cBalance, &d.cSince); err != nil {
 		return fmt.Errorf("Exec %s failed %v", query, err)

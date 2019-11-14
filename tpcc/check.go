@@ -14,10 +14,12 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 		w.checkCondition3,
 		w.checkCondition4,
 		w.checkCondition5,
+		w.checkCondition6,
 		// w.checkCondition7,
 		w.checkCondition8,
 		w.checkCondition9,
 		// w.checkCondition10,
+		w.checkCondition11,
 		// w.checkCondition12,
 	}
 
@@ -190,6 +192,11 @@ func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
 	return nil
 }
 
+// TODO: Implement this
+func (w *Workloader) checkCondition6(ctx context.Context, warehouse int) error {
+	return nil
+}
+
 func (w *Workloader) checkCondition7(ctx context.Context, warehouse int) error {
 	s := w.getState(ctx)
 
@@ -299,7 +306,7 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 												  AND H_C_D_ID=c.C_D_ID 
 												  AND H_C_ID=c.C_ID) smh 
 			 FROM customer c 
-			WHERE  c.c_w_id= ? ) t 
+			WHERE  c.c_w_id = ? ) t
    WHERE c1<>sm-smh`
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
@@ -322,6 +329,11 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 		return err
 	}
 
+	return nil
+}
+
+// TODO: Implement this
+func (w *Workloader) checkCondition11(ctx context.Context, warehouse int) error {
 	return nil
 }
 

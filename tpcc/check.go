@@ -6,9 +6,16 @@ import (
 )
 
 // Check implements Workloader interface
-func (w *Workloader) Check(ctx context.Context, threadID int) error {
+func (w *Workloader) Check(ctx context.Context, threadID int, checkForLoad bool) error {
 	// refer 3.3.2
 	checks := []func(ctx context.Context, warehouse int) error{
+		w.checkCondition1,
+		w.checkCondition2,
+		w.checkCondition3,
+		w.checkCondition4,
+	}
+
+	loadChecks := []func(ctx context.Context, warehouse int) error{
 		w.checkCondition1,
 		w.checkCondition2,
 		w.checkCondition3,
@@ -19,7 +26,12 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 		w.checkCondition8,
 		w.checkCondition9,
 		w.checkCondition10,
+		w.checkCondition11,
 		w.checkCondition12,
+	}
+
+	if checkForLoad {
+		checks = loadChecks
 	}
 
 	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {
@@ -190,8 +202,41 @@ func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
 	return nil
 }
 
-// TODO: Implement this
 func (w *Workloader) checkCondition6(ctx context.Context, warehouse int) error {
+	s := w.getState(ctx)
+
+	// For any row in the ORDER table, O_OL_CNT must equal the number of rows in the ORDER-LINE table for the
+	// corresponding order defined by (O_W_ID, O_D_ID, O_ID) = (OL_W_ID, OL_D_ID, OL_O_ID).
+	var count float64
+	query := `
+SELECT COUNT(*) FROM
+(SELECT o_ol_cnt, order_line_count FROM orders
+	LEFT JOIN (SELECT ol_w_id, ol_d_id, ol_o_id, count(*) order_line_count FROM order_line GROUP BY ol_w_id, ol_d_id, ol_o_id ORDER by ol_w_id, ol_d_id, ol_o_id) AS order_line
+	ON orders.o_w_id = order_line.ol_w_id AND orders.o_d_id = order_line.ol_d_id AND orders.o_id = order_line.ol_o_id
+	WHERE orders.o_w_id = ?) AS T
+WHERE T.o_ol_cnt != T.order_line_count`
+
+	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
+	if err != nil {
+		return fmt.Errorf("Exec %s failed %v", query, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return err
+		}
+
+		if count != 0 {
+			return fmt.Errorf("all of O_OL_CNT - count(order_line) for the corresponding order defined by (O_W_ID, O_D_ID, O_ID) = (OL_W_ID, OL_D_ID, OL_O_ID) should be 0 in warehouse %d", warehouse)
+		}
+
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -330,8 +375,44 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 	return nil
 }
 
-// TODO: Implement this
 func (w *Workloader) checkCondition11(ctx context.Context, warehouse int) error {
+	s := w.getState(ctx)
+
+	// Entries in the CUSTOMER, ORDER and NEW-ORDER tables must satisfy the relationship:
+	// (count(*) from ORDER) - (count(*) from NEW-ORDER) = 2100
+	// for each district defined by (O_W_ID, O_D_ID) = (NO_W_ID, NO_D_ID) = (C_W_ID, C_D_ID).
+	var count float64
+	query := `
+SELECT count(*) FROM
+	(SELECT * FROM
+		(SELECT o_w_id, o_d_id, count(*) order_count FROM orders GROUP BY o_w_id, o_d_id) orders
+        JOIN (SELECT no_w_id, no_d_id, count(*) new_order_count FROM new_order GROUP BY no_w_id, no_d_id) new_order
+        ON orders.o_w_id = new_order.no_w_id AND orders.o_d_id = new_order.no_d_id
+	) order_new_order
+JOIN (SELECT c_w_id, c_d_id, count(*) customer_count FROM customer GROUP BY c_w_id, c_d_id) customer
+ON order_new_order.no_w_id = customer.c_w_id AND order_new_order.no_d_id = customer.c_d_id
+WHERE c_w_id = ? AND order_count - 2100 != new_order_count`
+
+	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
+	if err != nil {
+		return fmt.Errorf("Exec %s failed %v", query, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return err
+		}
+
+		if count != 0 {
+			return fmt.Errorf("all of (count(*) from ORDER) - (count(*) from NEW-ORDER) for each district defined by (O_W_ID, O_D_ID) = (NO_W_ID, NO_D_ID) = (C_W_ID, C_D_ID) should be 2100 in warehouse %d", warehouse)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

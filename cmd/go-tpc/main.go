@@ -56,7 +56,7 @@ func openDB() {
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "dbbench",
+		Use:   "go-tpc",
 		Short: "Benchmark database with different workloads",
 	}
 

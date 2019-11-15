@@ -52,6 +52,10 @@ type Workloader struct {
 
 // NewWorkloader creates the tpc-c workloader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
+	if cfg.Parts > cfg.Warehouses {
+		panic(fmt.Errorf("number warehouses %d must >= partition %d", cfg.Warehouses, cfg.Parts))
+	}
+
 	w := &Workloader{
 		db:           db,
 		cfg:          cfg,

@@ -5,17 +5,9 @@ import (
 	"fmt"
 )
 
-// Check implements Workloader interface
-func (w *Workloader) Check(ctx context.Context, threadID int, checkForLoad bool) error {
-	// refer 3.3.2
+// CheckPrepare implements Workloader interface
+func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 	checks := []func(ctx context.Context, warehouse int) error{
-		w.checkCondition1,
-		w.checkCondition2,
-		w.checkCondition3,
-		w.checkCondition4,
-	}
-
-	loadChecks := []func(ctx context.Context, warehouse int) error{
 		w.checkCondition1,
 		w.checkCondition2,
 		w.checkCondition3,
@@ -30,8 +22,26 @@ func (w *Workloader) Check(ctx context.Context, threadID int, checkForLoad bool)
 		w.checkCondition12,
 	}
 
-	if checkForLoad {
-		checks = loadChecks
+	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {
+		warehouse := i%w.cfg.Warehouses + 1
+		fmt.Printf("begin to checking warehouse %d\n", warehouse)
+		for i := 0; i < len(checks); i++ {
+			if err := checks[i](ctx, warehouse); err != nil {
+				return fmt.Errorf("check condition %d failed %v", i+1, err)
+			}
+		}
+	}
+	return nil
+}
+
+// Check implements Workloader interface
+func (w *Workloader) Check(ctx context.Context, threadID int) error {
+	// refer 3.3.2
+	checks := []func(ctx context.Context, warehouse int) error{
+		w.checkCondition1,
+		w.checkCondition2,
+		w.checkCondition3,
+		w.checkCondition4,
 	}
 
 	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {

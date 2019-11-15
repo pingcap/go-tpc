@@ -11,6 +11,25 @@ import (
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
+func checkPrepare(ctx context.Context, w workload.Workloader) {
+	var wg sync.WaitGroup
+	wg.Add(threads)
+	for i := 0; i < threads; i++ {
+		go func(index int) {
+			defer wg.Done()
+
+			ctx = w.InitThread(ctx, index)
+			defer w.CleanupThread(ctx, index)
+
+			if err := w.CheckPrepare(ctx, index); err != nil {
+				fmt.Printf("check prepare failed, err %v\n", err)
+				return
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
 func execute(ctx context.Context, w workload.Workloader, action string, index int) error {
 	count := totalCount / threads
 
@@ -24,14 +43,11 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 				return err
 			}
 		}
-		if err := w.Prepare(ctx, index); err != nil {
-			return nil
-		}
-		return w.Check(ctx, index, true)
+		return w.Prepare(ctx, index)
 	case "cleanup":
 		return w.Cleanup(ctx, index)
 	case "check":
-		return w.Check(ctx, index, false)
+		return w.Check(ctx, index)
 	}
 
 	for i := 0; i < count; i++ {
@@ -90,6 +106,11 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	}
 
 	wg.Wait()
+
+	if action == "prepare" {
+		// For prepare, we must check the data consistency after all prepare finished
+		checkPrepare(ctx, w)
+	}
 	outputCancel()
 
 	<-ch

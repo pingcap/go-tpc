@@ -7,35 +7,16 @@ import (
 
 // CheckPrepare implements Workloader interface
 func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
-	checks := []func(ctx context.Context, warehouse int) error{
-		w.checkCondition1,
-		w.checkCondition2,
-		w.checkCondition3,
-		w.checkCondition4,
-		w.checkCondition5,
-		w.checkCondition6,
-		w.checkCondition7,
-		w.checkCondition8,
-		w.checkCondition9,
-		w.checkCondition10,
-		w.checkCondition11,
-		w.checkCondition12,
-	}
-
-	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {
-		warehouse := i%w.cfg.Warehouses + 1
-		fmt.Printf("begin to checking warehouse %d\n", warehouse)
-		for i := 0; i < len(checks); i++ {
-			if err := checks[i](ctx, warehouse); err != nil {
-				return fmt.Errorf("check condition %d failed %v", i+1, err)
-			}
-		}
-	}
-	return nil
+	return w.check(ctx, threadID, true)
 }
 
 // Check implements Workloader interface
 func (w *Workloader) Check(ctx context.Context, threadID int) error {
+	return w.check(ctx, threadID, w.cfg.CheckAll)
+}
+
+// Check implements Workloader interface
+func (w *Workloader) check(ctx context.Context, threadID int, checkAll bool) error {
 	// refer 3.3.2
 	checks := []func(ctx context.Context, warehouse int) error{
 		w.checkCondition1,
@@ -44,9 +25,27 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 		w.checkCondition4,
 	}
 
+	if checkAll {
+		checks = []func(ctx context.Context, warehouse int) error{
+			w.checkCondition1,
+			w.checkCondition2,
+			w.checkCondition3,
+			w.checkCondition4,
+			w.checkCondition5,
+			w.checkCondition6,
+			w.checkCondition7,
+			w.checkCondition8,
+			w.checkCondition9,
+			w.checkCondition10,
+			w.checkCondition11,
+			w.checkCondition12,
+		}
+	}
+
 	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {
 		warehouse := i%w.cfg.Warehouses + 1
 		for i := 0; i < len(checks); i++ {
+			fmt.Printf("begin to check warehouse %d at check %d\n", warehouse, i+1)
 			if err := checks[i](ctx, warehouse); err != nil {
 				return fmt.Errorf("check condition %d failed %v", i+1, err)
 			}

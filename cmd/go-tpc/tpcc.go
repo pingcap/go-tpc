@@ -25,6 +25,7 @@ func registerTpcc(root *cobra.Command) {
 
 	cmd.PersistentFlags().IntVar(&tpccConfig.Parts, "parts", 1, "Number to partition warehouses")
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
+	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",

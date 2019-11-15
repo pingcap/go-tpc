@@ -36,6 +36,7 @@ type Config struct {
 	Warehouses int
 	UseFK      bool
 	Isolation  int
+	CheckAll   bool
 }
 
 // Workloader is TPCC workload

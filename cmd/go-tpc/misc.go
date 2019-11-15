@@ -24,11 +24,14 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 				return err
 			}
 		}
-		return w.Prepare(ctx, index)
+		if err := w.Prepare(ctx, index); err != nil {
+			return nil
+		}
+		return w.Check(ctx, index, true)
 	case "cleanup":
 		return w.Cleanup(ctx, index)
 	case "check":
-		return w.Check(ctx, index)
+		return w.Check(ctx, index, false)
 	}
 
 	for i := 0; i < count; i++ {

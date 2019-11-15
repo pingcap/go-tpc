@@ -12,5 +12,5 @@ type Workloader interface {
 	Prepare(ctx context.Context, threadID int) error
 	Run(ctx context.Context, threadID int) error
 	Cleanup(ctx context.Context, threadID int) error
-	Check(ctx context.Context, threadID int) error
+	Check(ctx context.Context, threadID int, checkForLoad bool) error
 }

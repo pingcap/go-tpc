@@ -6,9 +6,16 @@ import (
 )
 
 // Check implements Workloader interface
-func (w *Workloader) Check(ctx context.Context, threadID int) error {
+func (w *Workloader) Check(ctx context.Context, threadID int, checkForLoad bool) error {
 	// refer 3.3.2
 	checks := []func(ctx context.Context, warehouse int) error{
+		w.checkCondition1,
+		w.checkCondition2,
+		w.checkCondition3,
+		w.checkCondition4,
+	}
+
+	loadChecks := []func(ctx context.Context, warehouse int) error{
 		w.checkCondition1,
 		w.checkCondition2,
 		w.checkCondition3,
@@ -21,6 +28,10 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 		w.checkCondition10,
 		w.checkCondition11,
 		w.checkCondition12,
+	}
+
+	if checkForLoad {
+		checks = loadChecks
 	}
 
 	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {

@@ -23,6 +23,13 @@ func (w *Workloader) check(ctx context.Context, threadID int, checkAll bool) err
 		w.checkCondition2,
 		w.checkCondition3,
 		w.checkCondition4,
+		w.checkCondition5,
+		w.checkCondition6,
+		w.checkCondition7,
+		w.checkCondition8,
+		w.checkCondition9,
+		w.checkCondition10,
+		w.checkCondition12,
 	}
 
 	if checkAll {

@@ -18,43 +18,43 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 // Check implements Workloader interface
 func (w *Workloader) check(ctx context.Context, threadID int, checkAll bool) error {
 	// refer 3.3.2
-	checks := []func(ctx context.Context, warehouse int) error{
-		w.checkCondition1,
-		w.checkCondition2,
-		w.checkCondition3,
-		w.checkCondition4,
-		w.checkCondition5,
-		w.checkCondition6,
-		w.checkCondition7,
-		w.checkCondition8,
-		w.checkCondition9,
-		w.checkCondition10,
-		w.checkCondition12,
+	checks := map[string]func(ctx context.Context, warehouse int) error{
+		"3.3.2.1":  w.checkCondition1,
+		"3.3.2.2":  w.checkCondition2,
+		"3.3.2.3":  w.checkCondition3,
+		"3.3.2.4":  w.checkCondition4,
+		"3.3.2.5":  w.checkCondition5,
+		"3.3.2.6":  w.checkCondition6,
+		"3.3.2.7":  w.checkCondition7,
+		"3.3.2.8":  w.checkCondition8,
+		"3.3.2.9":  w.checkCondition9,
+		"3.3.2.10": w.checkCondition10,
+		"3.3.2.12": w.checkCondition12,
 	}
 
 	if checkAll {
-		checks = []func(ctx context.Context, warehouse int) error{
-			w.checkCondition1,
-			w.checkCondition2,
-			w.checkCondition3,
-			w.checkCondition4,
-			w.checkCondition5,
-			w.checkCondition6,
-			w.checkCondition7,
-			w.checkCondition8,
-			w.checkCondition9,
-			w.checkCondition10,
-			w.checkCondition11,
-			w.checkCondition12,
+		checks = map[string]func(ctx context.Context, warehouse int) error{
+			"3.3.2.1":  w.checkCondition1,
+			"3.3.2.2":  w.checkCondition2,
+			"3.3.2.3":  w.checkCondition3,
+			"3.3.2.4":  w.checkCondition4,
+			"3.3.2.5":  w.checkCondition5,
+			"3.3.2.6":  w.checkCondition6,
+			"3.3.2.7":  w.checkCondition7,
+			"3.3.2.8":  w.checkCondition8,
+			"3.3.2.9":  w.checkCondition9,
+			"3.3.2.10": w.checkCondition10,
+			"3.3.2.11": w.checkCondition11,
+			"3.3.2.12": w.checkCondition12,
 		}
 	}
 
 	for i := threadID % w.cfg.Threads; i < w.cfg.Warehouses; i += w.cfg.Threads {
 		warehouse := i%w.cfg.Warehouses + 1
-		for i := 0; i < len(checks); i++ {
-			fmt.Printf("begin to check warehouse %d at check %d\n", warehouse, i+1)
-			if err := checks[i](ctx, warehouse); err != nil {
-				return fmt.Errorf("check condition %d failed %v", i+1, err)
+		for conditionIdx, check := range checks {
+			fmt.Printf("begin to check warehouse %d at condition %s\n", warehouse, conditionIdx)
+			if err := check(ctx, warehouse); err != nil {
+				return fmt.Errorf("check warehouse %d at condition %s failed %v", warehouse, conditionIdx, err)
 			}
 		}
 	}

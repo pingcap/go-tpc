@@ -1,9 +1,10 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/pingcap/go-tpc/tpch"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 var tpchConfig tpch.Config

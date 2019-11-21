@@ -15,8 +15,10 @@ const stateKey = contextKey("tpch")
 
 // Config is the configuration for tpch workload
 type Config struct {
-	RawQueries string
-	QueryNames []string
+	RawQueries        string
+	QueryNames        []string
+	ScaleFactor       int
+	EnableOutputCheck bool
 }
 
 type tpchState struct {
@@ -87,8 +89,10 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 		return fmt.Errorf("execute %s failed %v", queryName, err)
 	}
 
-	if err := w.checkQueryResult(queryName, rows); err != nil {
-		return fmt.Errorf("check %s failed %v", queryName, err)
+	if w.cfg.ScaleFactor == 1 && w.cfg.EnableOutputCheck {
+		if err := w.checkQueryResult(queryName, rows); err != nil {
+			return fmt.Errorf("check %s failed %v", queryName, err)
+		}
 	}
 	return nil
 }
@@ -99,10 +103,4 @@ func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
 
 func (w Workloader) Check(ctx context.Context, threadID int) error {
 	panic("implement me")
-}
-
-func (w Workloader) checkQueryResult(queryName string, rows *sql.Rows) error {
-	// TODO
-	defer rows.Close()
-	return nil
 }

@@ -1,101 +1,101 @@
-s_name                   |numwait               
-Supplier#000002829       |                    20
-Supplier#000005808       |                    18
-Supplier#000000262       |                    17
-Supplier#000000496       |                    17
-Supplier#000002160       |                    17
-Supplier#000002301       |                    17
-Supplier#000002540       |                    17
-Supplier#000003063       |                    17
-Supplier#000005178       |                    17
-Supplier#000008331       |                    17
-Supplier#000002005       |                    16
-Supplier#000002095       |                    16
-Supplier#000005799       |                    16
-Supplier#000005842       |                    16
-Supplier#000006450       |                    16
-Supplier#000006939       |                    16
-Supplier#000009200       |                    16
-Supplier#000009727       |                    16
-Supplier#000000486       |                    15
-Supplier#000000565       |                    15
-Supplier#000001046       |                    15
-Supplier#000001047       |                    15
-Supplier#000001161       |                    15
-Supplier#000001336       |                    15
-Supplier#000001435       |                    15
-Supplier#000003075       |                    15
-Supplier#000003335       |                    15
-Supplier#000005649       |                    15
-Supplier#000006027       |                    15
-Supplier#000006795       |                    15
-Supplier#000006800       |                    15
-Supplier#000006824       |                    15
-Supplier#000007131       |                    15
-Supplier#000007382       |                    15
-Supplier#000008913       |                    15
-Supplier#000009787       |                    15
-Supplier#000000633       |                    14
-Supplier#000001960       |                    14
-Supplier#000002323       |                    14
-Supplier#000002490       |                    14
-Supplier#000002993       |                    14
-Supplier#000003101       |                    14
-Supplier#000004489       |                    14
-Supplier#000005435       |                    14
-Supplier#000005583       |                    14
-Supplier#000005774       |                    14
-Supplier#000007579       |                    14
-Supplier#000008180       |                    14
-Supplier#000008695       |                    14
-Supplier#000009224       |                    14
-Supplier#000000357       |                    13
-Supplier#000000436       |                    13
-Supplier#000000610       |                    13
-Supplier#000000788       |                    13
-Supplier#000000889       |                    13
-Supplier#000001062       |                    13
-Supplier#000001498       |                    13
-Supplier#000002056       |                    13
-Supplier#000002312       |                    13
-Supplier#000002344       |                    13
-Supplier#000002596       |                    13
-Supplier#000002615       |                    13
-Supplier#000002978       |                    13
-Supplier#000003048       |                    13
-Supplier#000003234       |                    13
-Supplier#000003727       |                    13
-Supplier#000003806       |                    13
-Supplier#000004472       |                    13
-Supplier#000005236       |                    13
-Supplier#000005906       |                    13
-Supplier#000006241       |                    13
-Supplier#000006326       |                    13
-Supplier#000006384       |                    13
-Supplier#000006394       |                    13
-Supplier#000006624       |                    13
-Supplier#000006629       |                    13
-Supplier#000006682       |                    13
-Supplier#000006737       |                    13
-Supplier#000006825       |                    13
-Supplier#000007021       |                    13
-Supplier#000007417       |                    13
-Supplier#000007497       |                    13
-Supplier#000007602       |                    13
-Supplier#000008134       |                    13
-Supplier#000008234       |                    13
-Supplier#000009435       |                    13
-Supplier#000009436       |                    13
-Supplier#000009564       |                    13
-Supplier#000009896       |                    13
-Supplier#000000379       |                    12
-Supplier#000000673       |                    12
-Supplier#000000762       |                    12
-Supplier#000000811       |                    12
-Supplier#000000821       |                    12
-Supplier#000001337       |                    12
-Supplier#000001916       |                    12
-Supplier#000001925       |                    12
-Supplier#000002039       |                    12
-Supplier#000002357       |                    12
-Supplier#000002483       |                    12
+s_name|numwait
+Supplier#000000699|19
+Supplier#000001543|19
+Supplier#000007696|19
+Supplier#000009689|19
+Supplier#000002701|17
+Supplier#000005892|17
+Supplier#000005912|17
+Supplier#000009367|17
+Supplier#000000966|16
+Supplier#000000967|16
+Supplier#000003408|16
+Supplier#000004069|16
+Supplier#000004809|16
+Supplier#000005081|16
+Supplier#000006966|16
+Supplier#000007317|16
+Supplier#000007624|16
+Supplier#000008182|16
+Supplier#000008963|16
+Supplier#000009774|16
+Supplier#000009946|16
+Supplier#000001513|15
+Supplier#000001846|15
+Supplier#000002284|15
+Supplier#000003206|15
+Supplier#000004012|15
+Supplier#000005111|15
+Supplier#000005417|15
+Supplier#000005958|15
+Supplier#000006063|15
+Supplier#000006663|15
+Supplier#000007331|15
+Supplier#000008425|15
+Supplier#000009500|15
+Supplier#000000133|14
+Supplier#000000160|14
+Supplier#000001374|14
+Supplier#000001485|14
+Supplier#000001535|14
+Supplier#000001796|14
+Supplier#000002016|14
+Supplier#000002255|14
+Supplier#000002360|14
+Supplier#000002884|14
+Supplier#000003945|14
+Supplier#000004264|14
+Supplier#000005437|14
+Supplier#000006134|14
+Supplier#000006743|14
+Supplier#000006837|14
+Supplier#000006988|14
+Supplier#000007831|14
+Supplier#000008129|14
+Supplier#000008439|14
+Supplier#000008653|14
+Supplier#000009269|14
+Supplier#000009595|14
+Supplier#000009674|14
+Supplier#000000208|13
+Supplier#000000994|13
+Supplier#000001155|13
+Supplier#000002276|13
+Supplier#000002619|13
+Supplier#000002984|13
+Supplier#000003762|13
+Supplier#000004378|13
+Supplier#000004423|13
+Supplier#000004439|13
+Supplier#000004559|13
+Supplier#000005512|13
+Supplier#000005902|13
+Supplier#000006060|13
+Supplier#000006818|13
+Supplier#000007076|13
+Supplier#000007256|13
+Supplier#000007485|13
+Supplier#000008558|13
+Supplier#000009280|13
+Supplier#000009533|13
+Supplier#000000022|12
+Supplier#000000111|12
+Supplier#000000227|12
+Supplier#000000502|12
+Supplier#000000655|12
+Supplier#000000856|12
+Supplier#000001041|12
+Supplier#000001116|12
+Supplier#000002067|12
+Supplier#000002120|12
+Supplier#000002376|12
+Supplier#000002424|12
+Supplier#000003074|12
+Supplier#000003186|12
+Supplier#000003334|12
+Supplier#000003344|12
+Supplier#000003409|12
+Supplier#000003760|12
+Supplier#000004084|12
+Supplier#000004444|12
+Supplier#000004688|12

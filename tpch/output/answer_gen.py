@@ -8,15 +8,15 @@ if __name__ == "__main__":
         output += f"""var q{i}a = [][]string{{"""
         with open(f"output/q{i}.out", "r") as infile:
             line = infile.readline()
-            line = infile.readline()
+            line = infile.readline().rstrip('\r\n')
             while line:
-                columns = list(map(lambda column: f"\"{column.strip()}\"", line.split("|")))
+                columns = list(map(lambda column: f"`{column}`", line.split("|")))
                 max_columns = max(max_columns, len(columns))
 
                 l = ", ".join(columns)
                 output = f"""{output}
     {{{l}}},"""
-                line = infile.readline()
+                line = infile.readline().rstrip('\r\n')
         output = f"""{output}}}
 """
 

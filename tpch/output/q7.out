@@ -1,5 +1,5 @@
-supp_nation              |cust_nation              |l_year              |revenue                                  
-FRANCE                   |GERMANY                  |                1995|54639732.73
-FRANCE                   |GERMANY                  |                1996|54633083.31
-GERMANY                  |FRANCE                   |                1995|52531746.67
-GERMANY                  |FRANCE                   |                1996|52520549.02
+supp_nation|cust_nation|l_year|revenue
+INDIA|JAPAN|1995|54055321.9218
+INDIA|JAPAN|1996|58259567.0850
+JAPAN|INDIA|1995|50588811.3080
+JAPAN|INDIA|1996|51211533.1035

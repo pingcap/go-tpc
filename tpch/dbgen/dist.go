@@ -49,7 +49,7 @@ func readDist(name string, d *distribution) {
 	}
 }
 
-func LoadDists() {
+func initDists() {
 	readDist("p_cntr", &pCntrSet)
 	readDist("colors", &colors)
 	readDist("p_types", &pTypesSet)

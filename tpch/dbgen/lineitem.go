@@ -57,6 +57,6 @@ func sdLineItem(child table, skipCount dssHuge) {
 	}
 }
 
-func init() {
+func initLineItem() {
 	L_PKEY_MAX = tDefs[PART].base * scale
 }

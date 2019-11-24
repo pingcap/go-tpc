@@ -160,9 +160,7 @@ func genTable(n table, start, count dssHuge) error {
 func sdNull(child table, skipCount dssHuge) {
 }
 
-func init() {
-	LoadDists()
-
+func initTDefs() {
 	tDefs = []tDef{
 		{"part.tbl", "part table", 200000, sdPart, PSUPP, 0},
 		{"partsupp.tbl", "partsupplier table", 200000, sdPsupp, NONE, 0},
@@ -175,4 +173,15 @@ func init() {
 		{"nation.tbl", "nation table", dssHuge(nations.count), sdNull, NONE, 0},
 		{"region.tbl", "region table", dssHuge(regions.count), sdNull, NONE, 0},
 	}
+}
+
+func initDriver(sc int) {
+	scale = dssHuge(sc)
+	initSeeds()
+	initDists()
+	initTextPool()
+
+	initTDefs()
+	initOrder()
+	initLineItem()
 }

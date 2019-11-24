@@ -9,7 +9,7 @@ type Dist []Item
 
 var Maps = make(map[string]Dist)
 
-func init() {
+var _ = func() error {
 	Maps["category"] = []Item{
 		{
 			"FURNITURE",
@@ -2486,5 +2486,6 @@ func init() {
 			40,
 		},
 	}
-}
+	return nil
+}()
 

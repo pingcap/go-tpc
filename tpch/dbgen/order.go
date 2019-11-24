@@ -47,7 +47,7 @@ func makeOrder(idx dssHuge) *Order {
 	if scale >= 30000 {
 		order.custKey = random64(ockeyMin, ockeyMax, O_CKEY_SD)
 	} else {
-		order.custKey = random(ockeyMin, ockeyMin, O_CKEY_SD)
+		order.custKey = random(ockeyMin, ockeyMax, O_CKEY_SD)
 	}
 
 	// Comment: Orders are not present for all customers.
@@ -133,9 +133,9 @@ func makeOrder(idx dssHuge) *Order {
 	return order
 }
 
-func init() {
+func initOrder() {
 	ockeyMin = 1
-	ockeyMax = 1
+	ockeyMax = tDefs[CUST].base * scale
 	ascDate = makeAscDate()
 	odateMin = STARTDATE
 	odateMax = STARTDATE + TOTDATE - (L_SDTE_MAX + L_RDTE_MAX) - 1

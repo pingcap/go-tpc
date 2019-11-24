@@ -131,7 +131,7 @@ func advanceStream(nStream int, nCalls dssHuge, bUse64Bit bool) {
 	}
 }
 
-func init() {
+func initSeeds() {
 	seeds = [maxStream + 1]Seed{
 		{PART, 1, 0, 1},
 		{PART, 46831694, 0, 1},

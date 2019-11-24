@@ -36,7 +36,7 @@ type Dist []Item
 
 var Maps = make(map[string]Dist)
 
-func init() {"""
+var _ = func() error {"""
 
     for key, value in records.items():
         output += f"""
@@ -52,7 +52,8 @@ func init() {"""
 	}"""
 
     output += """
-}
+	return nil
+}()
 """
 
     print(output)

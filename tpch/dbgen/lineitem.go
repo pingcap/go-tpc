@@ -44,8 +44,17 @@ func (l LineItem) loader() error {
 	panic("implement me")
 }
 
-func sdLineItem(child table, skipCount dssHuge) long {
-	panic("implement me")
+func sdLineItem(child table, skipCount dssHuge) {
+	for j := 0; j < O_LCNT_MAX; j++ {
+		for i := L_QTY_SD; i <= L_RFLG_SD; i++ {
+			advanceStream(i, skipCount, false)
+		}
+		advanceStream(L_CMNT_SD, skipCount*2, false)
+	}
+	if child == PSUPP {
+		advanceStream(O_ODATE_SD, skipCount, false)
+		advanceStream(O_LCNT_SD, skipCount, false)
+	}
 }
 
 func init() {

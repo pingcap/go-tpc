@@ -1,18 +1,31 @@
 package dbgen
 
+import "github.com/pingcap/go-tpc/tpch/dbgen/dist"
+
 var (
-	nations      *distribution
-	nations2     *distribution
-	regions      *distribution
-	oPrioritySet *distribution
-	lInstructSet *distribution
-	lSmodeSet    *distribution
-	lCategorySet *distribution
-	lRflagSet    *distribution
-	cMsegSet     *distribution
-	colors       *distribution
-	pTypesSet    *distribution
-	pCntrSet     *distribution
+	nations      distribution
+	nations2     distribution
+	regions      distribution
+	oPrioritySet distribution
+	lInstructSet distribution
+	lSmodeSet    distribution
+	lCategorySet distribution
+	lRflagSet    distribution
+	cMsegSet     distribution
+	colors       distribution
+	pTypesSet    distribution
+	pCntrSet     distribution
+	articles     distribution
+	nouns        distribution
+	adjectives   distribution
+	adverbs      distribution
+	prepositions distribution
+	verbs        distribution
+	terminators  distribution
+	auxillaries  distribution
+	np           distribution
+	vp           distribution
+	grammar      distribution
 )
 
 type setMember struct {
@@ -22,11 +35,41 @@ type setMember struct {
 
 type distribution struct {
 	count   int
-	max     int
+	max     int32
 	members []setMember
 	permute []long
 }
 
-func init() {
+func readDist(name string, d *distribution) {
+	dist := dist.Maps[name]
+	d.count = len(dist)
+	for _, item := range dist {
+		d.max += item.Weight
+		d.members = append(d.members, setMember{text: item.Text, weight: long(d.max)})
+	}
+}
 
+func LoadDists() {
+	readDist("p_cntr", &pCntrSet)
+	readDist("colors", &colors)
+	readDist("p_types", &pTypesSet)
+	readDist("nations", &nations)
+	readDist("regions", &regions)
+	readDist("o_oprio", &oPrioritySet)
+	readDist("instruct", &lInstructSet)
+	readDist("smode", &lSmodeSet)
+	readDist("category", &lCategorySet)
+	readDist("rflag", &lRflagSet)
+	readDist("msegmnt", &cMsegSet)
+	readDist("nouns", &nouns)
+	readDist("verbs", &verbs)
+	readDist("adjectives", &adjectives)
+	readDist("adverbs", &adverbs)
+	readDist("auxillaries", &auxillaries)
+	readDist("terminators", &terminators)
+	readDist("articles", &articles)
+	readDist("prepositions", &prepositions)
+	readDist("grammar", &grammar)
+	readDist("np", &np)
+	readDist("vp", &vp)
 }

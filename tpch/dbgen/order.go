@@ -30,8 +30,14 @@ func (o Order) loader() error {
 	panic("implement me")
 }
 
-func sdOrder(child table, skipCount dssHuge) long {
-	panic("implement me")
+func sdOrder(child table, skipCount dssHuge) {
+	advanceStream(O_LCNT_SD, skipCount, false)
+	advanceStream(O_CKEY_SD, skipCount, false)
+	advanceStream(O_CMNT_SD, skipCount*2, false)
+	advanceStream(O_SUPP_SD, skipCount, false)
+	advanceStream(O_CLRK_SD, skipCount, false)
+	advanceStream(O_PRIO_SD, skipCount, false)
+	advanceStream(O_ODATE_SD, skipCount, false)
 }
 
 func makeOrder(idx dssHuge) *Order {
@@ -54,7 +60,7 @@ func makeOrder(idx dssHuge) *Order {
 	}
 	tmpDate := random(odateMin, odateMax, O_ODATE_SD)
 	order.date = ascDate[tmpDate-STARTDATE]
-	order.orderPriority = pickStr(oPrioritySet, O_PRIO_SD)
+	pickStr(&oPrioritySet, O_PRIO_SD, &order.orderPriority)
 	order.clerk = pickClerk()
 	order.comment = makeText(O_CMNT_LEN, O_CMNT_SD)
 	order.shipPriority = 0
@@ -71,8 +77,8 @@ func makeOrder(idx dssHuge) *Order {
 		line.discount = random(L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD)
 		line.tax = random(L_TAX_MIN, L_TAX_MAX, L_TAX_SD)
 
-		line.shipInstruct = pickStr(lInstructSet, L_SHIP_SD)
-		line.shipMode = pickStr(lSmodeSet, L_SMODE_SD)
+		pickStr(&lInstructSet, L_SHIP_SD, &line.shipInstruct)
+		pickStr(&lSmodeSet, L_SMODE_SD, &line.shipMode)
 		line.comment = makeText(L_CMNT_LEN, L_CMNT_SD)
 
 		if scale > 30000 {
@@ -102,7 +108,8 @@ func makeOrder(idx dssHuge) *Order {
 		line.rDate = ascDate[rDate-STARTDATE]
 
 		if julian(long(rDate)) <= CURRENTDATE {
-			tmpStr := pickStr(lRflagSet, L_RFLG_SD)
+			var tmpStr string
+			pickStr(&lRflagSet, L_RFLG_SD, &tmpStr)
 			line.rFlag = tmpStr[0]
 		} else {
 			line.rFlag = "N"[0]

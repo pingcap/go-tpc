@@ -10,6 +10,7 @@ const (
 	R_CMNT_LEN  = 72
 	R_CMNT_MAX  = 152
 	MONEY_SCL   = 0.01
+	V_STR_LOW   = 0.4
 	V_STR_HGH   = 1.6
 	P_NAME_LEN  = 55
 	P_MFG_LEN   = 25
@@ -56,50 +57,57 @@ const (
 )
 
 const (
-	P_MFG_SD = iota
-	P_BRND_SD
-	P_TYPE_SD
-	P_SIZE_SD
-	P_CNTR_SD
-	P_RCST_SD
-	PS_QTY_SD
-	PS_SCST_SD
-	O_SUPP_SD
-	O_CLRK_SD
-	O_ODATE_SD
-	L_QTY_SD
-	L_DCNT_SD
-	L_TAX_SD
-	L_SHIP_SD
-	L_SMODE_SD
-	L_PKEY_SD
-	L_SKEY_SD
-	L_SDTE_SD
-	L_CDTE_SD
-	L_RDTE_SD
-	L_RFLG_SD
-	C_NTRG_SD
-	C_PHNE_SD
-	C_ABAL_SD
-	C_MSEG_SD
-	S_NTRG_SD
-	S_PHNE_SD
-	S_ABAL_SD
-	P_NAME_SD
-	O_PRIO_SD
-	HVAR_SD
-	O_CKEY_SD
-	N_CMNT_SD
-	R_CMNT_SD
-	O_LCNT_SD
-	BBB_JNK_SD
-	BBB_TYPE_SD
-	BBB_CMNT_SD
-	BBB_OFFSET_SD7
+	P_MFG_SD      = 0
+	P_BRND_SD     = 1
+	P_TYPE_SD     = 2
+	P_SIZE_SD     = 3
+	P_CNTR_SD     = 4
+	P_RCST_SD     = 5
+	PS_QTY_SD     = 7
+	PS_SCST_SD    = 8
+	O_SUPP_SD     = 10
+	O_CLRK_SD     = 11
+	O_ODATE_SD    = 13
+	L_QTY_SD      = 14
+	L_DCNT_SD     = 15
+	L_TAX_SD      = 16
+	L_SHIP_SD     = 17
+	L_SMODE_SD    = 18
+	L_PKEY_SD     = 19
+	L_SKEY_SD     = 20
+	L_SDTE_SD     = 21
+	L_CDTE_SD     = 22
+	L_RDTE_SD     = 23
+	L_RFLG_SD     = 24
+	C_NTRG_SD     = 27
+	C_PHNE_SD     = 28
+	C_ABAL_SD     = 29
+	C_MSEG_SD     = 30
+	S_NTRG_SD     = 33
+	S_PHNE_SD     = 34
+	S_ABAL_SD     = 35
+	P_NAME_SD     = 37
+	O_PRIO_SD     = 38
+	HVAR_SD       = 39
+	O_CKEY_SD     = 40
+	N_CMNT_SD     = 41
+	R_CMNT_SD     = 42
+	O_LCNT_SD     = 43
+	BBB_JNK_SD    = 44
+	BBB_TYPE_SD   = 45
+	BBB_CMNT_SD   = 46
+	BBB_OFFSET_SD = 47
 )
 
 const (
-	PENNIES = 100
+	PENNIES       = 100
+	SUPP_PER_PART = 4
+)
+
+const (
+	O_CLRK_TAG = "Clerk#"
+	O_CLRK_FMT = "%%s%%0%d%s"
+	O_CLRK_SCL = 1000
 )
 
 var (
@@ -110,7 +118,7 @@ type tDef struct {
 	name    string
 	comment string
 	base    dssHuge
-	genSeed func(table, dssHuge) long
+	genSeed func(table, dssHuge)
 	child   table
 	vTotal  dssHuge
 }
@@ -146,9 +154,15 @@ func genTable(n table, start, count dssHuge) error {
 			//	d.makeRegion(i)
 		}
 	}
+	return nil
+}
+
+func sdNull(child table, skipCount dssHuge) {
 }
 
 func init() {
+	LoadDists()
+
 	tDefs = []tDef{
 		{"part.tbl", "part table", 200000, sdPart, PSUPP, 0},
 		{"partsupp.tbl", "partsupplier table", 200000, sdPsupp, NONE, 0},
@@ -158,7 +172,7 @@ func init() {
 		{"lineitem.tbl", "lineitem table", 150000, sdLineItem, NONE, 0},
 		{"orders.tbl", "orders/lineitem tables", 150000, sdOrder, LINE, 0},
 		{"part.tbl", "part/partsupplier tables", 200000, sdPart, PSUPP, 0},
-		{"nation.tbl", "nation table", 90, sdNull, NONE, 0},
-		{"region.tbl", "region table", 90, sdNull, NONE, 0},
+		{"nation.tbl", "nation table", dssHuge(nations.count), sdNull, NONE, 0},
+		{"region.tbl", "region table", dssHuge(regions.count), sdNull, NONE, 0},
 	}
 }

@@ -131,6 +131,26 @@ func advanceStream(nStream int, nCalls dssHuge, bUse64Bit bool) {
 	}
 }
 
+func rowStart(_ table) {
+	for i := 0; i < maxStream; i++ {
+		seeds[i].usage = 0
+	}
+}
+func rowStop(t table) {
+	if t == ORDER_LINE {
+		t = ORDER
+	}
+	if t == PART_PSUPP {
+		t = PART
+	}
+
+	for i := 0; i < maxStream; i++ {
+		if seeds[i].table == t || seeds[i].table == tDefs[t].child {
+			nthElement(seeds[i].boundary-seeds[i].usage, &seeds[i].value)
+		}
+	}
+}
+
 func initSeeds() {
 	seeds = [maxStream + 1]Seed{
 		{PART, 1, 0, 1},

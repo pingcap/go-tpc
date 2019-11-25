@@ -152,7 +152,10 @@ func makeText(avg, sd int) string {
 }
 
 func rpbRoutine(p dssHuge) dssHuge {
-	panic("implement me")
+	price := dssHuge(90000)
+	price += (p / 10) % 20001
+	price += (p % 1000) * 100
+	return price
 }
 
 func min(a, b dssHuge) dssHuge {
@@ -168,8 +171,30 @@ func max(a, b dssHuge) dssHuge {
 	return b
 }
 
-func julian(date long) long {
-	panic("implement me")
+func yeap(year int) int {
+	if (year%4 == 0) && (year%100 != 0) {
+		return 1
+	}
+	return 0
+}
+
+func julian(date int) int {
+	offset := date - STARTDATE
+	result := STARTDATE
+
+	for true {
+		yr := result / 1000
+		yend := yr*1000 + 365 + yeap(yr)
+
+		if result+offset > yend {
+			offset -= yend - result + 1
+			result += 1000
+			continue
+		} else {
+			break
+		}
+	}
+	return result + offset
 }
 
 func initTextPool() {

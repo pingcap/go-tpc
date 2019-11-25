@@ -2,7 +2,7 @@ package dbgen
 
 type table int
 type dssHuge int64
-type long int32
+type long int64
 
 const (
 	N_CMNT_LEN  = 72
@@ -126,9 +126,10 @@ type tDef struct {
 var tDefs []tDef
 
 // GenData generate data
-func genTable(n table, start, count dssHuge) error {
+func genTable(tnum table, start, count dssHuge) error {
 	for i := start; i < start+count; i++ {
-		switch n {
+		rowStart(tnum)
+		switch tnum {
 		case LINE:
 			fallthrough
 		case ORDER:
@@ -153,6 +154,7 @@ func genTable(n table, start, count dssHuge) error {
 			//case REGION:
 			//	d.makeRegion(i)
 		}
+		rowStop(tnum)
 	}
 	return nil
 }

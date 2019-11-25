@@ -1,5 +1,10 @@
 package dbgen
 
+import (
+	"fmt"
+	"os"
+)
+
 const (
 	O_LCNT_MIN = 1
 	O_LCNT_MAX = 7
@@ -16,7 +21,7 @@ var (
 type Order struct {
 	oKey          dssHuge
 	custKey       dssHuge
-	status        string
+	status        byte
 	totalPrice    dssHuge
 	date          string
 	orderPriority string
@@ -26,8 +31,30 @@ type Order struct {
 	lines         []LineItem
 }
 
+var orderLoader = func(o *Order) error {
+	f, err := os.OpenFile(tDefs[ORDER].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.WriteString(
+		fmt.Sprintf("%d|%d|%c|%d.%02d|%s|%s|%s|%d|%s|\n",
+			o.oKey,
+			o.custKey,
+			o.status,
+			o.totalPrice/100, o.totalPrice%100,
+			o.date,
+			o.orderPriority,
+			o.clerk,
+			o.shipPriority,
+			o.comment)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (o Order) loader() error {
-	panic("implement me")
+	return orderLoader(&o)
 }
 
 func sdOrder(child table, skipCount dssHuge) {
@@ -65,7 +92,7 @@ func makeOrder(idx dssHuge) *Order {
 	order.comment = makeText(O_CMNT_LEN, O_CMNT_SD)
 	order.shipPriority = 0
 	order.totalPrice = 0
-	order.status = "O"
+	order.status = 'O'
 	oCnt := 0
 	lineCount := random(O_LCNT_MIN, O_LCNT_MAX, O_LCNT_SD)
 
@@ -95,6 +122,11 @@ func makeOrder(idx dssHuge) *Order {
 		order.totalPrice += ((line.ePrice * (100 - line.discount)) / PENNIES) *
 			(100 + line.tax) / PENNIES
 
+		//fmt.Printf(
+		//	"o->lines:%d,partKey:%d,supp_num:%d,o->l[lcnt].suppkey:%d,o->l[lcnt].quantity:%d,o->totalprice:%d\n",
+		//	len(order.lines),line.partKey, suppNum, line.suppKey, line.quantity,
+		//	order.totalPrice)
+
 		sDate := random(L_SDTE_MIN, L_SDTE_MAX, L_SDTE_SD)
 		sDate += tmpDate
 
@@ -107,7 +139,7 @@ func makeOrder(idx dssHuge) *Order {
 		line.cDate = ascDate[cDate-STARTDATE]
 		line.rDate = ascDate[rDate-STARTDATE]
 
-		if julian(long(rDate)) <= CURRENTDATE {
+		if julian(int(rDate)) <= CURRENTDATE {
 			var tmpStr string
 			pickStr(&lRflagSet, L_RFLG_SD, &tmpStr)
 			line.rFlag = tmpStr[0]
@@ -115,7 +147,7 @@ func makeOrder(idx dssHuge) *Order {
 			line.rFlag = "N"[0]
 		}
 
-		if julian(long(sDate)) <= CURRENTDATE {
+		if julian(int(sDate)) <= CURRENTDATE {
 			oCnt++
 			line.lStatus = "F"[0]
 		} else {
@@ -125,9 +157,10 @@ func makeOrder(idx dssHuge) *Order {
 		order.lines = append(order.lines, line)
 	}
 	if oCnt > 0 {
-		order.status = "P"
-	} else {
-		order.status = "F"
+		order.status = 'P'
+	}
+	if oCnt == len(order.lines) {
+		order.status = 'F'
 	}
 
 	return order

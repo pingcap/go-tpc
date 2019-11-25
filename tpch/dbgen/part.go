@@ -14,6 +14,7 @@ func sdPart(child table, skipCount dssHuge) {
 	advanceStream(P_NAME_SD, skipCount*92, false)
 }
 
-func partSuppBridge(idx, s dssHuge) dssHuge {
-	panic("implement me")
+func partSuppBridge(p, s dssHuge) dssHuge {
+	totScnt := tDefs[SUPP].base * scale
+	return (p+s*(totScnt/SUPP_PER_PART+((p-1)/totScnt)))%totScnt + 1
 }

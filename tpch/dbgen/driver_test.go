@@ -61,7 +61,7 @@ var expectLines = `1|155190|7706|1|17|21168.23|0.04|0.02|N|O|1996-03-13|1996-02-
 34|169544|4577|3|6|9681.24|0.02|0.06|N|O|1998-10-30|1998-09-20|1998-11-05|NONE|FOB|ar foxes sleep |
 `
 
-var gotSuppBuf bytes.Buffer
+var gotSuppsBuf bytes.Buffer
 var expectSupps = `1|Supplier#000000001| N kD4on9OM Ipw3,gf0JBoQDd7tgrzrddZ|17|27-918-335-1736|5755.94|each slyly above the careful|
 2|Supplier#000000002|89eJ5ksX3ImxJQBvxObC,|5|15-679-861-2259|4032.68| slyly bold instructions. idle dependen|
 3|Supplier#000000003|q1,G3Pj6OjIuUYfUoH18BFTKP5aU9bEV3|1|11-383-516-1199|4192.40|blithely silent requests after the express dependencies are sl|
@@ -72,6 +72,19 @@ var expectSupps = `1|Supplier#000000001| N kD4on9OM Ipw3,gf0JBoQDd7tgrzrddZ|17|2
 8|Supplier#000000008|9Sq4bBH2FQEmaFOocY45sRTxo6yuoG|17|27-498-742-3860|7627.85|al pinto beans. asymptotes haggl|
 9|Supplier#000000009|1KhUgZegwM3ua7dsYmekYBsK|10|20-403-398-8662|5302.37|s. unusual, even requests along the furiously regular pac|
 10|Supplier#000000010|Saygah3gYWMp72i PY|24|34-852-489-8585|3891.91|ing waters. regular requests ar|
+`
+
+var gotCustsBuf bytes.Buffer
+var expectCusts = `1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-989-741-2988|711.56|BUILDING|to the even, regular platelets. regular, ironic epitaphs nag e|
+2|Customer#000000002|XSTf4,NCwDVaWNe6tEgvwfmRchLXak|13|23-768-687-3665|121.65|AUTOMOBILE|l accounts. blithely ironic theodolites integrate boldly: caref|
+3|Customer#000000003|MG9kdTD2WBHm|1|11-719-748-3364|7498.12|AUTOMOBILE| deposits eat slyly ironic, even instructions. express foxes detect slyly. blithely even accounts abov|
+4|Customer#000000004|XxVSJsLAGtn|4|14-128-190-5944|2866.83|MACHINERY| requests. final, regular ideas sleep final accou|
+5|Customer#000000005|KvpyuHCplrB84WgAiGV6sYpZq7Tj|3|13-750-942-6364|794.47|HOUSEHOLD|n accounts will have to unwind. foxes cajole accor|
+6|Customer#000000006|sKZz0CsnMD7mp4Xd0YrBvx,LREYKUWAh yVn|20|30-114-968-4951|7638.57|AUTOMOBILE|tions. even deposits boost according to the slyly bold packages. final accounts cajole requests. furious|
+7|Customer#000000007|TcGe5gaZNgVePxU5kRrvXBfkasDTea|18|28-190-982-9759|9561.95|AUTOMOBILE|ainst the ironic, express theodolites. express, even pinto beans among the exp|
+8|Customer#000000008|I0B10bB0AymmC, 0PrRYBCP1yGJ8xcBPmWhl5|17|27-147-574-9335|6819.74|BUILDING|among the slyly regular theodolites kindle blithely courts. carefully even theodolites haggle slyly along the ide|
+9|Customer#000000009|xKiAFTjUsCuxfeleNqefumTrjS|8|18-338-906-3675|8324.07|FURNITURE|r theodolites according to the requests wake thinly excuses: pending requests haggle furiousl|
+10|Customer#000000010|6LrEaV6KR6PLVcgl2ArL Q3rqzLzcT1 v2|5|15-741-346-9870|2753.54|HOUSEHOLD|es regular deposits haggle. fur|
 `
 
 func TestMain(m *testing.M) {
@@ -124,7 +137,7 @@ func TestMain(m *testing.M) {
 
 	testSuppLoader := func(supp interface{}) error {
 		s := supp.(*Supp)
-		if _, err := gotSuppBuf.WriteString(
+		if _, err := gotSuppsBuf.WriteString(
 			fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|\n",
 				s.suppKey,
 				s.name,
@@ -138,9 +151,27 @@ func TestMain(m *testing.M) {
 		return nil
 	}
 
+	testCustLoader := func(cust interface{}) error {
+		c := cust.(*Cust)
+		if _, err := gotCustsBuf.WriteString(
+			fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|%s|\n",
+				c.custKey,
+				c.name,
+				c.address,
+				c.nationCode,
+				c.phone,
+				fmtMoney(c.acctbal),
+				c.mktSegment,
+				c.comment)); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	*orderLoader = testOrderLoader
 	*lineItemLoader = testLineLoader
 	*suppLoader = testSuppLoader
+	*custLoader = testCustLoader
 	os.Exit(m.Run())
 }
 
@@ -183,8 +214,17 @@ func TestGenOrderLine(t *testing.T) {
 func TestGenSupp(t *testing.T) {
 	genTable(SUPP, 1, 10)
 
-	gotSupp := gotSuppBuf.String()
+	gotSupp := gotSuppsBuf.String()
 	if gotSupp != expectSupps {
 		t.Errorf("expect:\n%s\ngot:\n%s", expectSupps, gotSupp)
+	}
+}
+
+func TestGenCust(t *testing.T) {
+	genTable(CUST, 1, 10)
+
+	gotCusts := gotCustsBuf.String()
+	if gotCusts != expectCusts {
+		t.Errorf("expect:\n%s\ngot:\n%s", gotCusts, gotCusts)
 	}
 }

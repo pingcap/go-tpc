@@ -117,6 +117,9 @@ const (
 	O_CLRK_FMT    = "%%s%%0%d%s"
 	O_CLRK_SCL    = 1000
 	NATIONS_MAX   = 90
+
+	C_ABAL_MIN = -99999
+	C_ABAL_MAX = 999999
 )
 
 var (
@@ -137,6 +140,7 @@ var tDefs []tDef
 
 // GenData generate data
 func genTable(tnum table, start, count dssHuge) error {
+	loader := *tDefs[tnum].loader
 	for i := start; i < start+count; i++ {
 		rowStart(tnum)
 		switch tnum {
@@ -146,16 +150,19 @@ func genTable(tnum table, start, count dssHuge) error {
 			fallthrough
 		case ORDER_LINE:
 			order := makeOrder(i)
-			if err := (*tDefs[tnum].loader)(order); err != nil {
+			if err := loader(order); err != nil {
 				return err
 			}
 		case SUPP:
 			supp := makeSupp(i)
-			if err := (*tDefs[tnum].loader)(supp); err != nil {
+			if err := loader(supp); err != nil {
 				return err
 			}
-			//case CUST:
-			//	d.makeCust(i)
+		case CUST:
+			cust := makeCust(i)
+			if err := loader(cust); err != nil {
+				return err
+			}
 			//case PSUPP:
 			//	fallthrough
 			//case PART:
@@ -184,7 +191,7 @@ func initTDefs() {
 		{"part.tbl", "part table", 200000, &notImplLoader, sdPart, PSUPP, 0},
 		{"partsupp.tbl", "partsupplier table", 200000, &notImplLoader, sdPsupp, NONE, 0},
 		{"supplier.tbl", "suppliers table", 10000, suppLoader, sdSupp, NONE, 0},
-		{"customer.tbl", "customers table", 150000, &notImplLoader, sdCust, NONE, 0},
+		{"customer.tbl", "customers table", 150000, custLoader, sdCust, NONE, 0},
 		{"orders.tbl", "order table", 150000, orderLoader, sdOrder, LINE, 0},
 		{"lineitem.tbl", "lineitem table", 150000, lineItemLoader, sdLineItem, NONE, 0},
 		{"orders.tbl", "orders/lineitem tables", 150000, orderLineLoader, sdOrder, LINE, 0},

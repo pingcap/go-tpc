@@ -71,7 +71,7 @@ func txtVp(sd int) string {
 		buf.WriteString(" ")
 	}
 
-	return string(buf.Bytes())
+	return buf.String()
 }
 
 func txtNp(sd int) string {
@@ -102,7 +102,7 @@ func txtNp(sd int) string {
 		buf.WriteString(" ")
 	}
 
-	return string(buf.Bytes())
+	return buf.String()
 }
 
 func txtSentence(sd int) string {
@@ -123,7 +123,7 @@ func txtSentence(sd int) string {
 			buf.WriteString(" the ")
 			buf.WriteString(txtNp(sd))
 		case 'T':
-			sentence := string(buf.Bytes())
+			sentence := buf.String()
 			sentence = sentence[0 : len(sentence)-1]
 			buf.Reset()
 			buf.WriteString(sentence)
@@ -138,7 +138,7 @@ func txtSentence(sd int) string {
 			buf.Write([]byte{item[1]})
 		}
 	}
-	return string(buf.Bytes())
+	return buf.String()
 }
 
 func makeText(avg, sd int) string {
@@ -195,6 +195,15 @@ func julian(date int) int {
 		}
 	}
 	return result + offset
+}
+
+func fmtMoney(m dssHuge) string {
+	sign := ""
+	if m < 0 {
+		sign = "-"
+		m = -m
+	}
+	return fmt.Sprintf("%s%d.%02d", sign, m/100, m%100)
 }
 
 func initTextPool() {

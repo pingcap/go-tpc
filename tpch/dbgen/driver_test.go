@@ -61,16 +61,29 @@ var expectLines = `1|155190|7706|1|17|21168.23|0.04|0.02|N|O|1996-03-13|1996-02-
 34|169544|4577|3|6|9681.24|0.02|0.06|N|O|1998-10-30|1998-09-20|1998-11-05|NONE|FOB|ar foxes sleep |
 `
 
+var gotSuppBuf bytes.Buffer
+var expectSupps = `1|Supplier#000000001| N kD4on9OM Ipw3,gf0JBoQDd7tgrzrddZ|17|27-918-335-1736|5755.94|each slyly above the careful|
+2|Supplier#000000002|89eJ5ksX3ImxJQBvxObC,|5|15-679-861-2259|4032.68| slyly bold instructions. idle dependen|
+3|Supplier#000000003|q1,G3Pj6OjIuUYfUoH18BFTKP5aU9bEV3|1|11-383-516-1199|4192.40|blithely silent requests after the express dependencies are sl|
+4|Supplier#000000004|Bk7ah4CK8SYQTepEmvMkkgMwg|15|25-843-787-7479|4641.08|riously even requests above the exp|
+5|Supplier#000000005|Gcdm2rJRzl5qlTVzc|11|21-151-690-3663|-283.84|. slyly regular pinto bea|
+6|Supplier#000000006|tQxuVm7s7CnK|14|24-696-997-4969|1365.79|final accounts. regular dolphins use against the furiously ironic decoys. |
+7|Supplier#000000007|s,4TicNGB4uO6PaSqNBUq|23|33-990-965-2201|6820.35|s unwind silently furiously regular courts. final requests are deposits. requests wake quietly blit|
+8|Supplier#000000008|9Sq4bBH2FQEmaFOocY45sRTxo6yuoG|17|27-498-742-3860|7627.85|al pinto beans. asymptotes haggl|
+9|Supplier#000000009|1KhUgZegwM3ua7dsYmekYBsK|10|20-403-398-8662|5302.37|s. unusual, even requests along the furiously regular pac|
+10|Supplier#000000010|Saygah3gYWMp72i PY|24|34-852-489-8585|3891.91|ing waters. regular requests ar|
+`
+
 func TestMain(m *testing.M) {
 	initDriver(1)
 
 	testOrderLoader := func(order interface{}) error {
 		o := order.(*Order)
-		gotOrdersBuf.WriteString(fmt.Sprintf("%d|%d|%c|%d.%02d|%s|%s|%s|%d|%s|\n",
+		gotOrdersBuf.WriteString(fmt.Sprintf("%d|%d|%c|%s|%s|%s|%s|%d|%s|\n",
 			o.oKey,
 			o.custKey,
 			o.status,
-			o.totalPrice/100, o.totalPrice%100,
+			fmtMoney(o.totalPrice),
 			o.date,
 			o.orderPriority,
 			o.clerk,
@@ -84,15 +97,15 @@ func TestMain(m *testing.M) {
 		o := order.(*Order)
 		for _, line := range o.lines {
 			if _, err := gotLinesBuf.WriteString(
-				fmt.Sprintf("%d|%d|%d|%d|%d|%d.%02d|%d.%02d|%d.%02d|%c|%c|%s|%s|%s|%s|%s|%s|\n",
+				fmt.Sprintf("%d|%d|%d|%d|%d|%s|%s|%s|%c|%c|%s|%s|%s|%s|%s|%s|\n",
 					line.oKey,
 					line.partKey,
 					line.suppKey,
 					line.lCnt,
 					line.quantity,
-					line.ePrice/100, line.ePrice%100,
-					line.discount/100, line.discount%100,
-					line.tax/100, line.tax%100,
+					fmtMoney(line.ePrice),
+					fmtMoney(line.discount),
+					fmtMoney(line.tax),
 					line.rFlag,
 					line.lStatus,
 					line.sDate,
@@ -109,8 +122,25 @@ func TestMain(m *testing.M) {
 		return nil
 	}
 
+	testSuppLoader := func(supp interface{}) error {
+		s := supp.(*Supp)
+		if _, err := gotSuppBuf.WriteString(
+			fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|\n",
+				s.suppKey,
+				s.name,
+				s.address,
+				s.nationCode,
+				s.phone,
+				fmtMoney(s.acctbal),
+				s.comment)); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	*orderLoader = testOrderLoader
 	*lineItemLoader = testLineLoader
+	*suppLoader = testSuppLoader
 	os.Exit(m.Run())
 }
 
@@ -119,7 +149,7 @@ func TestGenOrder(t *testing.T) {
 		t.Error(err)
 	}
 
-	gotOrders := string(gotOrdersBuf.Bytes())
+	gotOrders := gotOrdersBuf.String()
 	if gotOrders != expectOrders {
 		t.Errorf("expect:\n%s\ngot:\n%s", expectOrders, gotOrders)
 	}
@@ -130,7 +160,7 @@ func TestGenLine(t *testing.T) {
 		t.Error(err)
 	}
 
-	gotLines := string(gotLinesBuf.Bytes())
+	gotLines := gotLinesBuf.String()
 	if gotLines != expectLines {
 		t.Errorf("expect:\n%s\ngot:\n%s", expectLines, gotLines)
 	}
@@ -140,12 +170,21 @@ func TestGenOrderLine(t *testing.T) {
 	if err := genTable(ORDER_LINE, 1, 10); err != nil {
 		t.Error(err)
 	}
-	gotOrders := string(gotOrdersBuf.Bytes())
+	gotOrders := gotOrdersBuf.String()
 	if gotOrders != expectOrders {
 		t.Errorf("expect:\n%s\ngot:\n%s", expectOrders, gotOrders)
 	}
-	gotLines := string(gotLinesBuf.Bytes())
+	gotLines := gotLinesBuf.String()
 	if gotLines != expectLines {
 		t.Errorf("expect:\n%s\ngot:\n%s", expectLines, gotLines)
+	}
+}
+
+func TestGenSupp(t *testing.T) {
+	genTable(SUPP, 1, 10)
+
+	gotSupp := gotSuppBuf.String()
+	if gotSupp != expectSupps {
+		t.Errorf("expect:\n%s\ngot:\n%s", expectSupps, gotSupp)
 	}
 }

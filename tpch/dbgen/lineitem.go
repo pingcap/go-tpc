@@ -55,15 +55,15 @@ var _lineItemLoader = func(order interface{}) error {
 
 	for _, line := range o.lines {
 		if _, err := f.WriteString(
-			fmt.Sprintf("%d|%d|%d|%d|%d|%d.%02d|%d.%02d|%d.%02d|%c|%c|%s|%s|%s|%s|%s|%s|\n",
+			fmt.Sprintf("%d|%d|%d|%d|%d|%s|%s|%s|%c|%c|%s|%s|%s|%s|%s|%s|\n",
 				line.oKey,
 				line.partKey,
 				line.suppKey,
 				line.lCnt,
 				line.quantity,
-				line.ePrice/100, line.ePrice%100,
-				line.discount/100, line.discount%100,
-				line.tax/100, line.tax%100,
+				fmtMoney(line.ePrice),
+				fmtMoney(line.discount),
+				fmtMoney(line.tax),
 				line.rFlag,
 				line.lStatus,
 				line.sDate,

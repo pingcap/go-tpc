@@ -2,10 +2,6 @@ package dbgen
 
 type Part struct{}
 
-func (p Part) loader() error {
-	panic("implement me")
-}
-
 func sdPart(child table, skipCount dssHuge) {
 	for i := P_MFG_SD; i <= P_CNTR_SD; i++ {
 		advanceStream(i, skipCount, false)

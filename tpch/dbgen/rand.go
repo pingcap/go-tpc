@@ -1,6 +1,10 @@
 package dbgen
 
-import "math"
+import (
+	"bytes"
+	"fmt"
+	"math"
+)
 
 const (
 	maxStream             = 47
@@ -9,6 +13,7 @@ const (
 	MAX_LONG              = math.MaxInt32
 	BITS_PER_LONG         = 32
 	dM                    = 2147483647.0
+	alphaNum              = "0123456789abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ,"
 )
 
 var (
@@ -149,6 +154,36 @@ func rowStop(t table) {
 			nthElement(seeds[i].boundary-seeds[i].usage, &seeds[i].value)
 		}
 	}
+}
+
+func aRand(min, max, column int) string {
+	var buf bytes.Buffer
+	var charInt dssHuge
+	len := random(dssHuge(min), dssHuge(max), column)
+	for i := dssHuge(0); i < len; i++ {
+		if i%5 == 0 {
+			charInt = random(0, MAX_LONG, column)
+		}
+		buf.Write([]byte{alphaNum[charInt&0o77]})
+		charInt >>= 6
+	}
+	return buf.String()
+}
+
+func vStr(avg, sd int) string {
+	return aRand((int)(float64(avg)*V_STR_LOW), (int)(float64(avg)*V_STR_HGH), sd)
+}
+
+func genPhone(idx dssHuge, sd int) string {
+	aCode := random(100, 999, sd)
+	exChg := random(100, 999, sd)
+	number := random(1000, 9999, sd)
+
+	return fmt.Sprintf("%02d-%03d-%03d-%04d",
+		10+(idx%NATIONS_MAX),
+		aCode,
+		exChg,
+		number)
 }
 
 func initSeeds() {

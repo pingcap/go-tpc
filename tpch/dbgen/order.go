@@ -39,11 +39,11 @@ var _orderLoader = func(order interface{}) error {
 	}
 	defer f.Close()
 	if _, err := f.WriteString(
-		fmt.Sprintf("%d|%d|%c|%d.%02d|%s|%s|%s|%d|%s|\n",
+		fmt.Sprintf("%d|%d|%c|%s|%s|%s|%s|%d|%s|\n",
 			o.oKey,
 			o.custKey,
 			o.status,
-			o.totalPrice/100, o.totalPrice%100,
+			fmtMoney(o.totalPrice),
 			o.date,
 			o.orderPriority,
 			o.clerk,

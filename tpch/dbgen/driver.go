@@ -102,12 +102,21 @@ const (
 const (
 	PENNIES       = 100
 	SUPP_PER_PART = 4
-)
-
-const (
-	O_CLRK_TAG = "Clerk#"
-	O_CLRK_FMT = "%%s%%0%d%s"
-	O_CLRK_SCL = 1000
+	S_SIZE        = 145
+	S_ABAL_MIN    = -99999
+	S_ABAL_MAX    = 999999
+	S_CMNT_BBB    = 10
+	BBB_DEADBEATS = 50
+	BBB_BASE      = "Customer "
+	BBB_COMPLAIN  = "Complaints"
+	BBB_COMMEND   = "Recommends"
+	BBB_CMNT_LEN  = 19
+	BBB_BASE_LEN  = 9
+	BBB_TYPE_LEN  = 10
+	O_CLRK_TAG    = "Clerk#"
+	O_CLRK_FMT    = "%%s%%0%d%s"
+	O_CLRK_SCL    = 1000
+	NATIONS_MAX   = 90
 )
 
 var (
@@ -137,12 +146,14 @@ func genTable(tnum table, start, count dssHuge) error {
 			fallthrough
 		case ORDER_LINE:
 			order := makeOrder(i)
-			loader := *tDefs[tnum].loader
-			if err := loader(order); err != nil {
+			if err := (*tDefs[tnum].loader)(order); err != nil {
 				return err
 			}
-			//case SUPP:
-			//	d.makeSupp(i)
+		case SUPP:
+			supp := makeSupp(i)
+			if err := (*tDefs[tnum].loader)(supp); err != nil {
+				return err
+			}
 			//case CUST:
 			//	d.makeCust(i)
 			//case PSUPP:
@@ -172,7 +183,7 @@ func initTDefs() {
 	tDefs = []tDef{
 		{"part.tbl", "part table", 200000, &notImplLoader, sdPart, PSUPP, 0},
 		{"partsupp.tbl", "partsupplier table", 200000, &notImplLoader, sdPsupp, NONE, 0},
-		{"supplier.tbl", "suppliers table", 10000, &notImplLoader, sdSupp, NONE, 0},
+		{"supplier.tbl", "suppliers table", 10000, suppLoader, sdSupp, NONE, 0},
 		{"customer.tbl", "customers table", 150000, &notImplLoader, sdCust, NONE, 0},
 		{"orders.tbl", "order table", 150000, orderLoader, sdOrder, LINE, 0},
 		{"lineitem.tbl", "lineitem table", 150000, lineItemLoader, sdLineItem, NONE, 0},

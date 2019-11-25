@@ -31,7 +31,8 @@ type Order struct {
 	lines         []LineItem
 }
 
-var orderLoader = func(o *Order) error {
+var _orderLoader = func(order interface{}) error {
+	o := order.(*Order)
 	f, err := os.OpenFile(tDefs[ORDER].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -52,10 +53,7 @@ var orderLoader = func(o *Order) error {
 	}
 	return nil
 }
-
-func (o Order) loader() error {
-	return orderLoader(&o)
-}
+var orderLoader = &_orderLoader
 
 func sdOrder(child table, skipCount dssHuge) {
 	advanceStream(O_LCNT_SD, skipCount, false)
@@ -99,7 +97,7 @@ func makeOrder(idx dssHuge) *Order {
 	for lCnt := dssHuge(0); lCnt < lineCount; lCnt++ {
 		line := LineItem{}
 		line.oKey = order.oKey
-		line.lCnt = lCnt
+		line.lCnt = lCnt + 1
 		line.quantity = random(L_QTY_MIN, L_QTY_MAX, L_QTY_SD)
 		line.discount = random(L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD)
 		line.tax = random(L_TAX_MIN, L_TAX_MAX, L_TAX_SD)
@@ -121,11 +119,6 @@ func makeOrder(idx dssHuge) *Order {
 
 		order.totalPrice += ((line.ePrice * (100 - line.discount)) / PENNIES) *
 			(100 + line.tax) / PENNIES
-
-		//fmt.Printf(
-		//	"o->lines:%d,partKey:%d,supp_num:%d,o->l[lcnt].suppkey:%d,o->l[lcnt].quantity:%d,o->totalprice:%d\n",
-		//	len(order.lines),line.partKey, suppNum, line.suppKey, line.quantity,
-		//	order.totalPrice)
 
 		sDate := random(L_SDTE_MIN, L_SDTE_MAX, L_SDTE_SD)
 		sDate += tmpDate

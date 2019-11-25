@@ -1,5 +1,10 @@
 package dbgen
 
+import (
+	"fmt"
+	"os"
+)
+
 const (
 	L_SIZE     = 144
 	L_QTY_MIN  = 1
@@ -40,9 +45,42 @@ type LineItem struct {
 	comment      string
 }
 
-func (l LineItem) loader() error {
-	panic("implement me")
+var _lineItemLoader = func(order interface{}) error {
+	o := order.(*Order)
+	f, err := os.OpenFile(tDefs[LINE].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	for _, line := range o.lines {
+		if _, err := f.WriteString(
+			fmt.Sprintf("%d|%d|%d|%d|%d|%d.%02d|%d.%02d|%d.%02d|%c|%c|%s|%s|%s|%s|%s|%s|\n",
+				line.oKey,
+				line.partKey,
+				line.suppKey,
+				line.lCnt,
+				line.quantity,
+				line.ePrice/100, line.ePrice%100,
+				line.discount/100, line.discount%100,
+				line.tax/100, line.tax%100,
+				line.rFlag,
+				line.lStatus,
+				line.sDate,
+				line.cDate,
+				line.rDate,
+				line.shipInstruct,
+				line.shipMode,
+				line.comment,
+			)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
+
+var lineItemLoader = &_lineItemLoader
 
 func sdLineItem(child table, skipCount dssHuge) {
 	for j := 0; j < O_LCNT_MAX; j++ {

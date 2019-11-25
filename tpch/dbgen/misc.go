@@ -203,7 +203,6 @@ func initTextPool() {
 	for buffer.Len() < TEXT_POOL_SIZE {
 		sentence := txtSentence(5)
 		len := len(sentence)
-		//fmt.Printf("sentence: %s\n", sentence)
 
 		needed := TEXT_POOL_SIZE - buffer.Len()
 		if needed >= len+1 {

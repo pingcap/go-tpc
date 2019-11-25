@@ -118,6 +118,7 @@ type tDef struct {
 	name    string
 	comment string
 	base    dssHuge
+	loader  *func(interface{}) error
 	genSeed func(table, dssHuge)
 	child   table
 	vTotal  dssHuge
@@ -136,7 +137,8 @@ func genTable(tnum table, start, count dssHuge) error {
 			fallthrough
 		case ORDER_LINE:
 			order := makeOrder(i)
-			if err := order.loader(); err != nil {
+			loader := *tDefs[tnum].loader
+			if err := loader(order); err != nil {
 				return err
 			}
 			//case SUPP:
@@ -162,18 +164,22 @@ func genTable(tnum table, start, count dssHuge) error {
 func sdNull(child table, skipCount dssHuge) {
 }
 
+var notImplLoader = func(order interface{}) error {
+	panic("implement me")
+}
+
 func initTDefs() {
 	tDefs = []tDef{
-		{"part.tbl", "part table", 200000, sdPart, PSUPP, 0},
-		{"partsupp.tbl", "partsupplier table", 200000, sdPsupp, NONE, 0},
-		{"supplier.tbl", "suppliers table", 10000, sdSupp, NONE, 0},
-		{"customer.tbl", "customers table", 150000, sdCust, NONE, 0},
-		{"orders.tbl", "order table", 150000, sdOrder, LINE, 0},
-		{"lineitem.tbl", "lineitem table", 150000, sdLineItem, NONE, 0},
-		{"orders.tbl", "orders/lineitem tables", 150000, sdOrder, LINE, 0},
-		{"part.tbl", "part/partsupplier tables", 200000, sdPart, PSUPP, 0},
-		{"nation.tbl", "nation table", dssHuge(nations.count), sdNull, NONE, 0},
-		{"region.tbl", "region table", dssHuge(regions.count), sdNull, NONE, 0},
+		{"part.tbl", "part table", 200000, &notImplLoader, sdPart, PSUPP, 0},
+		{"partsupp.tbl", "partsupplier table", 200000, &notImplLoader, sdPsupp, NONE, 0},
+		{"supplier.tbl", "suppliers table", 10000, &notImplLoader, sdSupp, NONE, 0},
+		{"customer.tbl", "customers table", 150000, &notImplLoader, sdCust, NONE, 0},
+		{"orders.tbl", "order table", 150000, orderLoader, sdOrder, LINE, 0},
+		{"lineitem.tbl", "lineitem table", 150000, lineItemLoader, sdLineItem, NONE, 0},
+		{"orders.tbl", "orders/lineitem tables", 150000, orderLineLoader, sdOrder, LINE, 0},
+		{"part.tbl", "part/partsupplier tables", 200000, &notImplLoader, sdPart, PSUPP, 0},
+		{"nation.tbl", "nation table", dssHuge(nations.count), &notImplLoader, sdNull, NONE, 0},
+		{"region.tbl", "region table", dssHuge(regions.count), &notImplLoader, sdNull, NONE, 0},
 	}
 }
 

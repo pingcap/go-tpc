@@ -1,9 +1,5 @@
 package dbgen
 
-type Loader interface {
-	loader() error
-}
-
 const (
 	NONE       table = -1
 	PART       table = iota
@@ -19,4 +15,3 @@ const (
 	UPDATE           = 10
 	MAX_TABLE        = 1
 )
-

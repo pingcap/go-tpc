@@ -87,6 +87,62 @@ var expectCusts = `1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-989-741-2988|711
 10|Customer#000000010|6LrEaV6KR6PLVcgl2ArL Q3rqzLzcT1 v2|5|15-741-346-9870|2753.54|HOUSEHOLD|es regular deposits haggle. fur|
 `
 
+var gotPartsBuf bytes.Buffer
+var expectParts = `1|goldenrod lavender spring chocolate lace|Manufacturer#1|Brand#13|PROMO BURNISHED COPPER|7|JUMBO PKG|901.00|ly. slyly ironi|
+2|blush thistle blue yellow saddle|Manufacturer#1|Brand#13|LARGE BRUSHED BRASS|1|LG CASE|902.00|lar accounts amo|
+3|spring green yellow purple cornsilk|Manufacturer#4|Brand#42|STANDARD POLISHED BRASS|21|WRAP CASE|903.00|egular deposits hag|
+4|cornflower chocolate smoke green pink|Manufacturer#3|Brand#34|SMALL PLATED BRASS|14|MED DRUM|904.00|p furiously r|
+5|forest brown coral puff cream|Manufacturer#3|Brand#32|STANDARD POLISHED TIN|15|SM PKG|905.00| wake carefully |
+6|bisque cornflower lawn forest magenta|Manufacturer#2|Brand#24|PROMO PLATED STEEL|4|MED BAG|906.00|sual a|
+7|moccasin green thistle khaki floral|Manufacturer#1|Brand#11|SMALL PLATED COPPER|45|SM BAG|907.00|lyly. ex|
+8|misty lace thistle snow royal|Manufacturer#4|Brand#44|PROMO BURNISHED TIN|41|LG DRUM|908.00|eposi|
+9|thistle dim navajo dark gainsboro|Manufacturer#4|Brand#43|SMALL BURNISHED STEEL|12|WRAP CASE|909.00|ironic foxe|
+10|linen pink saddle puff powder|Manufacturer#5|Brand#54|LARGE BURNISHED STEEL|44|LG CAN|910.01|ithely final deposit|
+`
+
+var gotPsuppsBuf bytes.Buffer
+var expectPsupps = `1|2|3325|771.64|, even theodolites. regular, final theodolites eat after the carefully pending foxes. furiously regular deposits sleep slyly. carefully bold realms above the ironic dependencies haggle careful|
+1|2502|8076|993.49|ven ideas. quickly even packages print. pending multipliers must have to are fluff|
+1|5002|3956|337.09|after the fluffily ironic deposits? blithely special dependencies integrate furiously even excuses. blithely silent theodolites could have to haggle pending, express requests; fu|
+1|7502|4069|357.84|al, regular dependencies serve carefully after the quickly final pinto beans. furiously even deposits sleep quickly final, silent pinto beans. fluffily reg|
+2|3|8895|378.49|nic accounts. final accounts sleep furiously about the ironic, bold packages. regular, regular accounts|
+2|2503|4969|915.27|ptotes. quickly pending dependencies integrate furiously. fluffily ironic ideas impress blithely above the express accounts. furiously even epitaphs need to wak|
+2|5003|8539|438.37|blithely bold ideas. furiously stealthy packages sleep fluffily. slyly special deposits snooze furiously carefully regular accounts. regular deposits according to the accounts nag carefully slyl|
+2|7503|3025|306.39|olites. deposits wake carefully. even, express requests cajole. carefully regular ex|
+3|4|4651|920.92|ilent foxes affix furiously quickly unusual requests. even packages across the carefully even theodolites nag above the sp|
+3|2504|4093|498.13|ending dependencies haggle fluffily. regular deposits boost quickly carefully regular requests. deposits affix furiously around the pinto beans. ironic, unusual platelets across the p|
+3|5004|3917|645.40|of the blithely regular theodolites. final theodolites haggle blithely carefully unusual ideas. blithely even f|
+3|7504|9942|191.92| unusual, ironic foxes according to the ideas detect furiously alongside of the even, express requests. blithely regular the|
+4|5|1339|113.97| carefully unusual ideas. packages use slyly. blithely final pinto beans cajole along the furiously express requests. regular orbits haggle carefully. care|
+4|2505|6377|591.18|ly final courts haggle carefully regular accounts. carefully regular accounts could integrate slyly. slyly express packages about the accounts wake slyly|
+4|5005|2694|51.37|g, regular deposits: quick instructions run across the carefully ironic theodolites-- final dependencies haggle into the dependencies. f|
+4|7505|2480|444.37|requests sleep quickly regular accounts. theodolites detect. carefully final depths w|
+5|6|3735|255.88|arefully even requests. ironic requests cajole carefully even dolphin|
+5|2506|9653|50.52|y stealthy deposits. furiously final pinto beans wake furiou|
+5|5006|1329|219.83|iously regular deposits wake deposits. pending pinto beans promise ironic dependencies. even, regular pinto beans integrate|
+5|7506|6925|537.98|sits. quickly fluffy packages wake quickly beyond the blithely regular requests. pending requests cajole among the final pinto beans. carefully busy theodolites affix quickly stealthily |
+6|7|8851|130.72|usly final packages. slyly ironic accounts poach across the even, sly requests. carefully pending request|
+6|2507|1627|424.25| quick packages. ironic deposits print. furiously silent platelets across the carefully final requests are slyly along the furiously even instructi|
+6|5007|3336|642.13|final instructions. courts wake packages. blithely unusual realms along the multipliers nag |
+6|7507|6451|175.32| accounts alongside of the slyly even accounts wake carefully final instructions-- ruthless platelets wake carefully ideas. even deposits are quickly final,|
+7|8|7454|763.98|y express tithes haggle furiously even foxes. furiously ironic deposits sleep toward the furiously unusual|
+7|2508|2770|149.66|hould have to nag after the blithely final asymptotes. fluffily spe|
+7|5008|3377|68.77|usly against the daring asymptotes. slyly regular platelets sleep quickly blithely regular deposits. boldly regular deposits wake blithely ironic accounts|
+7|7508|9460|299.58|. furiously final ideas hinder slyly among the ironic, final packages. blithely ironic dependencies cajole pending requests: blithely even packa|
+8|9|6834|249.63|lly ironic accounts solve express, unusual theodolites. special packages use quickly. quickly fin|
+8|2509|396|957.34|r accounts. furiously pending dolphins use even, regular platelets. final|
+8|5009|9845|220.62|s against the fluffily special packages snooze slyly slyly regular p|
+8|7509|8126|916.91|final accounts around the blithely special asymptotes wake carefully beyond the bold dugouts. regular ideas haggle furiously after|
+9|10|7054|84.20|ts boost. evenly regular packages haggle after the quickly careful accounts. |
+9|2510|7542|811.84|ate after the final pinto beans. express requests cajole express packages. carefully bold ideas haggle furiously. blithely express accounts eat carefully among the evenly busy accounts. carefully un|
+9|5010|9583|381.31|d foxes. final, even braids sleep slyly slyly regular ideas. unusual ideas above|
+9|7510|3063|291.84| the blithely ironic instructions. blithely express theodolites nag furiously. carefully bold requests shall have to use slyly pending requests. carefully regular instr|
+10|11|2952|996.12| bold foxes wake quickly even, final asymptotes. blithely even depe|
+10|2511|3335|673.27|s theodolites haggle according to the fluffily unusual instructions. silent realms nag carefully ironic theodolites. furiously unusual instructions would detect fu|
+10|5011|5691|164.00|r, silent instructions sleep slyly regular pinto beans. furiously unusual gifts use. silently ironic theodolites cajole final deposits! express dugouts are furiously. packages sleep |
+10|7511|841|374.02|refully above the ironic packages. quickly regular packages haggle foxes. blithely ironic deposits a|
+`
+
 func TestMain(m *testing.M) {
 	initDriver(1)
 
@@ -168,10 +224,46 @@ func TestMain(m *testing.M) {
 		return nil
 	}
 
+	testPartLoader := func(part interface{}) error {
+		p := part.(*Part)
+		if _, err := gotPartsBuf.WriteString(fmt.Sprintf("%d|%s|%s|%s|%s|%d|%s|%s|%s|\n",
+			p.partKey,
+			p.name,
+			p.mfgr,
+			p.brand,
+			p.types,
+			p.size,
+			p.container,
+			fmtMoney(p.retailPrice),
+			p.comment)); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	testPSuppLoader := func(part interface{}) error {
+		p := part.(*Part)
+		for i := 0; i < SUPP_PER_PART; i++ {
+			supp := p.s[i]
+			if _, err := gotPsuppsBuf.WriteString(
+				fmt.Sprintf("%d|%d|%d|%s|%s|\n",
+					supp.partKey,
+					supp.suppKey,
+					supp.qty,
+					fmtMoney(supp.sCost),
+					supp.comment)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	*orderLoader = testOrderLoader
 	*lineItemLoader = testLineLoader
 	*suppLoader = testSuppLoader
 	*custLoader = testCustLoader
+	*partLoader = testPartLoader
+	*partSuppLoader = testPSuppLoader
 	os.Exit(m.Run())
 }
 
@@ -226,5 +318,37 @@ func TestGenCust(t *testing.T) {
 	gotCusts := gotCustsBuf.String()
 	if gotCusts != expectCusts {
 		t.Errorf("expect:\n%s\ngot:\n%s", gotCusts, gotCusts)
+	}
+}
+
+func TestGenPart(t *testing.T) {
+	genTable(PART, 1, 10)
+
+	gotParts := gotPartsBuf.String()
+	if gotParts != expectParts {
+		t.Errorf("expect:\n%s\ngot:\n%s", expectParts, gotParts)
+	}
+}
+
+func TestGenPartSupp(t *testing.T) {
+	genTable(PSUPP, 1, 10)
+
+	gotPsupps := gotPsuppsBuf.String()
+	if gotPsupps != expectPsupps {
+		t.Errorf("expect:\n%s\ngot:\n%s", expectPsupps, gotPsupps)
+	}
+}
+
+func TestGenPartPsupp(t *testing.T) {
+	genTable(PART_PSUPP, 1, 10)
+
+	gotParts := gotPartsBuf.String()
+	if gotParts != expectParts {
+		t.Errorf("expect:\n%s\ngot:\n%s", expectParts, gotParts)
+	}
+
+	gotPsupps := gotPsuppsBuf.String()
+	if gotPsupps != expectPsupps {
+		t.Errorf("expect:\n%s\ngot:\n%s", expectPsupps, gotPsupps)
 	}
 }

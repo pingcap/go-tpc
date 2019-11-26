@@ -1,17 +1,17 @@
 package dbgen
 
 const (
-	NONE       table = -1
-	PART       table = iota
-	PSUPP            = 1
-	SUPP             = 2
-	CUST             = 3
-	ORDER            = 4
-	LINE             = 5
-	ORDER_LINE       = 6
-	PART_PSUPP       = 7
-	NATION           = 8
-	REGION           = 9
-	UPDATE           = 10
-	MAX_TABLE        = 1
+	NONE table = iota - 1
+	PART
+	PSUPP
+	SUPP
+	CUST
+	ORDER
+	LINE
+	ORDER_LINE
+	PART_PSUPP
+	NATION
+	REGION
+	UPDATE
+	MAX_TABLE
 )

@@ -49,6 +49,23 @@ func readDist(name string, d *distribution) {
 	}
 }
 
+func permute(permute []long, count int, stream long) {
+	for i := 0; i < count; i++ {
+		source := random(dssHuge(i), dssHuge(count-1), stream)
+		permute[source], permute[i] = permute[i], permute[source]
+	}
+}
+
+func permuteDist(dist *distribution, stream long) {
+	if len(dist.permute) == 0 {
+		dist.permute = make([]long, dist.count)
+	}
+	for i := 0; i < dist.count; i++ {
+		dist.permute[i] = long(i)
+	}
+	permute(dist.permute, dist.count, stream)
+}
+
 func initDists() {
 	readDist("p_cntr", &pCntrSet)
 	readDist("colors", &colors)

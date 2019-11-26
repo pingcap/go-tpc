@@ -40,7 +40,7 @@ func nextRand64(nSeed dssHuge) dssHuge {
 	return nSeed*a + c
 }
 
-func unifInt(nLow dssHuge, nHigh dssHuge, nStream int) dssHuge {
+func unifInt(nLow dssHuge, nHigh dssHuge, nStream long) dssHuge {
 	var dRange float64
 	var nTemp dssHuge
 	nLow32 := int32(nLow)
@@ -80,7 +80,7 @@ func random64(lower, upper dssHuge, nStream long) dssHuge {
 	return lower + nTemp
 }
 
-func random(lower, upper dssHuge, nStream int) dssHuge {
+func random(lower, upper dssHuge, nStream long) dssHuge {
 	seeds[nStream].usage += 1
 	return unifInt(lower, upper, nStream)
 }
@@ -159,10 +159,10 @@ func rowStop(t table) {
 func aRand(min, max, column int) string {
 	var buf bytes.Buffer
 	var charInt dssHuge
-	len := random(dssHuge(min), dssHuge(max), column)
+	len := random(dssHuge(min), dssHuge(max), long(column))
 	for i := dssHuge(0); i < len; i++ {
 		if i%5 == 0 {
-			charInt = random(0, MAX_LONG, column)
+			charInt = random(0, MAX_LONG, long(column))
 		}
 		buf.Write([]byte{alphaNum[charInt&0o77]})
 		charInt >>= 6
@@ -175,9 +175,9 @@ func vStr(avg, sd int) string {
 }
 
 func genPhone(idx dssHuge, sd int) string {
-	aCode := random(100, 999, sd)
-	exChg := random(100, 999, sd)
-	number := random(1000, 9999, sd)
+	aCode := random(100, 999, long(sd))
+	exChg := random(100, 999, long(sd))
+	number := random(1000, 9999, long(sd))
 
 	return fmt.Sprintf("%02d-%03d-%03d-%04d",
 		10+(idx%NATIONS_MAX),

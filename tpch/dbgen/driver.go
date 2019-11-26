@@ -120,6 +120,18 @@ const (
 
 	C_ABAL_MIN = -99999
 	C_ABAL_MAX = 999999
+
+	P_NAME_SCL  = 5
+	P_MFG_MIN   = 1
+	P_MFG_MAX   = 5
+	P_BRND_MIN  = 1
+	P_BRND_MAX  = 5
+	P_SIZE_MIN  = 1
+	P_SIZE_MAX  = 50
+	PS_QTY_MIN  = 1
+	PS_QTY_MAX  = 9999
+	PS_SCST_MIN = 100
+	PS_SCST_MAX = 100000
 )
 
 var (
@@ -163,12 +175,15 @@ func genTable(tnum table, start, count dssHuge) error {
 			if err := loader(cust); err != nil {
 				return err
 			}
-			//case PSUPP:
-			//	fallthrough
-			//case PART:
-			//	fallthrough
-			//case PARTPSUPP:
-			//	d.makePart(i)
+		case PSUPP:
+			fallthrough
+		case PART:
+			fallthrough
+		case PART_PSUPP:
+			part := makePart(i)
+			if err := loader(part); err != nil {
+				return err
+			}
 			//case NATION:
 			//	d.makeNation(i)
 			//case REGION:
@@ -188,14 +203,14 @@ var notImplLoader = func(order interface{}) error {
 
 func initTDefs() {
 	tDefs = []tDef{
-		{"part.tbl", "part table", 200000, &notImplLoader, sdPart, PSUPP, 0},
-		{"partsupp.tbl", "partsupplier table", 200000, &notImplLoader, sdPsupp, NONE, 0},
+		{"part.tbl", "part table", 200000, partLoader, sdPart, PSUPP, 0},
+		{"partsupp.tbl", "partsupplier table", 200000, partSuppLoader, sdPsupp, NONE, 0},
 		{"supplier.tbl", "suppliers table", 10000, suppLoader, sdSupp, NONE, 0},
 		{"customer.tbl", "customers table", 150000, custLoader, sdCust, NONE, 0},
 		{"orders.tbl", "order table", 150000, orderLoader, sdOrder, LINE, 0},
 		{"lineitem.tbl", "lineitem table", 150000, lineItemLoader, sdLineItem, NONE, 0},
 		{"orders.tbl", "orders/lineitem tables", 150000, orderLineLoader, sdOrder, LINE, 0},
-		{"part.tbl", "part/partsupplier tables", 200000, &notImplLoader, sdPart, PSUPP, 0},
+		{"part.tbl", "part/partsupplier tables", 200000, partPsuppLoader, sdPart, PSUPP, 0},
 		{"nation.tbl", "nation table", dssHuge(nations.count), &notImplLoader, sdNull, NONE, 0},
 		{"region.tbl", "region table", dssHuge(regions.count), &notImplLoader, sdNull, NONE, 0},
 	}

@@ -32,7 +32,7 @@ func makeSparse(idx dssHuge) dssHuge {
 }
 
 func pickStr(dist *distribution, c int, target *string) (pos int) {
-	j := long(random(1, dssHuge(dist.members[len(dist.members)-1].weight), c))
+	j := long(random(1, dssHuge(dist.members[len(dist.members)-1].weight), long(c)))
 	for pos = 0; dist.members[pos].weight < j; pos++ {
 	}
 	*target = dist.members[pos].text
@@ -145,10 +145,23 @@ func makeText(avg, sd int) string {
 	min := int(float64(avg) * V_STR_LOW)
 	max := int(float64(avg) * V_STR_HGH)
 
-	hgOffset := random(0, dssHuge(TEXT_POOL_SIZE-max), sd)
-	hgLength := random(dssHuge(min), dssHuge(max), sd)
+	hgOffset := random(0, dssHuge(TEXT_POOL_SIZE-max), long(sd))
+	hgLength := random(dssHuge(min), dssHuge(max), long(sd))
 
 	return string(szTextPool[hgOffset : hgOffset+hgLength])
+}
+
+func aggStr(set *distribution, count, col long) string {
+	var buf bytes.Buffer
+	permuteDist(set, col)
+
+	for i := long(0); i < count; i++ {
+		buf.WriteString(set.members[set.permute[i]].text)
+		buf.WriteString(" ")
+	}
+
+	tmp := buf.String()
+	return tmp[:len(tmp)-1]
 }
 
 func rpbRoutine(p dssHuge) dssHuge {

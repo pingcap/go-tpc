@@ -150,8 +150,7 @@ type tDef struct {
 
 var tDefs []tDef
 
-// GenData generate data
-func genTable(tnum table, start, count dssHuge) error {
+func genTbl(tnum table, start, count dssHuge) error {
 	loader := *tDefs[tnum].loader
 	for i := start; i < start+count; i++ {
 		rowStart(tnum)
@@ -184,21 +183,20 @@ func genTable(tnum table, start, count dssHuge) error {
 			if err := loader(part); err != nil {
 				return err
 			}
-			//case NATION:
-			//	d.makeNation(i)
-			//case REGION:
-			//	d.makeRegion(i)
+		case NATION:
+			nation := makeNation(i)
+			if err := loader(nation); err != nil {
+				return err
+			}
+		case REGION:
+			region := makeRegion(i)
+			if err := loader(region); err != nil {
+				return err
+			}
 		}
 		rowStop(tnum)
 	}
 	return nil
-}
-
-func sdNull(child table, skipCount dssHuge) {
-}
-
-var notImplLoader = func(order interface{}) error {
-	panic("implement me")
 }
 
 func initTDefs() {
@@ -211,8 +209,8 @@ func initTDefs() {
 		{"lineitem.tbl", "lineitem table", 150000, lineItemLoader, sdLineItem, NONE, 0},
 		{"orders.tbl", "orders/lineitem tables", 150000, orderLineLoader, sdOrder, LINE, 0},
 		{"part.tbl", "part/partsupplier tables", 200000, partPsuppLoader, sdPart, PSUPP, 0},
-		{"nation.tbl", "nation table", dssHuge(nations.count), &notImplLoader, sdNull, NONE, 0},
-		{"region.tbl", "region table", dssHuge(regions.count), &notImplLoader, sdNull, NONE, 0},
+		{"nation.tbl", "nation table", dssHuge(nations.count), nationLoader, sdNull, NONE, 0},
+		{"region.tbl", "region table", dssHuge(regions.count), regionLoader, sdNull, NONE, 0},
 	}
 }
 

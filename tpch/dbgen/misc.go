@@ -219,6 +219,9 @@ func fmtMoney(m dssHuge) string {
 	return fmt.Sprintf("%s%d.%02d", sign, m/100, m%100)
 }
 
+func sdNull(_ table, _ dssHuge) {
+}
+
 func initTextPool() {
 	var buffer bytes.Buffer
 

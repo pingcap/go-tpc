@@ -53,7 +53,6 @@ var _ = func() error {"""
 
     output += """
 	return nil
-}()
-"""
+}()"""
 
     print(output)

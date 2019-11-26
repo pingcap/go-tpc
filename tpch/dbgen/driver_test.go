@@ -331,27 +331,26 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestGenOrder(t *testing.T) {
-	if err := genTbl(ORDER, 1, 10); err != nil {
-		t.Error(err)
-	}
-
-	gotOrders := gotOrdersBuf.String()
-	if gotOrders != expectOrders {
-		t.Errorf("expect:\n%s\ngot:\n%s", expectOrders, gotOrders)
-	}
-}
-
-func TestGenLine(t *testing.T) {
-	if err := genTbl(LINE, 1, 10); err != nil {
-		t.Error(err)
-	}
-
-	gotLines := gotLinesBuf.String()
-	if gotLines != expectLines {
-		t.Errorf("expect:\n%s\ngot:\n%s", expectLines, gotLines)
-	}
-}
+////func TestGenOrder(t *testing.T) {
+////	if err := genTbl(ORDER, 1, 10); err != nil {
+////		t.Error(err)
+////	}
+////
+////	gotOrders := gotOrdersBuf.String()
+////	if gotOrders != expectOrders {
+////		t.Errorf("expect:\n%s\ngot:\n%s", expectOrders, gotOrders)
+////	}
+////}
+////func TestGenLine(t *testing.T) {
+////	if err := genTbl(LINE, 1, 10); err != nil {
+////		t.Error(err)
+////	}
+////
+////	gotLines := gotLinesBuf.String()
+////	if gotLines != expectLines {
+////		t.Errorf("expect:\n%s\ngot:\n%s", expectLines, gotLines)
+////	}
+////}
 
 func TestGenOrderLine(t *testing.T) {
 	if err := genTbl(ORDER_LINE, 1, 10); err != nil {
@@ -385,23 +384,22 @@ func TestGenCust(t *testing.T) {
 	}
 }
 
-func TestGenPart(t *testing.T) {
-	genTbl(PART, 1, 10)
-
-	gotParts := gotPartsBuf.String()
-	if gotParts != expectParts {
-		t.Errorf("expect:\n%s\ngot:\n%s", expectParts, gotParts)
-	}
-}
-
-func TestGenPartSupp(t *testing.T) {
-	genTbl(PSUPP, 1, 10)
-
-	gotPsupps := gotPsuppsBuf.String()
-	if gotPsupps != expectPsupps {
-		t.Errorf("expect:\n%s\ngot:\n%s", expectPsupps, gotPsupps)
-	}
-}
+////func TestGenPart(t *testing.T) {
+////	genTbl(PART, 1, 10)
+////
+////	gotParts := gotPartsBuf.String()
+////	if gotParts != expectParts {
+////		t.Errorf("expect:\n%s\ngot:\n%s", expectParts, gotParts)
+////	}
+////}
+////func TestGenPartSupp(t *testing.T) {
+////	genTbl(PSUPP, 1, 10)
+////
+////	gotPsupps := gotPsuppsBuf.String()
+////	if gotPsupps != expectPsupps {
+////		t.Errorf("expect:\n%s\ngot:\n%s", expectPsupps, gotPsupps)
+////	}
+////}
 
 func TestGenPartPsupp(t *testing.T) {
 	genTbl(PART_PSUPP, 1, 10)

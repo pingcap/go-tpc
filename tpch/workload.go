@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/pingcap/go-tpc/tpch/dbgen"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
@@ -65,14 +66,35 @@ func (w Workloader) InitThread(ctx context.Context, threadID int) context.Contex
 }
 
 func (w Workloader) CleanupThread(ctx context.Context, threadID int) {
+	s := w.getState(ctx)
+	s.Conn.Close()
 }
 
 func (w Workloader) Prepare(ctx context.Context, threadID int) error {
-	panic("implement me")
+	if threadID != 0 {
+		return nil
+	}
+	s := w.getState(ctx)
+
+	if err := w.createTable(ctx); err != nil {
+		return err
+	}
+	sqlLoader := map[dbgen.Table]dbgen.Loader{
+		dbgen.TOrder:  newOrderLoader(ctx, s.Conn),
+		dbgen.TLine:   newLineItemLoader(ctx, s.Conn),
+		dbgen.TPart:   newPartLoader(ctx, s.Conn),
+		dbgen.TPsupp:  newPartSuppLoader(ctx, s.Conn),
+		dbgen.TSupp:   newSuppLoader(ctx, s.Conn),
+		dbgen.TCust:   newCustLoader(ctx, s.Conn),
+		dbgen.TNation: newNationLoader(ctx, s.Conn),
+		dbgen.TRegion: newRegionLoader(ctx, s.Conn),
+	}
+	dbgen.InitDbGen(int64(w.cfg.ScaleFactor))
+	return dbgen.DbGen(sqlLoader)
 }
 
 func (w Workloader) CheckPrepare(ctx context.Context, threadID int) error {
-	panic("implement me")
+	return nil
 }
 
 func (w Workloader) Run(ctx context.Context, threadID int) error {
@@ -99,9 +121,12 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 }
 
 func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
-	panic("implement me")
+	if threadID != 0 {
+		return nil
+	}
+	return w.dropTable(ctx)
 }
 
 func (w Workloader) Check(ctx context.Context, threadID int) error {
-	panic("implement me")
+	return nil
 }

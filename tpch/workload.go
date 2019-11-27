@@ -34,6 +34,7 @@ type Workloader struct {
 	cfg *Config
 }
 
+// NewWorkloader new work loader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	return Workloader{
 		db:  db,
@@ -48,13 +49,15 @@ func (w *Workloader) getState(ctx context.Context) *tpchState {
 
 func (w *Workloader) updateState(ctx context.Context) {
 	s := w.getState(ctx)
-	s.queryIdx += 1
+	s.queryIdx ++
 }
 
+// Name return workloader name
 func (w Workloader) Name() string {
 	return "tpch"
 }
 
+// InitThread inits thread
 func (w Workloader) InitThread(ctx context.Context, threadID int) context.Context {
 	s := &tpchState{
 		queryIdx: threadID % len(w.cfg.QueryNames),
@@ -65,11 +68,13 @@ func (w Workloader) InitThread(ctx context.Context, threadID int) context.Contex
 	return ctx
 }
 
+// CleanupThread cleans up thread
 func (w Workloader) CleanupThread(ctx context.Context, threadID int) {
 	s := w.getState(ctx)
 	s.Conn.Close()
 }
 
+// Prepare prepares data
 func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 	if threadID != 0 {
 		return nil
@@ -93,10 +98,12 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 	return dbgen.DbGen(sqlLoader)
 }
 
+// CheckPrepare checks prepare
 func (w Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 	return nil
 }
 
+// Run runs workload
 func (w Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 	defer w.updateState(ctx)
@@ -112,6 +119,7 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 		return fmt.Errorf("execute %s failed %v", queryName, err)
 	}
 
+	// we only check scale = 1, it was much quick
 	if w.cfg.ScaleFactor == 1 && w.cfg.EnableOutputCheck {
 		if err := w.checkQueryResult(queryName, rows); err != nil {
 			return fmt.Errorf("check %s failed %v", queryName, err)
@@ -120,6 +128,7 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 	return nil
 }
 
+// Cleanup cleans up workloader
 func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
 	if threadID != 0 {
 		return nil
@@ -127,6 +136,7 @@ func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
 	return w.dropTable(ctx)
 }
 
+// Check checks data 
 func (w Workloader) Check(ctx context.Context, threadID int) error {
 	return nil
 }

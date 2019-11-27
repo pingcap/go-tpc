@@ -45,8 +45,7 @@ var _ = func() error {"""
         for v in value:
             output += f"""
 		{{
-			"{v[0]}",
-			{v[1]},
+			"{v[0]}", {v[1]},
 		}},"""
         output += """
 	}"""

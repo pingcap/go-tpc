@@ -1,17 +1,20 @@
 package dbgen
 
 const (
-	NONE table = iota - 1
-	PART
-	PSUPP
-	SUPP
-	CUST
-	ORDER
-	LINE
-	ORDER_LINE
-	PART_PSUPP
-	NATION
-	REGION
-	UPDATE
-	MAX_TABLE
+	TNone Table = iota - 1
+	TPart
+	TPsupp
+	TSupp
+	TCust
+	TOrder
+	TLine
+	TOrderLine
+	TPartPsupp
+	TNation
+	TRegion
 )
+
+type Loader interface {
+	Load(item interface{}) error
+	Flush() error
+}

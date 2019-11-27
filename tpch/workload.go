@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/pingcap/go-tpc/tpch/dbgen"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
@@ -68,11 +69,28 @@ func (w Workloader) CleanupThread(ctx context.Context, threadID int) {
 }
 
 func (w Workloader) Prepare(ctx context.Context, threadID int) error {
-	panic("implement me")
+	if threadID != 0 {
+		return nil
+	}
+	s := w.getState(ctx)
+	sqlLoader := map[dbgen.Table]dbgen.Loader{
+		dbgen.TOrder:  newOrderLoader(ctx, s.Conn),
+		dbgen.TLine:   newLineItemLoader(ctx, s.Conn),
+		dbgen.TPart:   newPartLoader(ctx, s.Conn),
+		dbgen.TPsupp:  newPartSuppLoader(ctx, s.Conn),
+		dbgen.TSupp:   newSuppLoader(ctx, s.Conn),
+		dbgen.TCust:   newCustLoader(ctx, s.Conn),
+		dbgen.TNation: newNationLoader(ctx, s.Conn),
+		dbgen.TRegion: newRegionLoader(ctx, s.Conn),
+	}
+
+	dbgen.InitDbGen(int64(w.cfg.ScaleFactor))
+	return dbgen.DbGen(sqlLoader)
 }
 
 func (w Workloader) CheckPrepare(ctx context.Context, threadID int) error {
-	panic("implement me")
+	//panic("implement me")
+	return nil
 }
 
 func (w Workloader) Run(ctx context.Context, threadID int) error {

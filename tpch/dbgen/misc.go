@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	STARTDATE      = 92001
-	CURRENTDATE    = 95168
-	TOTDATE        = 2557
-	TEXT_POOL_SIZE = 300 * 1024 * 1024
+	startDate    = 92001
+	currentDate  = 95168
+	totDate      = 2557
+	textPoolSize = 300 * 1024 * 1024
 )
 
 var szTextPool []byte
@@ -19,7 +19,7 @@ var szTextPool []byte
 func makeAscDate() []string {
 	var res []string
 	date := time.Date(1992, 1, 1, 0, 0, 0, 0, time.UTC)
-	for i := 0; i < TOTDATE; i++ {
+	for i := 0; i < totDate; i++ {
 		newDate := date.AddDate(0, 0, i)
 		ascDate := fmt.Sprintf("%4d-%02d-%02d", newDate.Year(), newDate.Month(), newDate.Day())
 		res = append(res, ascDate)
@@ -40,8 +40,8 @@ func pickStr(dist *distribution, c int, target *string) (pos int) {
 }
 
 func pickClerk() string {
-	clkNum := random(1, max(scale*O_CLRK_SCL, O_CLRK_SCL), O_CLRK_SD)
-	return fmt.Sprintf("%s%09d", O_CLRK_TAG, clkNum)
+	clkNum := random(1, max(scale*oClrkScl, oClrkScl), oClrkSd)
+	return fmt.Sprintf("Clerk#%09d", clkNum)
 }
 
 func txtVp(sd int) string {
@@ -142,10 +142,10 @@ func txtSentence(sd int) string {
 }
 
 func makeText(avg, sd int) string {
-	min := int(float64(avg) * V_STR_LOW)
-	max := int(float64(avg) * V_STR_HGH)
+	min := int(float64(avg) * vStrLow)
+	max := int(float64(avg) * vStrHgh)
 
-	hgOffset := random(0, dssHuge(TEXT_POOL_SIZE-max), long(sd))
+	hgOffset := random(0, dssHuge(textPoolSize-max), long(sd))
 	hgLength := random(dssHuge(min), dssHuge(max), long(sd))
 
 	return string(szTextPool[hgOffset : hgOffset+hgLength])
@@ -192,8 +192,8 @@ func yeap(year int) int {
 }
 
 func julian(date int) int {
-	offset := date - STARTDATE
-	result := STARTDATE
+	offset := date - startDate
+	result := startDate
 
 	for true {
 		yr := result / 1000
@@ -210,7 +210,7 @@ func julian(date int) int {
 	return result + offset
 }
 
-func fmtMoney(m dssHuge) string {
+func FmtMoney(m dssHuge) string {
 	sign := ""
 	if m < 0 {
 		sign = "-"
@@ -219,17 +219,17 @@ func fmtMoney(m dssHuge) string {
 	return fmt.Sprintf("%s%d.%02d", sign, m/100, m%100)
 }
 
-func sdNull(_ table, _ dssHuge) {
+func sdNull(_ Table, _ dssHuge) {
 }
 
 func initTextPool() {
 	var buffer bytes.Buffer
 
-	for buffer.Len() < TEXT_POOL_SIZE {
+	for buffer.Len() < textPoolSize {
 		sentence := txtSentence(5)
 		len := len(sentence)
 
-		needed := TEXT_POOL_SIZE - buffer.Len()
+		needed := textPoolSize - buffer.Len()
 		if needed >= len+1 {
 			buffer.WriteString(sentence + " ")
 		} else {

@@ -4,14 +4,23 @@ type OrderLine struct {
 	order Order
 }
 
-var _orderLineLoader = func(order interface{}) error {
-	if err := (*orderLoader)(order); err != nil {
+type orderLineLoader struct {
+}
+
+func (o orderLineLoader) Load(item interface{}) error {
+	if err := tDefs[TOrder].loader.Load(item); err != nil {
 		return err
 	}
-	if err := (*lineItemLoader)(order); err != nil {
+	if err := tDefs[TLine].loader.Load(item); err != nil {
 		return err
 	}
 	return nil
 }
 
-var orderLineLoader = &_orderLineLoader
+func (o orderLineLoader) Flush() error {
+	return nil
+}
+
+func newOrderLineLoader() orderLineLoader {
+	return orderLineLoader{}
+}

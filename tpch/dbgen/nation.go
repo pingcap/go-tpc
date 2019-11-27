@@ -2,42 +2,53 @@ package dbgen
 
 import (
 	"fmt"
-	"os"
+	"io"
+)
+
+const (
+	nCmntSd    = 41
+	nCmntLen   = 72
+	nationsMax = 90
 )
 
 type Nation struct {
-	code    dssHuge
-	text    string
-	join    long
-	comment string
+	Code    dssHuge
+	Text    string
+	Join    long
+	Comment string
 }
 
 func makeNation(idx dssHuge) *Nation {
 	nation := &Nation{}
-	nation.code = idx - 1
-	nation.text = nations.members[idx-1].text
-	nation.join = nations.members[idx-1].weight
-	nation.comment = makeText(N_CMNT_LEN, N_CMNT_SD)
+	nation.Code = idx - 1
+	nation.Text = nations.members[idx-1].text
+	nation.Join = nations.members[idx-1].weight
+	nation.Comment = makeText(nCmntLen, nCmntSd)
 
 	return nation
 }
 
-var _nationLoader = func(nation interface{}) error {
-	n := nation.(*Nation)
-	f, err := os.OpenFile(tDefs[NATION].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err := f.WriteString(
+type nationLoader struct {
+	io.StringWriter
+}
+
+func (n nationLoader) Load(item interface{}) error {
+	nation := item.(*Nation)
+	if _, err := n.WriteString(
 		fmt.Sprintf("%d|%s|%d|%s|\n",
-			n.code,
-			n.text,
-			n.join,
-			n.comment)); err != nil {
+			nation.Code,
+			nation.Text,
+			nation.Join,
+			nation.Comment)); err != nil {
 		return err
 	}
 	return nil
 }
 
-var nationLoader = &_nationLoader
+func (n nationLoader) Flush() error {
+	return nil
+}
+
+func newNationLoader(writer io.StringWriter) nationLoader {
+	return nationLoader{writer}
+}

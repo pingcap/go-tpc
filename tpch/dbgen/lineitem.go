@@ -2,99 +2,101 @@ package dbgen
 
 import (
 	"fmt"
-	"os"
+	"io"
 )
 
 const (
-	L_SIZE     = 144
-	L_QTY_MIN  = 1
-	L_QTY_MAX  = 50
-	L_TAX_MIN  = 0
-	L_TAX_MAX  = 8
-	L_DCNT_MIN = 0
-	L_DCNT_MAX = 10
-	L_PKEY_MIN = 1
-	L_SDTE_MIN = 1
-	L_SDTE_MAX = 121
-	L_CDTE_MIN = 30
-	L_CDTE_MAX = 90
-	L_RDTE_MIN = 1
-	L_RDTE_MAX = 30
+	lQtyMin  = 1
+	lQtyMax  = 50
+	lTaxMin  = 0
+	lTaxMax  = 8
+	lDcntMin = 0
+	lDcntMax = 10
+	lPkeyMin = 1
+	lSdteMin = 1
+	lSdteMax = 121
+	lCdteMin = 30
+	lCdteMax = 90
+	lRdteMin = 1
+	lRdteMax = 30
 )
 
 var (
-	L_PKEY_MAX dssHuge
+	LPkeyMax dssHuge
 )
 
 type LineItem struct {
-	oKey         dssHuge
-	partKey      dssHuge
-	suppKey      dssHuge
-	lCnt         dssHuge
-	quantity     dssHuge
-	ePrice       dssHuge
-	discount     dssHuge
-	tax          dssHuge
-	rFlag        byte
-	lStatus      byte
-	cDate        string
-	sDate        string
-	rDate        string
-	shipInstruct string
-	shipMode     string
-	comment      string
+	OKey         dssHuge
+	PartKey      dssHuge
+	SuppKey      dssHuge
+	LCnt         dssHuge
+	Quantity     dssHuge
+	EPrice       dssHuge
+	Discount     dssHuge
+	Tax          dssHuge
+	RFlag        byte
+	LStatus      byte
+	CDate        string
+	SDate        string
+	RDate        string
+	ShipInstruct string
+	ShipMode     string
+	Comment      string
 }
 
-var _lineItemLoader = func(order interface{}) error {
-	o := order.(*Order)
-	f, err := os.OpenFile(tDefs[LINE].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+type lineItemLoader struct {
+	io.StringWriter
+}
 
-	for _, line := range o.lines {
-		if _, err := f.WriteString(
+func (l lineItemLoader) Load(item interface{}) error {
+	o := item.(*Order)
+	for _, line := range o.Lines {
+		if _, err := l.WriteString(
 			fmt.Sprintf("%d|%d|%d|%d|%d|%s|%s|%s|%c|%c|%s|%s|%s|%s|%s|%s|\n",
-				line.oKey,
-				line.partKey,
-				line.suppKey,
-				line.lCnt,
-				line.quantity,
-				fmtMoney(line.ePrice),
-				fmtMoney(line.discount),
-				fmtMoney(line.tax),
-				line.rFlag,
-				line.lStatus,
-				line.sDate,
-				line.cDate,
-				line.rDate,
-				line.shipInstruct,
-				line.shipMode,
-				line.comment,
+				line.OKey,
+				line.PartKey,
+				line.SuppKey,
+				line.LCnt,
+				line.Quantity,
+				FmtMoney(line.EPrice),
+				FmtMoney(line.Discount),
+				FmtMoney(line.Tax),
+				line.RFlag,
+				line.LStatus,
+				line.SDate,
+				line.CDate,
+				line.RDate,
+				line.ShipInstruct,
+				line.ShipMode,
+				line.Comment,
 			)); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-var lineItemLoader = &_lineItemLoader
+func (l lineItemLoader) Flush() error {
+	return nil
+}
 
-func sdLineItem(child table, skipCount dssHuge) {
-	for j := 0; j < O_LCNT_MAX; j++ {
-		for i := L_QTY_SD; i <= L_RFLG_SD; i++ {
+func newLineItemLoader(writer io.StringWriter) lineItemLoader {
+	return lineItemLoader{writer}
+}
+
+func sdLineItem(child Table, skipCount dssHuge) {
+	for j := 0; j < oLcntMax; j++ {
+		for i := lQtySd; i <= lRflgSd; i++ {
 			advanceStream(i, skipCount, false)
 		}
-		advanceStream(L_CMNT_SD, skipCount*2, false)
+		advanceStream(lCmntSd, skipCount*2, false)
 	}
-	if child == PSUPP {
-		advanceStream(O_ODATE_SD, skipCount, false)
-		advanceStream(O_LCNT_SD, skipCount, false)
+	if child == TPsupp {
+		advanceStream(oOdateSd, skipCount, false)
+		advanceStream(oLcntSd, skipCount, false)
 	}
 }
 
 func initLineItem() {
-	L_PKEY_MAX = tDefs[PART].base * scale
+	LPkeyMax = tDefs[TPart].base * scale
 }

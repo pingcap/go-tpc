@@ -2,7 +2,6 @@ package dbgen
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"testing"
 )
@@ -100,8 +99,8 @@ var expectParts = `1|goldenrod lavender spring chocolate lace|Manufacturer#1|Bra
 10|linen pink saddle puff powder|Manufacturer#5|Brand#54|LARGE BURNISHED STEEL|44|LG CAN|910.01|ithely final deposit|
 `
 
-var gotPsuppsBuf bytes.Buffer
-var expectPsupps = `1|2|3325|771.64|, even theodolites. regular, final theodolites eat after the carefully pending foxes. furiously regular deposits sleep slyly. carefully bold realms above the ironic dependencies haggle careful|
+var gotPartSuppsBuf bytes.Buffer
+var expectPartSupps = `1|2|3325|771.64|, even theodolites. regular, final theodolites eat after the carefully pending foxes. furiously regular deposits sleep slyly. carefully bold realms above the ironic dependencies haggle careful|
 1|2502|8076|993.49|ven ideas. quickly even packages print. pending multipliers must have to are fluff|
 1|5002|3956|337.09|after the fluffily ironic deposits? blithely special dependencies integrate furiously even excuses. blithely silent theodolites could have to haggle pending, express requests; fu|
 1|7502|4069|357.84|al, regular dependencies serve carefully after the quickly final pinto beans. furiously even deposits sleep quickly final, silent pinto beans. fluffily reg|
@@ -180,159 +179,25 @@ var expectRegions = `0|AFRICA|lar deposits. blithely final packages cajole. regu
 `
 
 func TestMain(m *testing.M) {
-	initDriver(1)
+	InitDbGen(1)
 
-	testOrderLoader := func(order interface{}) error {
-		o := order.(*Order)
-		gotOrdersBuf.WriteString(fmt.Sprintf("%d|%d|%c|%s|%s|%s|%s|%d|%s|\n",
-			o.oKey,
-			o.custKey,
-			o.status,
-			fmtMoney(o.totalPrice),
-			o.date,
-			o.orderPriority,
-			o.clerk,
-			o.shipPriority,
-			o.comment))
-
-		return nil
-	}
-
-	testLineLoader := func(order interface{}) error {
-		o := order.(*Order)
-		for _, line := range o.lines {
-			if _, err := gotLinesBuf.WriteString(
-				fmt.Sprintf("%d|%d|%d|%d|%d|%s|%s|%s|%c|%c|%s|%s|%s|%s|%s|%s|\n",
-					line.oKey,
-					line.partKey,
-					line.suppKey,
-					line.lCnt,
-					line.quantity,
-					fmtMoney(line.ePrice),
-					fmtMoney(line.discount),
-					fmtMoney(line.tax),
-					line.rFlag,
-					line.lStatus,
-					line.sDate,
-					line.cDate,
-					line.rDate,
-					line.shipInstruct,
-					line.shipMode,
-					line.comment,
-				)); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	testSuppLoader := func(supp interface{}) error {
-		s := supp.(*Supp)
-		if _, err := gotSuppsBuf.WriteString(
-			fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|\n",
-				s.suppKey,
-				s.name,
-				s.address,
-				s.nationCode,
-				s.phone,
-				fmtMoney(s.acctbal),
-				s.comment)); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	testCustLoader := func(cust interface{}) error {
-		c := cust.(*Cust)
-		if _, err := gotCustsBuf.WriteString(
-			fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|%s|\n",
-				c.custKey,
-				c.name,
-				c.address,
-				c.nationCode,
-				c.phone,
-				fmtMoney(c.acctbal),
-				c.mktSegment,
-				c.comment)); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	testPartLoader := func(part interface{}) error {
-		p := part.(*Part)
-		if _, err := gotPartsBuf.WriteString(fmt.Sprintf("%d|%s|%s|%s|%s|%d|%s|%s|%s|\n",
-			p.partKey,
-			p.name,
-			p.mfgr,
-			p.brand,
-			p.types,
-			p.size,
-			p.container,
-			fmtMoney(p.retailPrice),
-			p.comment)); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	testPSuppLoader := func(part interface{}) error {
-		p := part.(*Part)
-		for i := 0; i < SUPP_PER_PART; i++ {
-			supp := p.s[i]
-			if _, err := gotPsuppsBuf.WriteString(
-				fmt.Sprintf("%d|%d|%d|%s|%s|\n",
-					supp.partKey,
-					supp.suppKey,
-					supp.qty,
-					fmtMoney(supp.sCost),
-					supp.comment)); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	var testNationLoader = func(nation interface{}) error {
-		n := nation.(*Nation)
-		if _, err := gotNationsBuf.WriteString(
-			fmt.Sprintf("%d|%s|%d|%s|\n",
-				n.code,
-				n.text,
-				n.join,
-				n.comment)); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	var testRegionLoader = func(region interface{}) error {
-		r := region.(*Region)
-		if _, err := gotRegionsBuf.WriteString(
-			fmt.Sprintf("%d|%s|%s|\n",
-				r.code,
-				r.text,
-				r.comment)); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	*orderLoader = testOrderLoader
-	*lineItemLoader = testLineLoader
-	*suppLoader = testSuppLoader
-	*custLoader = testCustLoader
-	*partLoader = testPartLoader
-	*partSuppLoader = testPSuppLoader
-	*nationLoader = testNationLoader
-	*regionLoader = testRegionLoader
+	// mock writer
+	tDefs[TOrder].loader = newOrderLoader(&gotOrdersBuf)
+	tDefs[TLine].loader = newLineItemLoader(&gotLinesBuf)
+	tDefs[TSupp].loader = newSuppLoader(&gotSuppsBuf)
+	tDefs[TCust].loader = newCustLoader(&gotCustsBuf)
+	tDefs[TPart].loader = newPartLoader(&gotPartsBuf)
+	tDefs[TPsupp].loader = newPartSuppLoader(&gotPartSuppsBuf)
+	tDefs[TNation].loader = newNationLoader(&gotNationsBuf)
+	tDefs[TRegion].loader = newRegionLoader(&gotRegionsBuf)
+	tDefs[TOrderLine].loader = newOrderLineLoader()
+	tDefs[TPartPsupp].loader = newPartPsuppLoader()
 
 	os.Exit(m.Run())
 }
 
 ////func TestGenOrder(t *testing.T) {
-////	if err := genTbl(ORDER, 1, 10); err != nil {
+////	if err := genTbl(TOrder, 1, 10); err != nil {
 ////		t.Error(err)
 ////	}
 ////
@@ -342,7 +207,7 @@ func TestMain(m *testing.M) {
 ////	}
 ////}
 ////func TestGenLine(t *testing.T) {
-////	if err := genTbl(LINE, 1, 10); err != nil {
+////	if err := genTbl(TLine, 1, 10); err != nil {
 ////		t.Error(err)
 ////	}
 ////
@@ -353,7 +218,7 @@ func TestMain(m *testing.M) {
 ////}
 
 func TestGenOrderLine(t *testing.T) {
-	if err := genTbl(ORDER_LINE, 1, 10); err != nil {
+	if err := genTbl(TOrderLine, 1, 10); err != nil {
 		t.Error(err)
 	}
 	gotOrders := gotOrdersBuf.String()
@@ -367,7 +232,7 @@ func TestGenOrderLine(t *testing.T) {
 }
 
 func TestGenSupp(t *testing.T) {
-	genTbl(SUPP, 1, 10)
+	genTbl(TSupp, 1, 10)
 
 	gotSupp := gotSuppsBuf.String()
 	if gotSupp != expectSupps {
@@ -376,7 +241,7 @@ func TestGenSupp(t *testing.T) {
 }
 
 func TestGenCust(t *testing.T) {
-	genTbl(CUST, 1, 10)
+	genTbl(TCust, 1, 10)
 
 	gotCusts := gotCustsBuf.String()
 	if gotCusts != expectCusts {
@@ -385,7 +250,7 @@ func TestGenCust(t *testing.T) {
 }
 
 ////func TestGenPart(t *testing.T) {
-////	genTbl(PART, 1, 10)
+////	genTbl(TPart, 1, 10)
 ////
 ////	gotParts := gotPartsBuf.String()
 ////	if gotParts != expectParts {
@@ -393,30 +258,30 @@ func TestGenCust(t *testing.T) {
 ////	}
 ////}
 ////func TestGenPartSupp(t *testing.T) {
-////	genTbl(PSUPP, 1, 10)
+////	genTbl(TPsupp, 1, 10)
 ////
-////	gotPsupps := gotPsuppsBuf.String()
-////	if gotPsupps != expectPsupps {
-////		t.Errorf("expect:\n%s\ngot:\n%s", expectPsupps, gotPsupps)
+////	gotPsupps := gotPartSuppsBuf.String()
+////	if gotPsupps != expectPartSupps {
+////		t.Errorf("expect:\n%s\ngot:\n%s", expectPartSupps, gotPsupps)
 ////	}
 ////}
 
 func TestGenPartPsupp(t *testing.T) {
-	genTbl(PART_PSUPP, 1, 10)
+	genTbl(TPartPsupp, 1, 10)
 
 	gotParts := gotPartsBuf.String()
 	if gotParts != expectParts {
 		t.Errorf("expect:\n%s\ngot:\n%s", expectParts, gotParts)
 	}
 
-	gotPsupps := gotPsuppsBuf.String()
-	if gotPsupps != expectPsupps {
-		t.Errorf("expect:\n%s\ngot:\n%s", expectPsupps, gotPsupps)
+	gotPsupps := gotPartSuppsBuf.String()
+	if gotPsupps != expectPartSupps {
+		t.Errorf("expect:\n%s\ngot:\n%s", expectPartSupps, gotPsupps)
 	}
 }
 
 func TestGenNation(t *testing.T) {
-	genTbl(NATION, 1, 25)
+	genTbl(TNation, 1, 25)
 
 	gotNations := gotNationsBuf.String()
 	if gotNations != expectNations {
@@ -425,7 +290,7 @@ func TestGenNation(t *testing.T) {
 }
 
 func TestGenRegion(t *testing.T) {
-	genTbl(REGION, 1, 5)
+	genTbl(TRegion, 1, 5)
 
 	gotRegions := gotRegionsBuf.String()
 	if gotRegions != expectRegions {

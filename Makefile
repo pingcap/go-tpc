@@ -15,7 +15,7 @@ fmt:
 	@gofmt -s -l -w $(FILES) 2>&1 | $(GOCHECKER)
 
 test:
-	$(GO) test ./... -cover $(PACKAGES)
+	go test ./... -cover $(PACKAGES)
 
 build:
 	go build -o ./bin/go-tpc cmd/go-tpc/*

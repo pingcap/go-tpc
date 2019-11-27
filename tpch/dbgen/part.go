@@ -2,81 +2,114 @@ package dbgen
 
 import (
 	"fmt"
-	"os"
+	"io"
+)
+
+const (
+	pNameScl    = 5
+	pMfgMin     = 1
+	pMfgMax     = 5
+	pBrndMin    = 1
+	pBrndMax    = 5
+	pSizeMin    = 1
+	pSizeMax    = 50
+	psQtyMin    = 1
+	psQtyMax    = 9999
+	psScstMin   = 100
+	psScstMax   = 100000
+	pMfgSd      = 0
+	pBrndSd     = 1
+	pTypeSd     = 2
+	pSizeSd     = 3
+	pCntrSd     = 4
+	psQtySd     = 7
+	psScstSd    = 8
+	pNameSd     = 37
+	pCmntLen    = 14
+	psCmntLen   = 124
+	pCmntSd     = 6
+	psCmntSd    = 9
+	suppPerPart = 4
 )
 
 type Part struct {
-	partKey     dssHuge
-	name        string
-	mfgr        string
-	brand       string
-	types       string
-	size        dssHuge
-	container   string
-	retailPrice dssHuge
-	comment     string
-	s           []PartSupp
+	PartKey     dssHuge
+	Name        string
+	Mfgr        string
+	Brand       string
+	Type        string
+	Size        dssHuge
+	Container   string
+	RetailPrice dssHuge
+	Comment     string
+	S           []PartSupp
 }
 
-func sdPart(child table, skipCount dssHuge) {
-	for i := P_MFG_SD; i <= P_CNTR_SD; i++ {
+func sdPart(child Table, skipCount dssHuge) {
+	for i := pMfgSd; i <= pCntrSd; i++ {
 		advanceStream(i, skipCount, false)
 	}
-	advanceStream(P_CMNT_SD, skipCount*2, false)
-	advanceStream(P_NAME_SD, skipCount*92, false)
+	advanceStream(pCmntSd, skipCount*2, false)
+	advanceStream(pNameSd, skipCount*92, false)
 }
 
 func partSuppBridge(p, s dssHuge) dssHuge {
-	totScnt := tDefs[SUPP].base * scale
-	return (p+s*(totScnt/SUPP_PER_PART+((p-1)/totScnt)))%totScnt + 1
+	totScnt := tDefs[TSupp].base * scale
+	return (p+s*(totScnt/suppPerPart+((p-1)/totScnt)))%totScnt + 1
 }
 
-var _partLoader = func(part interface{}) error {
-	p := part.(*Part)
-	f, err := os.OpenFile(tDefs[PART].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err := f.WriteString(
+type partLoader struct {
+	io.StringWriter
+}
+
+func (p partLoader) Load(item interface{}) error {
+	part := item.(*Part)
+	if _, err := p.WriteString(
 		fmt.Sprintf("%d|%s|%s|%s|%s|%d|%s|%s|%s|\n",
-			p.partKey,
-			p.name,
-			p.mfgr,
-			p.brand,
-			p.types,
-			p.size,
-			p.container,
-			fmtMoney(p.retailPrice),
-			p.comment)); err != nil {
+			part.PartKey,
+			part.Name,
+			part.Mfgr,
+			part.Brand,
+			part.Type,
+			part.Size,
+			part.Container,
+			FmtMoney(part.RetailPrice),
+			part.Comment)); err != nil {
 		return err
 	}
 	return nil
 }
-var partLoader = &_partLoader
+
+func (p partLoader) Flush() error {
+	return nil
+}
+
+func newPartLoader(writer io.StringWriter) partLoader {
+	return partLoader{writer}
+}
 
 func makePart(idx dssHuge) *Part {
 	part := &Part{}
-	part.partKey = idx
-	part.name = aggStr(&colors, P_NAME_SCL, P_NAME_SD)
-	tmp := random(P_MFG_MIN, P_MFG_MAX, P_MFG_SD)
-	part.mfgr = fmt.Sprintf("Manufacturer#%d", tmp)
-	brnd := random(P_BRND_MIN, P_BRND_MAX, P_BRND_SD)
-	part.brand = fmt.Sprintf("Brand#%02d", tmp*10+brnd)
-	pickStr(&pTypesSet, P_TYPE_SD, &part.types)
-	part.size = random(P_SIZE_MIN, P_SIZE_MAX, P_SIZE_SD)
-	pickStr(&pCntrSet, P_CNTR_SD, &part.container)
-	part.retailPrice = rpbRoutine(idx)
-	part.comment = makeText(P_CMNT_LEN, P_CMNT_SD)
+	part.PartKey = idx
+	part.Name = aggStr(&colors, pNameScl, pNameSd)
+	tmp := random(pMfgMin, pMfgMax, pMfgSd)
+	part.Mfgr = fmt.Sprintf("Manufacturer#%d", tmp)
+	brnd := random(pBrndMin, pBrndMax, pBrndSd)
+	part.Brand = fmt.Sprintf("Brand#%02d", tmp*10+brnd)
+	pickStr(&pTypesSet, pTypeSd, &part.Type)
+	part.Size = random(pSizeMin, pSizeMax, pSizeSd)
+	pickStr(&pCntrSet, pCntrSd, &part.Container)
+	part.RetailPrice = rpbRoutine(idx)
+	part.Comment = makeText(pCmntLen, pCmntSd)
 
-	for snum := 0; snum < SUPP_PER_PART; snum++ {
+	for snum := 0; snum < suppPerPart; snum++ {
 		ps := PartSupp{}
-		ps.partKey = part.partKey
-		ps.suppKey = partSuppBridge(idx, dssHuge(snum))
-		ps.qty = random(PS_QTY_MIN, PS_QTY_MAX, PS_QTY_SD)
-		ps.sCost = random(PS_SCST_MIN, PS_SCST_MAX, PS_SCST_SD)
-		ps.comment = makeText(PS_CMNT_LEN, PS_CMNT_SD)
-		part.s = append(part.s, ps)
+		ps.PartKey = part.PartKey
+		ps.SuppKey = partSuppBridge(idx, dssHuge(snum))
+		ps.Qty = random(psQtyMin, psQtyMax, psQtySd)
+		ps.SCost = random(psScstMin, psScstMax, psScstSd)
+		ps.Comment = makeText(psCmntLen, psCmntSd)
+		part.S = append(part.S, ps)
 	}
 
 	return part

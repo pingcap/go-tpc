@@ -2,47 +2,50 @@ package dbgen
 
 import (
 	"fmt"
-	"os"
+	"io"
 )
 
 type PartSupp struct {
-	partKey dssHuge
-	suppKey dssHuge
-	qty     dssHuge
-	sCost   dssHuge
-	comment string
+	PartKey dssHuge
+	SuppKey dssHuge
+	Qty     dssHuge
+	SCost   dssHuge
+	Comment string
 }
 
-func sdPsupp(child table, skipCount dssHuge) {
-	for j := 0; j < SUPP_PER_PART; j++ {
-		advanceStream(PS_QTY_SD, skipCount, false)
-		advanceStream(PS_SCST_SD, skipCount, false)
-		advanceStream(PS_CMNT_SD, skipCount*2, false)
+func sdPsupp(child Table, skipCount dssHuge) {
+	for j := 0; j < suppPerPart; j++ {
+		advanceStream(psQtySd, skipCount, false)
+		advanceStream(psScstSd, skipCount, false)
+		advanceStream(psCmntSd, skipCount*2, false)
 	}
 }
 
-var _partSuppLoader = func(part interface{}) error {
-	p := part.(*Part)
-	f, err := os.OpenFile(tDefs[PSUPP].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+type partSuppLoader struct {
+	io.StringWriter
+}
 
-	for i := 0; i < SUPP_PER_PART; i++ {
-		supp := p.s[i]
-		if _, err := f.WriteString(
+func (p partSuppLoader) Load(item interface{}) error {
+	pSupp := item.(*Part)
+	for i := 0; i < suppPerPart; i++ {
+		supp := pSupp.S[i]
+		if _, err := p.WriteString(
 			fmt.Sprintf("%d|%d|%d|%s|%s|\n",
-				supp.partKey,
-				supp.suppKey,
-				supp.qty,
-				fmtMoney(supp.sCost),
-				supp.comment)); err != nil {
+				supp.PartKey,
+				supp.SuppKey,
+				supp.Qty,
+				FmtMoney(supp.SCost),
+				supp.Comment)); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-var partSuppLoader = &_partSuppLoader
+func (p partSuppLoader) Flush() error {
+	return nil
+}
+
+func newPartSuppLoader(writer io.StringWriter) partSuppLoader {
+	return partSuppLoader{writer}
+}

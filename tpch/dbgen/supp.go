@@ -2,86 +2,115 @@ package dbgen
 
 import (
 	"fmt"
-	"os"
+	"io"
+)
+
+const (
+	sNtrgSd      = 33
+	sPhneSd      = 34
+	sAbalSd      = 35
+	sAddrLen     = 25
+	sAbalMin     = -99999
+	sAbalMax     = 999999
+	sCmntLen     = 63
+	sAddrSd      = 32
+	sCmntSd      = 36
+	sCmntBbb     = 10
+	bbbJnkSd     = 44
+	bbbTypeSd    = 45
+	bbbCmntSd    = 46
+	bbbOffsetSd  = 47
+	bbbDeadbeats = 50
+	bbbBase      = "Customer "
+	bbbComplain  = "Complaints"
+	bbbCommend   = "Recommends"
+	bbbCmntLen   = 19
+	bbbBaseLen   = 9
 )
 
 type Supp struct {
-	suppKey    dssHuge
-	name       string
-	address    string
-	nationCode dssHuge
-	phone      string
-	acctbal    dssHuge
-	comment    string
+	SuppKey    dssHuge
+	Name       string
+	Address    string
+	NationCode dssHuge
+	Phone      string
+	Acctbal    dssHuge
+	Comment    string
 }
 
-var _suppLoader = func(supp interface{}) error {
-	s := supp.(*Supp)
-	f, err := os.OpenFile(tDefs[SUPP].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err := f.WriteString(
+type suppLoader struct {
+	io.StringWriter
+}
+
+func (s suppLoader) Load(item interface{}) error {
+	supp := item.(*Supp)
+	if _, err := s.WriteString(
 		fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|\n",
-			s.suppKey,
-			s.name,
-			s.address,
-			s.nationCode,
-			s.phone,
-			fmtMoney(s.acctbal),
-			s.comment)); err != nil {
+			supp.SuppKey,
+			supp.Name,
+			supp.Address,
+			supp.NationCode,
+			supp.Phone,
+			FmtMoney(supp.Acctbal),
+			supp.Comment)); err != nil {
 		return err
 	}
 	return nil
 }
-var suppLoader = &_suppLoader
+
+func (s suppLoader) Flush() error {
+	return nil
+}
+
+func newSuppLoader(writer io.StringWriter) suppLoader {
+	return suppLoader{writer}
+}
 
 func makeSupp(idx dssHuge) *Supp {
 	supp := &Supp{}
-	supp.suppKey = idx
-	supp.name = fmt.Sprintf("Supplier#%09d", idx)
-	supp.address = vStr(S_ADDR_LEN, S_ADDR_SD)
-	i := random(0, dssHuge(nations.count-1), S_NTRG_SD)
-	supp.nationCode = i
-	supp.phone = genPhone(i, S_PHNE_SD)
-	supp.acctbal = random(S_ABAL_MIN, S_ABAL_MAX, S_ABAL_SD)
-	supp.comment = makeText(S_CMNT_LEN, S_CMNT_SD)
+	supp.SuppKey = idx
+	supp.Name = fmt.Sprintf("Supplier#%09d", idx)
+	supp.Address = vStr(sAddrLen, sAddrSd)
+	i := random(0, dssHuge(nations.count-1), sNtrgSd)
+	supp.NationCode = i
+	supp.Phone = genPhone(i, sPhneSd)
+	supp.Acctbal = random(sAbalMin, sAbalMax, sAbalSd)
+	supp.Comment = makeText(sCmntLen, sCmntSd)
 
-	badPress := random(1, 10000, BBB_CMNT_SD)
-	types := random(0, 100, BBB_TYPE_SD)
-	noise := random(0, dssHuge(len(supp.comment)-BBB_CMNT_LEN), BBB_JNK_SD)
-	offset := random(0, dssHuge(len(supp.comment))-(BBB_CMNT_LEN+noise), BBB_OFFSET_SD)
+	badPress := random(1, 10000, bbbCmntSd)
+	types := random(0, 100, bbbTypeSd)
+	noise := random(0, dssHuge(len(supp.Comment)-bbbCmntLen), bbbJnkSd)
+	offset := random(0, dssHuge(len(supp.Comment))-(bbbCmntLen+noise), bbbOffsetSd)
 
-	if badPress <= S_CMNT_BBB {
-		if types < BBB_DEADBEATS {
+	if badPress <= sCmntBbb {
+		if types < bbbDeadbeats {
 			types = 0
 		} else {
 			types = 1
 		}
-		supp.comment = supp.comment[:offset] + BBB_BASE + supp.comment[offset+dssHuge(len(BBB_BASE)):]
+		supp.Comment = supp.Comment[:offset] + bbbBase + supp.Comment[offset+dssHuge(len(bbbBase)):]
 		if types == 0 {
-			supp.comment = supp.comment[:BBB_BASE_LEN+offset+noise] +
-				BBB_COMPLAIN +
-				supp.comment[BBB_BASE_LEN+offset+noise+dssHuge(len(BBB_COMPLAIN)):]
+			supp.Comment = supp.Comment[:bbbBaseLen+offset+noise] +
+				bbbComplain +
+				supp.Comment[bbbBaseLen+offset+noise+dssHuge(len(bbbComplain)):]
 		} else {
-			supp.comment = supp.comment[:BBB_BASE_LEN+offset+noise] +
-				BBB_COMMEND +
-				supp.comment[BBB_BASE_LEN+offset+noise+dssHuge(len(BBB_COMMEND)):]
+			supp.Comment = supp.Comment[:bbbBaseLen+offset+noise] +
+				bbbCommend +
+				supp.Comment[bbbBaseLen+offset+noise+dssHuge(len(bbbCommend)):]
 		}
 	}
 
 	return supp
 }
 
-func sdSupp(child table, skipCount dssHuge) {
-	advanceStream(S_NTRG_SD, skipCount, false)
-	advanceStream(S_PHNE_SD, skipCount*3, false)
-	advanceStream(S_ABAL_SD, skipCount, false)
-	advanceStream(S_ADDR_SD, skipCount*9, false)
-	advanceStream(S_CMNT_SD, skipCount*2, false)
-	advanceStream(BBB_CMNT_SD, skipCount, false)
-	advanceStream(BBB_JNK_SD, skipCount, false)
-	advanceStream(BBB_OFFSET_SD, skipCount, false)
-	advanceStream(BBB_TYPE_SD, skipCount, false)
+func sdSupp(child Table, skipCount dssHuge) {
+	advanceStream(sNtrgSd, skipCount, false)
+	advanceStream(sPhneSd, skipCount*3, false)
+	advanceStream(sAbalSd, skipCount, false)
+	advanceStream(sAddrSd, skipCount*9, false)
+	advanceStream(sCmntSd, skipCount*2, false)
+	advanceStream(bbbCmntSd, skipCount, false)
+	advanceStream(bbbJnkSd, skipCount, false)
+	advanceStream(bbbOffsetSd, skipCount, false)
+	advanceStream(bbbTypeSd, skipCount, false)
 }

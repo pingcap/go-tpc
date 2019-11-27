@@ -2,63 +2,82 @@ package dbgen
 
 import (
 	"fmt"
-	"os"
+	"io"
+)
+
+const (
+	cPhneSd  = 28
+	cAbalSd  = 29
+	cMsegSd  = 30
+	cAddrLen = 25
+	cCmntLen = 73
+	cAddrSd  = 26
+	cCmntSd  = 31
+	cAbalMin = -99999
+	cAbalMax = 999999
+	lNtrgSd  = 27
 )
 
 type Cust struct {
-	custKey    dssHuge
-	name       string
-	address    string
-	nationCode dssHuge
-	phone      string
-	acctbal    dssHuge
-	mktSegment string
-	comment    string
+	CustKey    dssHuge
+	Name       string
+	Address    string
+	NationCode dssHuge
+	Phone      string
+	Acctbal    dssHuge
+	MktSegment string
+	Comment    string
 }
 
-var _custLoader = func(cust interface{}) error {
-	c := cust.(*Cust)
-	f, err := os.OpenFile(tDefs[CUST].name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err := f.WriteString(
+type custLoader struct {
+	io.StringWriter
+}
+
+func (c custLoader) Load(item interface{}) error {
+	cust := item.(*Cust)
+	if _, err := c.WriteString(
 		fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|%s|\n",
-			c.custKey,
-			c.name,
-			c.address,
-			c.nationCode,
-			c.phone,
-			fmtMoney(c.acctbal),
-			c.mktSegment,
-			c.comment)); err != nil {
+			cust.CustKey,
+			cust.Name,
+			cust.Address,
+			cust.NationCode,
+			cust.Phone,
+			FmtMoney(cust.Acctbal),
+			cust.MktSegment,
+			cust.Comment)); err != nil {
 		return err
 	}
 	return nil
 }
-var custLoader = &_custLoader
 
-func sdCust(child table, skipCount dssHuge) {
-	advanceStream(C_ADDR_SD, skipCount*9, false)
-	advanceStream(C_CMNT_SD, skipCount*2, false)
-	advanceStream(C_NTRG_SD, skipCount, false)
-	advanceStream(C_PHNE_SD, skipCount*3, false)
-	advanceStream(C_ABAL_SD, skipCount, false)
-	advanceStream(C_MSEG_SD, skipCount, false)
+func (c custLoader) Flush() error {
+	return nil
+}
+
+func newCustLoader(writer io.StringWriter) custLoader {
+	return custLoader{writer}
+}
+
+func sdCust(child Table, skipCount dssHuge) {
+	advanceStream(cAddrSd, skipCount*9, false)
+	advanceStream(cCmntSd, skipCount*2, false)
+	advanceStream(lNtrgSd, skipCount, false)
+	advanceStream(cPhneSd, skipCount*3, false)
+	advanceStream(cAbalSd, skipCount, false)
+	advanceStream(cMsegSd, skipCount, false)
 }
 
 func makeCust(idx dssHuge) *Cust {
 	cust := &Cust{}
-	cust.custKey = idx
-	cust.name = fmt.Sprintf("Customer#%09d", idx)
-	cust.address = vStr(C_ADDR_LEN, C_ADDR_SD)
-	i := random(0, dssHuge(nations.count-1), C_NTRG_SD)
-	cust.nationCode = i
-	cust.phone = genPhone(i, C_PHNE_SD)
-	cust.acctbal = random(C_ABAL_MIN, C_ABAL_MAX, C_ABAL_SD)
-	pickStr(&cMsegSet, C_MSEG_SD, &cust.mktSegment)
-	cust.comment = makeText(C_CMNT_LEN, C_CMNT_SD)
+	cust.CustKey = idx
+	cust.Name = fmt.Sprintf("Customer#%09d", idx)
+	cust.Address = vStr(cAddrLen, cAddrSd)
+	i := random(0, dssHuge(nations.count-1), lNtrgSd)
+	cust.NationCode = i
+	cust.Phone = genPhone(i, cPhneSd)
+	cust.Acctbal = random(cAbalMin, cAbalMax, cAbalSd)
+	pickStr(&cMsegSet, cMsegSd, &cust.MktSegment)
+	cust.Comment = makeText(cCmntLen, cCmntSd)
 
 	return cust
 }

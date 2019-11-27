@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	maxStream             = 47
-	RNG_A         dssHuge = 6364136223846793005
-	RNG_C         dssHuge = 1
-	MAX_LONG              = math.MaxInt32
-	BITS_PER_LONG         = 32
-	dM                    = 2147483647.0
-	alphaNum              = "0123456789abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ,"
+	maxStream         = 47
+	rngA      dssHuge = 6364136223846793005
+	rngC      dssHuge = 1
+	maxLong           = math.MaxInt32
+	dM                = 2147483647.0
+	alphaNum          = "0123456789abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ,"
+	vStrLow           = 0.4
+	vStrHgh           = 1.6
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 )
 
 type Seed struct {
-	table
+	Table
 	value    dssHuge
 	usage    dssHuge
 	boundary dssHuge
@@ -35,8 +36,8 @@ func nextRand(nSeed dssHuge) dssHuge {
 }
 
 func nextRand64(nSeed dssHuge) dssHuge {
-	a := RNG_A
-	c := RNG_C
+	a := rngA
+	c := rngC
 	return nSeed*a + c
 }
 
@@ -49,7 +50,7 @@ func unifInt(nLow dssHuge, nHigh dssHuge, nStream long) dssHuge {
 	if nStream < 0 || nStream > maxStream {
 		nStream = 0
 	}
-	if (nHigh == MAX_LONG) && (nLow == 0) {
+	if (nHigh == maxLong) && (nLow == 0) {
 		dRange = float64(nHigh32 - nLow32 + 1)
 		_ = dssHuge(nHigh32 - nLow32 + 1)
 	} else {
@@ -86,8 +87,8 @@ func random(lower, upper dssHuge, nStream long) dssHuge {
 }
 
 func advanceRand64(nSeed, nCount dssHuge) dssHuge {
-	a := RNG_A
-	c := RNG_C
+	a := rngA
+	c := rngC
 	var nBit int
 	aPow := a
 	dSum := c
@@ -95,7 +96,7 @@ func advanceRand64(nSeed, nCount dssHuge) dssHuge {
 		return nSeed
 	}
 
-	for nBit = 0; (nCount >> nBit) != RNG_C; nBit++ {
+	for nBit = 0; (nCount >> nBit) != rngC; nBit++ {
 	}
 	for {
 		nBit -= 1
@@ -136,21 +137,21 @@ func advanceStream(nStream int, nCalls dssHuge, bUse64Bit bool) {
 	}
 }
 
-func rowStart(_ table) {
+func rowStart(_ Table) {
 	for i := 0; i < maxStream; i++ {
 		seeds[i].usage = 0
 	}
 }
-func rowStop(t table) {
-	if t == ORDER_LINE {
-		t = ORDER
+func rowStop(t Table) {
+	if t == TOrderLine {
+		t = TOrder
 	}
-	if t == PART_PSUPP {
-		t = PART
+	if t == TPartPsupp {
+		t = TPart
 	}
 
 	for i := 0; i < maxStream; i++ {
-		if seeds[i].table == t || seeds[i].table == tDefs[t].child {
+		if seeds[i].Table == t || seeds[i].Table == tDefs[t].child {
 			nthElement(seeds[i].boundary-seeds[i].usage, &seeds[i].value)
 		}
 	}
@@ -162,7 +163,7 @@ func aRand(min, max, column int) string {
 	len := random(dssHuge(min), dssHuge(max), long(column))
 	for i := dssHuge(0); i < len; i++ {
 		if i%5 == 0 {
-			charInt = random(0, MAX_LONG, long(column))
+			charInt = random(0, maxLong, long(column))
 		}
 		buf.Write([]byte{alphaNum[charInt&0o77]})
 		charInt >>= 6
@@ -171,7 +172,7 @@ func aRand(min, max, column int) string {
 }
 
 func vStr(avg, sd int) string {
-	return aRand((int)(float64(avg)*V_STR_LOW), (int)(float64(avg)*V_STR_HGH), sd)
+	return aRand((int)(float64(avg)*vStrLow), (int)(float64(avg)*vStrHgh), sd)
 }
 
 func genPhone(idx dssHuge, sd int) string {
@@ -180,7 +181,7 @@ func genPhone(idx dssHuge, sd int) string {
 	number := random(1000, 9999, long(sd))
 
 	return fmt.Sprintf("%02d-%03d-%03d-%04d",
-		10+(idx%NATIONS_MAX),
+		10+(idx%nationsMax),
 		aCode,
 		exChg,
 		number)
@@ -188,53 +189,53 @@ func genPhone(idx dssHuge, sd int) string {
 
 func initSeeds() {
 	seeds = [maxStream + 1]Seed{
-		{PART, 1, 0, 1},
-		{PART, 46831694, 0, 1},
-		{PART, 1841581359, 0, 1},
-		{PART, 1193163244, 0, 1},
-		{PART, 727633698, 0, 1},
-		{NONE, 933588178, 0, 1},
-		{PART, 804159733, 0, 2},
-		{PSUPP, 1671059989, 0, SUPP_PER_PART},
-		{PSUPP, 1051288424, 0, SUPP_PER_PART},
-		{PSUPP, 1961692154, 0, SUPP_PER_PART * 2},
-		{ORDER, 1227283347, 0, 1},
-		{ORDER, 1171034773, 0, 1},
-		{ORDER, 276090261, 0, 2},
-		{ORDER, 1066728069, 0, 1},
-		{LINE, 209208115, 0, O_LCNT_MAX},
-		{LINE, 554590007, 0, O_LCNT_MAX},
-		{LINE, 721958466, 0, O_LCNT_MAX},
-		{LINE, 1371272478, 0, O_LCNT_MAX},
-		{LINE, 675466456, 0, O_LCNT_MAX},
-		{LINE, 1808217256, 0, O_LCNT_MAX},
-		{LINE, 2095021727, 0, O_LCNT_MAX},
-		{LINE, 1769349045, 0, O_LCNT_MAX},
-		{LINE, 904914315, 0, O_LCNT_MAX},
-		{LINE, 373135028, 0, O_LCNT_MAX},
-		{LINE, 717419739, 0, O_LCNT_MAX},
-		{LINE, 1095462486, 0, O_LCNT_MAX * 2},
-		{CUST, 881155353, 0, 9},
-		{CUST, 1489529863, 0, 1},
-		{CUST, 1521138112, 0, 3},
-		{CUST, 298370230, 0, 1},
-		{CUST, 1140279430, 0, 1},
-		{CUST, 1335826707, 0, 2},
-		{SUPP, 706178559, 0, 9},
-		{SUPP, 110356601, 0, 1},
-		{SUPP, 884434366, 0, 3},
-		{SUPP, 962338209, 0, 1},
-		{SUPP, 1341315363, 0, 2},
-		{PART, 709314158, 0, 92},
-		{ORDER, 591449447, 0, 1},
-		{LINE, 431918286, 0, 1},
-		{ORDER, 851767375, 0, 1},
-		{NATION, 606179079, 0, 2},
-		{REGION, 1500869201, 0, 2},
-		{ORDER, 1434868289, 0, 1},
-		{SUPP, 263032577, 0, 1},
-		{SUPP, 753643799, 0, 1},
-		{SUPP, 202794285, 0, 1},
-		{SUPP, 715851524, 0, 1},
+		{TPart, 1, 0, 1},
+		{TPart, 46831694, 0, 1},
+		{TPart, 1841581359, 0, 1},
+		{TPart, 1193163244, 0, 1},
+		{TPart, 727633698, 0, 1},
+		{TNone, 933588178, 0, 1},
+		{TPart, 804159733, 0, 2},
+		{TPsupp, 1671059989, 0, suppPerPart},
+		{TPsupp, 1051288424, 0, suppPerPart},
+		{TPsupp, 1961692154, 0, suppPerPart * 2},
+		{TOrder, 1227283347, 0, 1},
+		{TOrder, 1171034773, 0, 1},
+		{TOrder, 276090261, 0, 2},
+		{TOrder, 1066728069, 0, 1},
+		{TLine, 209208115, 0, oLcntMax},
+		{TLine, 554590007, 0, oLcntMax},
+		{TLine, 721958466, 0, oLcntMax},
+		{TLine, 1371272478, 0, oLcntMax},
+		{TLine, 675466456, 0, oLcntMax},
+		{TLine, 1808217256, 0, oLcntMax},
+		{TLine, 2095021727, 0, oLcntMax},
+		{TLine, 1769349045, 0, oLcntMax},
+		{TLine, 904914315, 0, oLcntMax},
+		{TLine, 373135028, 0, oLcntMax},
+		{TLine, 717419739, 0, oLcntMax},
+		{TLine, 1095462486, 0, oLcntMax * 2},
+		{TCust, 881155353, 0, 9},
+		{TCust, 1489529863, 0, 1},
+		{TCust, 1521138112, 0, 3},
+		{TCust, 298370230, 0, 1},
+		{TCust, 1140279430, 0, 1},
+		{TCust, 1335826707, 0, 2},
+		{TSupp, 706178559, 0, 9},
+		{TSupp, 110356601, 0, 1},
+		{TSupp, 884434366, 0, 3},
+		{TSupp, 962338209, 0, 1},
+		{TSupp, 1341315363, 0, 2},
+		{TPart, 709314158, 0, 92},
+		{TOrder, 591449447, 0, 1},
+		{TLine, 431918286, 0, 1},
+		{TOrder, 851767375, 0, 1},
+		{TNation, 606179079, 0, 2},
+		{TRegion, 1500869201, 0, 2},
+		{TOrder, 1434868289, 0, 1},
+		{TSupp, 263032577, 0, 1},
+		{TSupp, 753643799, 0, 1},
+		{TSupp, 202794285, 0, 1},
+		{TSupp, 715851524, 0, 1},
 	}
 }

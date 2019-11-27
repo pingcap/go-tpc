@@ -83,7 +83,9 @@ func (l *lineItemloader) Load(item interface{}) error {
 			line.ShipMode,
 			line.Comment,
 		)
-		return l.InsertValue(v)
+		if err := l.InsertValue(v); err != nil {
+			return nil
+		}
 	}
 	return nil
 }

@@ -13,6 +13,12 @@ func (p partPsuppLoader) Load(item interface{}) error {
 }
 
 func (p partPsuppLoader) Flush() error {
+	if err := tDefs[TPart].loader.Flush(); err != nil {
+		return err
+	}
+	if err := tDefs[TPsupp].loader.Flush(); err != nil {
+		return err
+	}
 	return nil
 }
 

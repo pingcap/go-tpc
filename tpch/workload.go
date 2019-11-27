@@ -66,6 +66,8 @@ func (w Workloader) InitThread(ctx context.Context, threadID int) context.Contex
 }
 
 func (w Workloader) CleanupThread(ctx context.Context, threadID int) {
+	s := w.getState(ctx)
+	s.Conn.Close()
 }
 
 func (w Workloader) Prepare(ctx context.Context, threadID int) error {
@@ -89,7 +91,6 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 }
 
 func (w Workloader) CheckPrepare(ctx context.Context, threadID int) error {
-	//panic("implement me")
 	return nil
 }
 

@@ -83,7 +83,7 @@ func main() {
 	registerTpch(rootCmd)
 
 	var cancel context.CancelFunc
-	globalCtx, cancel = context.WithTimeout(context.Background(), totalTime)
+	globalCtx, cancel = context.WithCancel(context.Background())
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc,

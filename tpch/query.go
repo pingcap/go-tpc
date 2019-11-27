@@ -413,8 +413,6 @@ create view revenue0 (supplier_no, total_revenue) as
 		and l_shipdate < date_add('1997-07-01', interval '3' month)
 	group by
 		l_suppkey;
-
-
 select
 	s_suppkey,
 	s_name,

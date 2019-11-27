@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pingcap/go-tpc/tpch"
@@ -16,7 +17,10 @@ func executeTpch(action string, _ []string) {
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
 	w := tpch.NewWorkloader(globalDB, &tpchConfig)
 
-	executeWorkload(globalCtx, w, action)
+	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
+	defer cancel()
+
+	executeWorkload(timeoutCtx, w, action)
 }
 
 func registerTpch(root *cobra.Command) {

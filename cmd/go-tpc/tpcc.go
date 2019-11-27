@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +17,10 @@ func executeTpcc(action string, args []string) {
 	tpccConfig.Isolation = isolationLevel
 	w := tpcc.NewWorkloader(globalDB, &tpccConfig)
 
-	executeWorkload(globalCtx, w, action)
+	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
+	defer cancel()
+
+	executeWorkload(timeoutCtx, w, action)
 }
 
 func registerTpcc(root *cobra.Command) {

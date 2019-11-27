@@ -21,3 +21,15 @@ make
 ./bin/go-tpc tpcc --warehouses 4 check
 ```
 
+## TPC-H
+
+```bash
+# Prepare data with scale factor 1
+./bin/go-tpc tpch --sf=1 prepare
+# Run TPCH workloads with result checking
+./bin/go-tpc tpch --sf=1 --check=true run
+# Run TPCH workloads without result checking
+./bin/go-tpc tpch --sf=1 run
+# Cleanup
+./bin/go-tpc tpch cleanup
+```

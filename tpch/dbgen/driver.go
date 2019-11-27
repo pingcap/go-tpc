@@ -106,7 +106,7 @@ func DbGen(loaders map[Table]Loader) error {
 		tDefs[table].loader = loader
 	}
 
-	for _, i := range []Table{TCust, TSupp, TNation, TRegion, TPartPsupp, TOrderLine} {
+	for _, i := range []Table{TNation, TRegion, TCust, TSupp, TPartPsupp, TOrderLine} {
 		rowCnt := tDefs[i].base
 		if i < TNation {
 			rowCnt *= scale

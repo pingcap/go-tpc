@@ -6,6 +6,9 @@ func (p partPsuppLoader) Load(item interface{}) error {
 	if err := tDefs[TPart].loader.Load(item); err != nil {
 		return err
 	}
+	if err := tDefs[TPart].loader.Flush(); err != nil {
+		return err
+	}
 	if err := tDefs[TPsupp].loader.Load(item); err != nil {
 		return err
 	}
@@ -13,9 +16,6 @@ func (p partPsuppLoader) Load(item interface{}) error {
 }
 
 func (p partPsuppLoader) Flush() error {
-	if err := tDefs[TPart].loader.Flush(); err != nil {
-		return err
-	}
 	if err := tDefs[TPsupp].loader.Flush(); err != nil {
 		return err
 	}

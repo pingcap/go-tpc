@@ -11,9 +11,6 @@ func (o orderLineLoader) Load(item interface{}) error {
 	if err := tDefs[TOrder].loader.Load(item); err != nil {
 		return err
 	}
-	if err := tDefs[TOrder].loader.Flush(); err != nil {
-		return nil
-	}
 	if err := tDefs[TLine].loader.Load(item); err != nil {
 		return err
 	}
@@ -21,6 +18,9 @@ func (o orderLineLoader) Load(item interface{}) error {
 }
 
 func (o orderLineLoader) Flush() error {
+	if err := tDefs[TOrder].loader.Flush(); err != nil {
+		return nil
+	}
 	if err := tDefs[TLine].loader.Flush(); err != nil {
 		return err
 	}

@@ -65,8 +65,7 @@ CREATE TABLE IF NOT EXISTS supplier (
     S_PHONE CHAR(15) NOT NULL,
     S_ACCTBAL DECIMAL(15, 2) NOT NULL,
     S_COMMENT VARCHAR(101) NOT NULL,
-    PRIMARY KEY (S_SUPPKEY),
-    CONSTRAINT FOREIGN KEY SUPPLIER_FK1 (S_NATIONKEY) references nation(N_NATIONKEY)
+    PRIMARY KEY (S_SUPPKEY)
 )`
 	if err := w.createTableDDL(ctx, query, "supplier", "creating"); err != nil {
 		return err
@@ -79,9 +78,7 @@ CREATE TABLE IF NOT EXISTS partsupp (
     PS_AVAILQTY BIGINT NOT NULL,
     PS_SUPPLYCOST DECIMAL(15, 2) NOT NULL,
     PS_COMMENT VARCHAR(199) NOT NULL,
-    PRIMARY KEY (PS_PARTKEY, PS_SUPPKEY),
-    CONSTRAINT FOREIGN KEY PARTSUPP_FK1 (PS_SUPPKEY) references supplier(S_SUPPKEY),
-    CONSTRAINT FOREIGN KEY PARTSUPP_FK2 (PS_PARTKEY) references part(P_PARTKEY)
+    PRIMARY KEY (PS_PARTKEY, PS_SUPPKEY)
 )`
 	if err := w.createTableDDL(ctx, query, "partsupp", "creating"); err != nil {
 		return err
@@ -97,8 +94,7 @@ CREATE TABLE IF NOT EXISTS customer (
     C_ACCTBAL DECIMAL(15, 2) NOT NULL,
     C_MKTSEGMENT CHAR(10) NOT NULL,
     C_COMMENT VARCHAR(117) NOT NULL,
-    PRIMARY KEY (C_CUSTKEY),
-    CONSTRAINT FOREIGN KEY CUSTOMER_FK1 (C_NATIONKEY) references nation(N_NATIONKEY)
+    PRIMARY KEY (C_CUSTKEY)
 )`
 	if err := w.createTableDDL(ctx, query, "customer", "creating"); err != nil {
 		return err
@@ -115,8 +111,7 @@ CREATE TABLE IF NOT EXISTS orders (
     O_CLERK CHAR(15) NOT NULL,
     O_SHIPPRIORITY BIGINT NOT NULL,
     O_COMMENT VARCHAR(79) NOT NULL,
-    PRIMARY KEY (O_ORDERKEY),
-    CONSTRAINT FOREIGN KEY ORDERS_FK1 (O_CUSTKEY) references customer(C_CUSTKEY)
+    PRIMARY KEY (O_ORDERKEY)
 )`
 	if err := w.createTableDDL(ctx, query, "orders", "creating"); err != nil {
 		return err
@@ -140,9 +135,7 @@ CREATE TABLE IF NOT EXISTS lineitem (
     L_SHIPINSTRUCT CHAR(25) NOT NULL,
     L_SHIPMODE CHAR(10) NOT NULL,
     L_COMMENT VARCHAR(44) NOT NULL,
-    PRIMARY KEY (L_ORDERKEY, L_LINENUMBER),
-    CONSTRAINT FOREIGN KEY LINEITEM_FK1 (L_ORDERKEY) references orders(O_ORDERKEY),
-    CONSTRAINT FOREIGN KEY LINEITEM_FK2 (L_PARTKEY, L_SUPPKEY) references partsupp(PS_PARTKEY, PS_SUPPKEY)
+    PRIMARY KEY (L_ORDERKEY, L_LINENUMBER)
 )
 `
 	if err := w.createTableDDL(ctx, query, "lineitem", "creating"); err != nil {

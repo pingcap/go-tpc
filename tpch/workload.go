@@ -49,7 +49,7 @@ func (w *Workloader) getState(ctx context.Context) *tpchState {
 
 func (w *Workloader) updateState(ctx context.Context) {
 	s := w.getState(ctx)
-	s.queryIdx ++
+	s.queryIdx++
 }
 
 // Name return workloader name
@@ -136,7 +136,7 @@ func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
 	return w.dropTable(ctx)
 }
 
-// Check checks data 
+// Check checks data
 func (w Workloader) Check(ctx context.Context, threadID int) error {
 	return nil
 }

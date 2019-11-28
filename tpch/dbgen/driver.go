@@ -112,7 +112,7 @@ func DbGen(loaders map[Table]Loader) error {
 			rowCnt *= scale
 		}
 		if err := genTbl(i, 1, rowCnt); err != nil {
-			return fmt.Errorf("fail to generate %s, err: %v\n", tDefs[i].name, err)
+			return fmt.Errorf("fail to generate %s, err: %v", tDefs[i].name, err)
 		}
 	}
 	return nil

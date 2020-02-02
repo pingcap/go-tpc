@@ -8,6 +8,22 @@ import (
 	"time"
 )
 
+var newOrderQueries = []string{
+	`SELECT c_discount, c_last, c_credit, w_tax FROM customer, 
+warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`,
+	`SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`,
+	`UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?`,
+	`INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) 
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+	`INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`,
+	`SELECT i_price, i_name, i_data FROM item WHERE i_id = ?`,
+	"",
+	`UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? 
+WHERE s_i_id = ? AND s_w_id = ?`,
+	`INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id,
+ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+}
+
 func (w *Workloader) otherWarehouse(ctx context.Context, warehouse int) int {
 	s := w.getState(ctx)
 
@@ -116,27 +132,26 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	// Process 1
 	// SELECT c_discount, c_last, c_credit, w_tax INTO :c_discount, :c_last, :c_credit,
 	// 	:w_tax FROM customer, warehouse WHERE w_id = :w_id AND c_w_id = w_id AND c_d_id = :d_id AND c_id = :c_id;
-	query := `SELECT c_discount, c_last, c_credit, w_tax FROM customer, 
-warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
+	// 	query := `SELECT c_discount, c_last, c_credit, w_tax FROM customer,
+	// warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
 
-	if err := tx.QueryRowContext(ctx, query, d.wID, d.dID, d.cID).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+	if err := s.newOrderStmts[0].QueryRowContext(ctx, d.wID, d.dID, d.cID).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
+		return fmt.Errorf("Exec %s failed %v", newOrderQueries[0], err)
 	}
 
 	// Process 2
 	// SELECT d_next_o_id, d_tax INTO :d_next_o_id, :d_tax FROM district WHERE d_id = :d_id AND d_w_id = :w_id FOR UPDATE;
-
-	query = `SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`
-	if err := tx.QueryRowContext(ctx, query, d.dID, d.wID).Scan(&d.dNextOID, &d.dTax); err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+	// query := `SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`
+	if err := s.newOrderStmts[1].QueryRowContext(ctx, d.dID, d.wID).Scan(&d.dNextOID, &d.dTax); err != nil {
+		return fmt.Errorf("Exec %s failed %v", newOrderQueries[1], err)
 	}
 
 	// Process 3
 
 	// UPDATE district SET d_next_o_id = :d_next_o_id + 1 WHERE d_id = :d_id AND d_w_id = :w_id;
-	query = "UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?"
-	if _, err := tx.ExecContext(ctx, query, d.dNextOID, d.dID, d.wID); err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+	// query := "UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?"
+	if _, err := s.newOrderStmts[2].ExecContext(ctx, d.dNextOID, d.dID, d.wID); err != nil {
+		return fmt.Errorf("Exec %s failed %v", newOrderQueries[2], err)
 	}
 
 	oID := d.dNextOID
@@ -145,19 +160,19 @@ warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
 
 	// INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local)
 	// 	VALUES (:o_id , :d _id , :w _id , :c_id , :datetime, :o_ol_cnt, :o_all_local);
-	query = `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) 
-VALUES (?, ?, ?, ?, ?, ?, ?)`
-	if _, err := tx.ExecContext(ctx, query, oID, d.dID, d.wID, d.cID,
+	// 	query = `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local)
+	// VALUES (?, ?, ?, ?, ?, ?, ?)`
+	if _, err := s.newOrderStmts[3].ExecContext(ctx, oID, d.dID, d.wID, d.cID,
 		time.Now().Format(timeFormat), d.oOlCnt, allLocal); err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("Exec %s failed %v", newOrderQueries[3], err)
 	}
 
 	// Process 5
 
 	// INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (:o_id , :d _id , :w _id );
-	query = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
-	if _, err := tx.ExecContext(ctx, query, oID, d.dID, d.wID); err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+	// query = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
+	if _, err := s.newOrderStmts[4].ExecContext(ctx, oID, d.dID, d.wID); err != nil {
+		return fmt.Errorf("Exec %s failed %v", newOrderQueries[4], err)
 	}
 
 	for i := 0; i < d.oOlCnt; i++ {
@@ -165,13 +180,13 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`
 		// Process 6
 
 		// SELECT i_price, i_name , i_data INTO :i_price, :i_name, :i_data FROM item WHERE i_id = :ol_i_id;
-		query = "SELECT i_price, i_name, i_data FROM item WHERE i_id = ?"
+		// query = "SELECT i_price, i_name, i_data FROM item WHERE i_id = ?"
 
-		if err := tx.QueryRowContext(ctx, query, item.olIID).Scan(&item.iPrice, &item.iName, &item.iData); err != nil {
+		if err := s.newOrderStmts[5].QueryRowContext(ctx, item.olIID).Scan(&item.iPrice, &item.iName, &item.iData); err != nil {
 			if err == sql.ErrNoRows {
 				return nil
 			}
-			return fmt.Errorf("Exec %s failed %v", query, err)
+			return fmt.Errorf("Exec %s failed %v", newOrderQueries[5], err)
 		}
 
 		// Process 7
@@ -184,7 +199,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`
 		// 	:s_dist_07, :s_dist_08, :s_dist_09, :s_dist_10
 		// 	FROM stock WHERE s_i_id = :ol_i_id
 		// 	AND s_w_id = :ol_supply_w_id FOR UPDATE;
-		query = fmt.Sprintf(`SELECT s_quantity, s_data, s_dist_%02d s_dist FROM stock 
+		query := fmt.Sprintf(`SELECT s_quantity, s_data, s_dist_%02d s_dist FROM stock 
 WHERE s_i_id = ? AND s_w_id = ? FOR UPDATE`, d.dID)
 
 		var distInfo struct {
@@ -210,9 +225,9 @@ WHERE s_i_id = ? AND s_w_id = ? FOR UPDATE`, d.dID)
 		if item.remoteWarehouse {
 			remoteCnt = 1
 		}
-		query = "UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?"
-		if _, err := tx.ExecContext(ctx, query, distInfo.sQuantity, item.olQuantity, remoteCnt, item.olIID, item.olSupplyWID); err != nil {
-			return fmt.Errorf("Exec %s failed %v", query, err)
+		// query = "UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?"
+		if _, err := s.newOrderStmts[7].ExecContext(ctx, distInfo.sQuantity, item.olQuantity, remoteCnt, item.olIID, item.olSupplyWID); err != nil {
+			return fmt.Errorf("Exec %s failed %v", newOrderQueries[7], err)
 		}
 
 		olAmount := float64(item.olQuantity) * item.iPrice * (1 + d.wTax + d.dTax) * (1 - d.cDiscount)
@@ -225,11 +240,11 @@ WHERE s_i_id = ? AND s_w_id = ? FOR UPDATE`, d.dID)
 		// 	ol_amount, ol_dist_info)
 		// 	VALUES (:o_id, :d_id, :w_id, :ol_number, :ol_i_id,
 		//  :ol_supply_w_id, :ol_quantity, :ol_amount, :ol_dist_info);
-		query = `INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id,
-ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		if _, err := tx.ExecContext(ctx, query, oID, d.dID, d.wID, item.olNumber,
+		// 		query = `INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id,
+		// ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		if _, err := s.newOrderStmts[8].ExecContext(ctx, oID, d.dID, d.wID, item.olNumber,
 			item.olIID, item.olSupplyWID, item.olQuantity, olAmount, distInfo.sDist); err != nil {
-			return fmt.Errorf("Exec %s failed %v", query, err)
+			return fmt.Errorf("Exec %s failed %v", newOrderQueries[8], err)
 		}
 	}
 

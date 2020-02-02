@@ -27,6 +27,9 @@ type tpccState struct {
 	*workload.TpcState
 	index int
 	decks []int
+
+	newOrderStmts []*sql.Stmt
+	paymentStmts  []*sql.Stmt
 }
 
 // Config is the configuration for tpcc workload
@@ -96,12 +99,19 @@ func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Conte
 	s.index = len(s.decks) - 1
 
 	ctx = context.WithValue(ctx, stateKey, s)
+
+	s.newOrderStmts = prepareStmts(ctx, s.Conn, newOrderQueries)
+	s.paymentStmts = prepareStmts(ctx, s.Conn, paymentQueries)
+	// TODO: prepare stmts for delivery, order status, and stock level
 	return ctx
 }
 
 // CleanupThread implements Workloader interface
 func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	s := w.getState(ctx)
+	closeStmts(s.newOrderStmts)
+	closeStmts(s.paymentStmts)
+	// TODO: close stmts for delivery, order status, and stock level
 	s.Conn.Close()
 }
 
@@ -235,4 +245,29 @@ func (w *Workloader) beginTx(ctx context.Context) (*sql.Tx, error) {
 		Isolation: sql.IsolationLevel(w.cfg.Isolation),
 	})
 	return tx, err
+}
+
+func prepareStmts(ctx context.Context, conn *sql.Conn, queries []string) []*sql.Stmt {
+	stmts := make([]*sql.Stmt, len(queries))
+	var err error
+	for i, query := range queries {
+		if len(query) == 0 {
+			continue
+		}
+		stmts[i], err = conn.PrepareContext(ctx, query)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return stmts
+}
+
+func closeStmts(stmts []*sql.Stmt) {
+	for _, stmt := range stmts {
+		if stmt == nil {
+			continue
+		}
+		stmt.Close()
+	}
 }

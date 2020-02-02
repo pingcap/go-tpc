@@ -100,9 +100,6 @@ func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Conte
 
 	ctx = context.WithValue(ctx, stateKey, s)
 
-	s.newOrderStmts = prepareStmts(ctx, s.Conn, newOrderQueries)
-	s.paymentStmts = prepareStmts(ctx, s.Conn, paymentQueries)
-	// TODO: prepare stmts for delivery, order status, and stock level
 	return ctx
 }
 
@@ -209,6 +206,13 @@ func (w *Workloader) getState(ctx context.Context) *tpccState {
 // Run implements Workloader interface
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
+
+	if s.newOrderStmts == nil {
+		s.newOrderStmts = prepareStmts(ctx, s.Conn, newOrderQueries)
+		s.paymentStmts = prepareStmts(ctx, s.Conn, paymentQueries)
+		// TODO: prepare stmts for delivery, order status, and stock level
+	}
+
 	// refer 5.2.4.2
 	if s.index == len(s.decks) {
 		s.index = 0

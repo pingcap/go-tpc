@@ -19,6 +19,7 @@ type histogram struct {
 
 type histInfo struct {
 	elapsed float64
+	sum     int64
 	count   int64
 	ops     float64
 	avg     int64
@@ -61,6 +62,7 @@ func (h *histogram) Summary() string {
 	buf.WriteString(fmt.Sprintf("Takes(s): %.1f, ", res.elapsed))
 	buf.WriteString(fmt.Sprintf("Count: %d, ", res.count))
 	buf.WriteString(fmt.Sprintf("OPS: %.1f, ", res.ops))
+	buf.WriteString(fmt.Sprintf("Sum(ms): %d, ", res.sum))
 	buf.WriteString(fmt.Sprintf("Avg(ms): %d, ", res.avg))
 	buf.WriteString(fmt.Sprintf("95th(ms): %d, ", res.p95))
 	buf.WriteString(fmt.Sprintf("99th(ms): %d, ", res.p99))
@@ -104,6 +106,7 @@ func (h *histogram) getInfo() histInfo {
 	ops := float64(count) / elapsed
 	info := histInfo{
 		elapsed: elapsed,
+		sum:     sum,
 		count:   count,
 		ops:     ops,
 		avg:     avg,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -59,6 +60,7 @@ func main() {
 		Use:   "go-tpc",
 		Short: "Benchmark database with different workloads",
 	}
+	runtime.GOMAXPROCS(runtime.NumCPU() / 2)
 
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Database host")

@@ -28,8 +28,11 @@ type tpccState struct {
 	index int
 	decks []int
 
-	newOrderStmts []*sql.Stmt
-	paymentStmts  []*sql.Stmt
+	newOrderStmts    map[string]*sql.Stmt
+	orderStatusStmts map[string]*sql.Stmt
+	deliveryStmts    map[string]*sql.Stmt
+	stockLevelStmt   map[string]*sql.Stmt
+	paymentStmts     map[string]*sql.Stmt
 }
 
 // Config is the configuration for tpcc workload
@@ -67,11 +70,11 @@ func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	}
 
 	w.txns = []txn{
-		{name: "new_order", action: w.runNewOrder, weight: 10},
-		{name: "payment", action: w.runPayment, weight: 10},
-		{name: "order_status", action: w.runOrderStatus, weight: 1},
-		{name: "delivery", action: w.runDelivery, weight: 1},
-		{name: "stock_level", action: w.runStockLevel, weight: 1},
+		{name: "new_order", action: w.runNewOrder, weight: 45},
+		{name: "payment", action: w.runPayment, weight: 43},
+		{name: "order_status", action: w.runOrderStatus, weight: 4},
+		{name: "delivery", action: w.runDelivery, weight: 4},
+		{name: "stock_level", action: w.runStockLevel, weight: 4},
 	}
 	w.createTableWg.Add(cfg.Threads)
 	return w
@@ -108,6 +111,9 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	s := w.getState(ctx)
 	closeStmts(s.newOrderStmts)
 	closeStmts(s.paymentStmts)
+	closeStmts(s.deliveryStmts)
+	closeStmts(s.stockLevelStmt)
+	closeStmts(s.orderStatusStmts)
 	// TODO: close stmts for delivery, order status, and stock level
 	s.Conn.Close()
 }
@@ -208,9 +214,51 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 
 	if s.newOrderStmts == nil {
-		s.newOrderStmts = prepareStmts(ctx, s.Conn, newOrderQueries)
-		s.paymentStmts = prepareStmts(ctx, s.Conn, paymentQueries)
-		// TODO: prepare stmts for delivery, order status, and stock level
+		s.newOrderStmts = map[string]*sql.Stmt{
+			newOrderSelectCustomer: prepareStmt(ctx, s.Conn, newOrderSelectCustomer),
+			newOrderSelectDistrict: prepareStmt(ctx, s.Conn, newOrderSelectDistrict),
+			newOrderUpdateDistrict: prepareStmt(ctx, s.Conn, newOrderUpdateDistrict),
+			newOrderInsertOrder:    prepareStmt(ctx, s.Conn, newOrderInsertOrder),
+			newOrderInsertNewOrder: prepareStmt(ctx, s.Conn, newOrderInsertNewOrder),
+			// batch select items
+			// batch select stock for update
+			newOrderUpdateStock: prepareStmt(ctx, s.Conn, newOrderUpdateStock),
+			// batch insert order_line
+		}
+
+		s.paymentStmts = map[string]*sql.Stmt{
+			paymentUpdateWarehouse:          prepareStmt(ctx, s.Conn, paymentUpdateWarehouse),
+			paymentSelectWarehouse:          prepareStmt(ctx, s.Conn, paymentSelectWarehouse),
+			paymentUpdateDistrict:           prepareStmt(ctx, s.Conn, paymentUpdateDistrict),
+			paymentSelectDistrict:           prepareStmt(ctx, s.Conn, paymentSelectDistrict),
+			paymentSelectCustomerListByLast: prepareStmt(ctx, s.Conn, paymentSelectCustomerListByLast),
+			paymentSelectCustomerForUpdate:  prepareStmt(ctx, s.Conn, paymentSelectCustomerForUpdate),
+			paymentSelectCustomerData:       prepareStmt(ctx, s.Conn, paymentSelectCustomerData),
+			paymentUpdateCustomerWithData:   prepareStmt(ctx, s.Conn, paymentUpdateCustomerWithData),
+			paymentUpdateCustomer:           prepareStmt(ctx, s.Conn, paymentUpdateCustomer),
+			paymentInsertHistory:            prepareStmt(ctx, s.Conn, paymentInsertHistory),
+		}
+
+		s.orderStatusStmts = map[string]*sql.Stmt{
+			orderStatusSelectCustomerCntByLast: prepareStmt(ctx, s.Conn, orderStatusSelectCustomerCntByLast),
+			orderStatusSelectCustomerByLast:    prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByLast),
+			orderStatusSelectCustomerByID:      prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByID),
+			orderStatusSelectLatestOrder:       prepareStmt(ctx, s.Conn, orderStatusSelectLatestOrder),
+			orderStatusSelectOrderLine:         prepareStmt(ctx, s.Conn, orderStatusSelectOrderLine),
+		}
+		s.deliveryStmts = map[string]*sql.Stmt{
+			deliverySelectNewOrder:  prepareStmt(ctx, s.Conn, deliverySelectNewOrder),
+			deliveryDeleteNewOrder:  prepareStmt(ctx, s.Conn, deliveryDeleteNewOrder),
+			deliveryUpdateOrder:     prepareStmt(ctx, s.Conn, deliveryUpdateOrder),
+			deliverySelectOrders:    prepareStmt(ctx, s.Conn, deliverySelectOrders),
+			deliveryUpdateOrderLine: prepareStmt(ctx, s.Conn, deliveryUpdateOrderLine),
+			deliverySelectSumAmount: prepareStmt(ctx, s.Conn, deliverySelectSumAmount),
+			deliveryUpdateCustomer:  prepareStmt(ctx, s.Conn, deliveryUpdateCustomer),
+		}
+		s.stockLevelStmt = map[string]*sql.Stmt{
+			stockLevelSelectDistrict: prepareStmt(ctx, s.Conn, stockLevelSelectDistrict),
+			stockLevelCount:          prepareStmt(ctx, s.Conn, stockLevelCount),
+		}
 	}
 
 	// refer 5.2.4.2
@@ -253,21 +301,25 @@ func (w *Workloader) beginTx(ctx context.Context) (*sql.Tx, error) {
 
 func prepareStmts(ctx context.Context, conn *sql.Conn, queries []string) []*sql.Stmt {
 	stmts := make([]*sql.Stmt, len(queries))
-	var err error
 	for i, query := range queries {
 		if len(query) == 0 {
 			continue
 		}
-		stmts[i], err = conn.PrepareContext(ctx, query)
-		if err != nil {
-			panic(err)
-		}
+		stmts[i] = prepareStmt(ctx, conn, query)
 	}
 
 	return stmts
 }
 
-func closeStmts(stmts []*sql.Stmt) {
+func prepareStmt(ctx context.Context, conn *sql.Conn, query string) *sql.Stmt {
+	stmt, err := conn.PrepareContext(ctx, query)
+	if err != nil {
+		panic(err)
+	}
+	return stmt
+}
+
+func closeStmts(stmts map[string]*sql.Stmt) {
 	for _, stmt := range stmts {
 		if stmt == nil {
 			continue

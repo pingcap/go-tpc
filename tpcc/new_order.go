@@ -1,27 +1,61 @@
 package tpcc
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
-	"sort"
+	"strconv"
 	"time"
 )
 
-var newOrderQueries = []string{
-	`SELECT c_discount, c_last, c_credit, w_tax FROM customer, 
-warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`,
-	`SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`,
-	`UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?`,
-	`INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) 
-VALUES (?, ?, ?, ?, ?, ?, ?)`,
-	`INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`,
-	`SELECT i_price, i_name, i_data FROM item WHERE i_id = ?`,
-	"",
-	`UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? 
-WHERE s_i_id = ? AND s_w_id = ?`,
-	`INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id,
-ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+const (
+	newOrderSelectCustomer = `SELECT c_discount, c_last, c_credit, w_tax FROM customer, warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
+	newOrderSelectDistrict = `SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`
+	newOrderUpdateDistrict = `UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?`
+	newOrderInsertOrder    = `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	newOrderInsertNewOrder = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
+	newOrderUpdateStock    = `UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?`
+)
+
+func genNewOrderSelectItemsSQL(items []orderItem) string {
+	buf := bytes.NewBufferString("SELECT i_price, i_name, i_data, i_id FROM ITEM WHERE i_id IN (")
+	for i := range items {
+		if i != 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(strconv.Itoa(items[i].olIID))
+	}
+	buf.WriteByte(')')
+	return buf.String()
+}
+
+func genNewOrderSelectStockSQL(w_id int, items []orderItem) string {
+	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE (s_w_id, s_i_id) IN (")
+	wIDStr := strconv.Itoa(w_id)
+	for i := range items {
+		if i != 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteByte('(')
+		buf.WriteString(wIDStr)
+		buf.WriteByte(',')
+		buf.WriteString(strconv.Itoa(items[i].olIID))
+		buf.WriteByte(')')
+	}
+	buf.WriteString(") FOR UPDATE")
+	return buf.String()
+}
+
+func genNewOrderInsertOrderLineSQL(wID, dID, oID int, items []orderItem) string {
+	buf := bytes.NewBufferString("INSERT into order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES ")
+	for i, item := range items {
+		if i != 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(fmt.Sprintf("(%v, %v, %v, %v, %v, %v, %v, %v, '%v')", oID, dID, wID, item.olNumber, item.olIID, item.olSupplyWID, item.olQuantity, item.olAmount, item.sDist))
+	}
+	return buf.String()
 }
 
 func (w *Workloader) otherWarehouse(ctx context.Context, warehouse int) int {
@@ -53,7 +87,11 @@ type orderItem struct {
 	iName  string
 	iData  string
 
-	remoteWarehouse bool
+	foundInItems    bool
+	foundInStock    bool
+	sQuantity       int
+	sDist           string
+	remoteWarehouse int
 }
 
 type newOrderData struct {
@@ -87,39 +125,36 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 
 	items := make([]orderItem, d.oOlCnt)
 
-	itemIDs := make(map[int]struct{}, d.oOlCnt)
+	itemsMap := make(map[int]*orderItem, d.oOlCnt)
 
 	for i := 0; i < len(items); i++ {
-		items[i].olNumber = i + 1
+		item := &items[i]
+		item.olNumber = i + 1
 		if i == len(items)-1 && rbk == 1 {
-			items[i].olIID = -1
+			item.olIID = -1
 		} else {
 			for {
 				id := randItemID(s.R)
 				// Find a unique ID
-				if _, ok := itemIDs[id]; ok {
+				if _, ok := itemsMap[id]; ok {
 					continue
 				}
-				itemIDs[id] = struct{}{}
-				items[i].olIID = id
+				itemsMap[id] = item
+				item.olIID = id
 				break
 			}
 		}
 
 		if w.cfg.Warehouses == 1 || randInt(s.R, 1, 100) != 1 {
-			items[i].olSupplyWID = d.wID
+			item.olSupplyWID = d.wID
 		} else {
-			items[i].olSupplyWID = w.otherWarehouse(ctx, d.wID)
-			items[i].remoteWarehouse = true
+			item.olSupplyWID = w.otherWarehouse(ctx, d.wID)
+			item.remoteWarehouse = 1
 			allLocal = 0
 		}
 
-		items[i].olQuantity = randInt(s.R, 1, 10)
+		item.olQuantity = randInt(s.R, 1, 10)
 	}
-
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].olIID < items[j].olIID
-	})
 
 	tx, err := w.beginTx(ctx)
 	if err != nil {
@@ -130,123 +165,109 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	// TODO: support prepare statement
 
 	// Process 1
-	// SELECT c_discount, c_last, c_credit, w_tax INTO :c_discount, :c_last, :c_credit,
-	// 	:w_tax FROM customer, warehouse WHERE w_id = :w_id AND c_w_id = w_id AND c_d_id = :d_id AND c_id = :c_id;
-	// 	query := `SELECT c_discount, c_last, c_credit, w_tax FROM customer,
-	// warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
-
-	if err := s.newOrderStmts[0].QueryRowContext(ctx, d.wID, d.dID, d.cID).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
-		return fmt.Errorf("Exec %s failed %v", newOrderQueries[0], err)
+	if err := s.newOrderStmts[newOrderSelectCustomer].QueryRowContext(ctx, d.wID, d.dID, d.cID).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
+		return fmt.Errorf("exec %s failed %v", newOrderSelectCustomer, err)
 	}
 
 	// Process 2
-	// SELECT d_next_o_id, d_tax INTO :d_next_o_id, :d_tax FROM district WHERE d_id = :d_id AND d_w_id = :w_id FOR UPDATE;
-	// query := `SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`
-	if err := s.newOrderStmts[1].QueryRowContext(ctx, d.dID, d.wID).Scan(&d.dNextOID, &d.dTax); err != nil {
-		return fmt.Errorf("Exec %s failed %v", newOrderQueries[1], err)
+	if err := s.newOrderStmts[newOrderSelectDistrict].QueryRowContext(ctx, d.dID, d.wID).Scan(&d.dNextOID, &d.dTax); err != nil {
+		return fmt.Errorf("exec %s failed %v", newOrderSelectDistrict, err)
 	}
 
 	// Process 3
-
-	// UPDATE district SET d_next_o_id = :d_next_o_id + 1 WHERE d_id = :d_id AND d_w_id = :w_id;
-	// query := "UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?"
-	if _, err := s.newOrderStmts[2].ExecContext(ctx, d.dNextOID, d.dID, d.wID); err != nil {
-		return fmt.Errorf("Exec %s failed %v", newOrderQueries[2], err)
+	if _, err := s.newOrderStmts[newOrderUpdateDistrict].ExecContext(ctx, d.dNextOID, d.dID, d.wID); err != nil {
+		return fmt.Errorf("exec %s failed %v", newOrderUpdateDistrict, err)
 	}
 
 	oID := d.dNextOID
 
 	// Process 4
-
-	// INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local)
-	// 	VALUES (:o_id , :d _id , :w _id , :c_id , :datetime, :o_ol_cnt, :o_all_local);
-	// 	query = `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local)
-	// VALUES (?, ?, ?, ?, ?, ?, ?)`
-	if _, err := s.newOrderStmts[3].ExecContext(ctx, oID, d.dID, d.wID, d.cID,
+	if _, err := s.newOrderStmts[newOrderInsertOrder].ExecContext(ctx, oID, d.dID, d.wID, d.cID,
 		time.Now().Format(timeFormat), d.oOlCnt, allLocal); err != nil {
-		return fmt.Errorf("Exec %s failed %v", newOrderQueries[3], err)
+		return fmt.Errorf("exec %s failed %v", newOrderInsertOrder, err)
 	}
 
 	// Process 5
 
 	// INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (:o_id , :d _id , :w _id );
 	// query = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
-	if _, err := s.newOrderStmts[4].ExecContext(ctx, oID, d.dID, d.wID); err != nil {
-		return fmt.Errorf("Exec %s failed %v", newOrderQueries[4], err)
+	if _, err := s.newOrderStmts[newOrderInsertNewOrder].ExecContext(ctx, oID, d.dID, d.wID); err != nil {
+		return fmt.Errorf("exec %s failed %v", newOrderInsertNewOrder, err)
 	}
 
-	for i := 0; i < d.oOlCnt; i++ {
-		item := items[i]
-		// Process 6
-
-		// SELECT i_price, i_name , i_data INTO :i_price, :i_name, :i_data FROM item WHERE i_id = :ol_i_id;
-		// query = "SELECT i_price, i_name, i_data FROM item WHERE i_id = ?"
-
-		if err := s.newOrderStmts[5].QueryRowContext(ctx, item.olIID).Scan(&item.iPrice, &item.iName, &item.iData); err != nil {
-			if err == sql.ErrNoRows {
+	// Process 6
+	selectItemSQL := genNewOrderSelectItemsSQL(items)
+	rows, err := s.Conn.QueryContext(ctx, selectItemSQL)
+	if err != nil {
+		return fmt.Errorf("exec %s failed %v", selectItemSQL, err)
+	}
+	for rows.Next() {
+		var tmpItem orderItem
+		err := rows.Scan(&tmpItem.iPrice, &tmpItem.iName, &tmpItem.iData, &tmpItem.olIID)
+		if err != nil {
+			return fmt.Errorf("exec %s failed %v", selectItemSQL, err)
+		}
+		item := itemsMap[tmpItem.olIID]
+		item.iPrice = tmpItem.iPrice
+		item.iName = tmpItem.iName
+		item.iData = tmpItem.iData
+		item.foundInItems = true
+	}
+	for i := range items {
+		item := &items[i]
+		if !item.foundInItems {
+			if item.olIID == -1 {
+				// Rollback
 				return nil
 			}
-			return fmt.Errorf("Exec %s failed %v", newOrderQueries[5], err)
-		}
-
-		// Process 7
-
-		// SELECT s_quantity, s_data, s_dist_01, s_dist_02,
-		// 	s_dist_03, s_dist_04, s_dist_05, s_dist_06,
-		// 	s_dist_07, s_dist_08, s_dist_09, s_dist_10
-		// 	INTO :s_quantity, :s_data, :s_dist_01, :s_dist_02,
-		// 	:s_dist_03, :s_dist_04, :s_dist_05, :s_dist_06,
-		// 	:s_dist_07, :s_dist_08, :s_dist_09, :s_dist_10
-		// 	FROM stock WHERE s_i_id = :ol_i_id
-		// 	AND s_w_id = :ol_supply_w_id FOR UPDATE;
-		query := fmt.Sprintf(`SELECT s_quantity, s_data, s_dist_%02d s_dist FROM stock 
-WHERE s_i_id = ? AND s_w_id = ? FOR UPDATE`, d.dID)
-
-		var distInfo struct {
-			sQuantity int    `db:"s_quantity"`
-			sData     string `db:"s_data"`
-			sDist     string `db:"s_dist"`
-		}
-		if err := tx.QueryRowContext(ctx, query, item.olIID, item.olSupplyWID).Scan(&distInfo.sQuantity, &distInfo.sData, &distInfo.sDist); err != nil {
-			return fmt.Errorf("Exec %s failed %v", query, err)
-		}
-
-		distInfo.sQuantity = distInfo.sQuantity - item.olQuantity
-		if distInfo.sQuantity < item.olQuantity+10 {
-			distInfo.sQuantity += +91
-		}
-
-		// Process 8
-
-		// UPDATE stock SET s_quantity = :s_quantity
-		//  WHERE s_i_id = :ol_i_id
-		// 	AND s_w_id = :ol_supply_w_id;
-		remoteCnt := 0
-		if item.remoteWarehouse {
-			remoteCnt = 1
-		}
-		// query = "UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?"
-		if _, err := s.newOrderStmts[7].ExecContext(ctx, distInfo.sQuantity, item.olQuantity, remoteCnt, item.olIID, item.olSupplyWID); err != nil {
-			return fmt.Errorf("Exec %s failed %v", newOrderQueries[7], err)
-		}
-
-		olAmount := float64(item.olQuantity) * item.iPrice * (1 + d.wTax + d.dTax) * (1 - d.cDiscount)
-
-		// Process 9
-
-		// INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id,
-		// 	ol_number, ol_i_id,
-		// 	ol_supply_w_id, ol_quantity,
-		// 	ol_amount, ol_dist_info)
-		// 	VALUES (:o_id, :d_id, :w_id, :ol_number, :ol_i_id,
-		//  :ol_supply_w_id, :ol_quantity, :ol_amount, :ol_dist_info);
-		// 		query = `INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id,
-		// ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		if _, err := s.newOrderStmts[8].ExecContext(ctx, oID, d.dID, d.wID, item.olNumber,
-			item.olIID, item.olSupplyWID, item.olQuantity, olAmount, distInfo.sDist); err != nil {
-			return fmt.Errorf("Exec %s failed %v", newOrderQueries[8], err)
+			return fmt.Errorf("item %d not found", item.olIID)
 		}
 	}
 
+	// Process 7
+	selectStockSQL := genNewOrderSelectStockSQL(d.wID, items)
+	rows, err = s.Conn.QueryContext(ctx, selectStockSQL)
+	if err != nil {
+		return fmt.Errorf("exec %s failed %v", selectStockSQL, err)
+	}
+	for rows.Next() {
+		var iID int
+		var quantity int
+		var data string
+		var dists [10]string
+		err = rows.Scan(&iID, &quantity, &data, &dists[0], &dists[1], &dists[2], &dists[3], &dists[4], &dists[5], &dists[6], &dists[7], &dists[8], &dists[9])
+		if err != nil {
+			return fmt.Errorf("exec %s failed %v", selectStockSQL, err)
+		}
+		item := itemsMap[iID]
+		quantity -= item.olQuantity
+		if quantity < 10 {
+			quantity += 91
+		}
+		item.foundInStock = true
+		item.sQuantity = quantity
+		item.sDist = dists[d.dID-1]
+		item.olAmount = float64(item.olQuantity) * item.iPrice * (1 + d.wTax + d.dTax) * (1 - d.cDiscount)
+	}
+
+	// Process 8
+	for i := 0; i < d.oOlCnt; i++ {
+		item := &items[i]
+		if !item.foundInStock {
+			return fmt.Errorf("item (%d, %d) not found in stock", d.wID, item.olIID)
+		}
+		if item.olIID < 0 {
+			return nil
+		}
+		if _, err = s.newOrderStmts[newOrderUpdateStock].ExecContext(ctx, item.sQuantity, item.olQuantity, item.remoteWarehouse, item.olIID, d.wID); err != nil {
+			return fmt.Errorf("exec %s failed %v", newOrderUpdateStock, err)
+		}
+	}
+
+	// Process 9
+	insertOrderLineSQL := genNewOrderInsertOrderLineSQL(d.wID, d.dID, oID, items)
+	if _, err = s.Conn.ExecContext(ctx, insertOrderLineSQL); err != nil {
+		return fmt.Errorf("exec %s failed %v", insertOrderLineSQL, err)
+	}
 	return tx.Commit()
 }

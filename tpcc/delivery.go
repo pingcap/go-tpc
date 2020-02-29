@@ -157,7 +157,7 @@ func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
 		if order.oID == 0 {
 			continue
 		}
-		if _, err = s.deliveryStmts[deliveryUpdateCustomer].ExecContext(ctx, order.amount, d.wID, i+1, order.oID); err != nil {
+		if _, err = s.deliveryStmts[deliveryUpdateCustomer].ExecContext(ctx, order.amount, d.wID, i+1, order.cID); err != nil {
 			return fmt.Errorf("exec %s failed %v", deliveryUpdateCustomer, err)
 		}
 	}

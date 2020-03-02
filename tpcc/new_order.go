@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	newOrderSelectCustomer = `SELECT c_discount, c_last, c_credit, w_tax FROM customer, warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
-	newOrderSelectDistrict = `SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`
-	newOrderUpdateDistrict = `UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?`
-	newOrderInsertOrder    = `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (?, ?, ?, ?, ?, ?, ?)`
-	newOrderInsertNewOrder = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
-	newOrderUpdateStock    = `UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?`
+	newOrderSelectCustomer = `SELECT c_discount, c_last, c_credit, w_tax FROM customer, warehouse WHERE w_id = ? AND c_pk = ?`
+	newOrderSelectDistrict = `SELECT d_next_o_id, d_tax FROM district WHERE d_pk = ? FOR UPDATE`
+	newOrderUpdateDistrict = `UPDATE district SET d_next_o_id = ? + 1 WHERE d_pk = ?`
+	newOrderInsertOrder    = `INSERT INTO orders (o_pk, o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	newOrderInsertNewOrder = `INSERT INTO new_order (no_pk, no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?, ?)`
+	newOrderUpdateStock    = `UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_pk = ?`
 )
 
 var (
@@ -44,24 +44,24 @@ func genNewOrderSelectItemsSQL(cnt int) string {
 }
 
 func genNewOrderSelectStockSQL(cnt int) string {
-	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE (s_w_id, s_i_id) IN (")
+	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE s_pk IN (")
 	for i := 0; i < cnt; i++ {
 		if i != 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteString("(?,?)")
+		buf.WriteByte('?')
 	}
 	buf.WriteString(") FOR UPDATE")
 	return buf.String()
 }
 
 func genNewOrderInsertOrderLineSQL(cnt int) string {
-	buf := bytes.NewBufferString("INSERT into order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES ")
+	buf := bytes.NewBufferString("INSERT into order_line (ol_pk, ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES ")
 	for i := 0; i < cnt; i++ {
 		if i != 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteString("(?,?,?,?,?,?,?,?,?)")
+		buf.WriteString("(?,?,?,?,?,?,?,?,?,?)")
 	}
 	return buf.String()
 }
@@ -173,24 +173,24 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	// TODO: support prepare statement
 
 	// Process 1
-	if err := s.newOrderStmts[newOrderSelectCustomer].QueryRowContext(ctx, d.wID, d.dID, d.cID).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
+	if err := s.newOrderStmts[newOrderSelectCustomer].QueryRowContext(ctx, d.wID, getCPK(d.wID, d.dID, d.cID)).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderSelectCustomer, err)
 	}
 
 	// Process 2
-	if err := s.newOrderStmts[newOrderSelectDistrict].QueryRowContext(ctx, d.dID, d.wID).Scan(&d.dNextOID, &d.dTax); err != nil {
+	if err := s.newOrderStmts[newOrderSelectDistrict].QueryRowContext(ctx, getDPK(d.wID, d.dID)).Scan(&d.dNextOID, &d.dTax); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderSelectDistrict, err)
 	}
 
 	// Process 3
-	if _, err := s.newOrderStmts[newOrderUpdateDistrict].ExecContext(ctx, d.dNextOID, d.dID, d.wID); err != nil {
+	if _, err := s.newOrderStmts[newOrderUpdateDistrict].ExecContext(ctx, d.dNextOID, getDPK(d.wID, d.dID)); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderUpdateDistrict, err)
 	}
 
 	oID := d.dNextOID
 
 	// Process 4
-	if _, err := s.newOrderStmts[newOrderInsertOrder].ExecContext(ctx, oID, d.dID, d.wID, d.cID,
+	if _, err := s.newOrderStmts[newOrderInsertOrder].ExecContext(ctx, getOPK(d.wID, d.dID, oID), oID, d.dID, d.wID, d.cID,
 		time.Now().Format(timeFormat), d.oOlCnt, allLocal); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderInsertOrder, err)
 	}
@@ -199,7 +199,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 
 	// INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (:o_id , :d _id , :w _id );
 	// query = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
-	if _, err := s.newOrderStmts[newOrderInsertNewOrder].ExecContext(ctx, oID, d.dID, d.wID); err != nil {
+	if _, err := s.newOrderStmts[newOrderInsertNewOrder].ExecContext(ctx, getNOPK(d.wID, d.dID, oID), oID, d.dID, d.wID); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderInsertNewOrder, err)
 	}
 
@@ -238,10 +238,9 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 
 	// Process 7
 	selectStockSQL := newOrderSelectStockSQLs[len(items)]
-	selectStockArgs := make([]interface{}, len(items)*2)
+	selectStockArgs := make([]interface{}, len(items))
 	for i := range items {
-		selectStockArgs[i*2] = d.wID
-		selectStockArgs[i*2+1] = items[i].olIID
+		selectStockArgs[i] = getSPK(d.wID, items[i].olIID)
 	}
 	rows, err = s.newOrderStmts[selectStockSQL].QueryContext(ctx, selectStockArgs...)
 	if err != nil {
@@ -276,25 +275,26 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		if item.olIID < 0 {
 			return nil
 		}
-		if _, err = s.newOrderStmts[newOrderUpdateStock].ExecContext(ctx, item.sQuantity, item.olQuantity, item.remoteWarehouse, item.olIID, d.wID); err != nil {
+		if _, err = s.newOrderStmts[newOrderUpdateStock].ExecContext(ctx, item.sQuantity, item.olQuantity, item.remoteWarehouse, getSPK(d.wID, item.olIID)); err != nil {
 			return fmt.Errorf("exec %s failed %v", newOrderUpdateStock, err)
 		}
 	}
 
 	// Process 9
 	insertOrderLineSQL := newOrderInsertOrderLineSQLs[len(items)]
-	insertOrderLineArgs := make([]interface{}, len(items)*9)
+	insertOrderLineArgs := make([]interface{}, len(items)*10)
 	for i := range items {
 		item := &items[i]
-		insertOrderLineArgs[i*9] = oID
-		insertOrderLineArgs[i*9+1] = d.dID
-		insertOrderLineArgs[i*9+2] = d.wID
-		insertOrderLineArgs[i*9+3] = item.olNumber
-		insertOrderLineArgs[i*9+4] = item.olIID
-		insertOrderLineArgs[i*9+5] = item.olSupplyWID
-		insertOrderLineArgs[i*9+6] = item.olQuantity
-		insertOrderLineArgs[i*9+7] = item.olAmount
-		insertOrderLineArgs[i*9+8] = item.sDist
+		insertOrderLineArgs[i*10] = getOLPK(d.wID, d.dID, oID, item.olNumber)
+		insertOrderLineArgs[i*10+1] = oID
+		insertOrderLineArgs[i*10+2] = d.dID
+		insertOrderLineArgs[i*10+3] = d.wID
+		insertOrderLineArgs[i*10+4] = item.olNumber
+		insertOrderLineArgs[i*10+5] = item.olIID
+		insertOrderLineArgs[i*10+6] = item.olSupplyWID
+		insertOrderLineArgs[i*10+7] = item.olQuantity
+		insertOrderLineArgs[i*10+8] = item.olAmount
+		insertOrderLineArgs[i*10+9] = item.sDist
 	}
 	if _, err = s.newOrderStmts[insertOrderLineSQL].ExecContext(ctx, insertOrderLineArgs...); err != nil {
 		return fmt.Errorf("exec %s failed %v", insertOrderLineSQL, err)

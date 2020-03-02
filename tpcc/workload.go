@@ -225,6 +225,11 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 			newOrderUpdateStock: prepareStmt(ctx, s.Conn, newOrderUpdateStock),
 			// batch insert order_line
 		}
+		for i := 5; i <= 15; i++ {
+			s.newOrderStmts[newOrderSelectItemSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderSelectItemSQLs[i])
+			s.newOrderStmts[newOrderSelectStockSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderSelectStockSQLs[i])
+			s.newOrderStmts[newOrderInsertOrderLineSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderInsertOrderLineSQLs[i])
+		}
 
 		s.paymentStmts = map[string]*sql.Stmt{
 			paymentUpdateWarehouse:          prepareStmt(ctx, s.Conn, paymentUpdateWarehouse),

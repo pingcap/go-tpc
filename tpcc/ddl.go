@@ -112,9 +112,7 @@ CREATE TABLE IF NOT EXISTS history (
 	h_date DATETIME,
 	h_amount DECIMAL(6, 2),
 	h_data VARCHAR(24),
-	PRIMARY KEY(h_w_id, row_id),
-	INDEX idx_history_customer (h_c_w_id, h_c_d_id, h_c_id),
-	INDEX idx_history_district (h_w_id, h_d_id)
+	PRIMARY KEY(h_w_id, row_id)
 )`
 
 	query = w.appendPartition(query, "h_w_id")
@@ -168,8 +166,7 @@ CREATE TABLE IF NOT EXISTS orders (
 		ol_quantity INT,
 		ol_amount DECIMAL(6, 2),
 		ol_dist_info CHAR(24),
-		PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number),
-		INDEX idx_order_line_stock (ol_supply_w_id, ol_d_id)
+		PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number)
 )`
 
 	query = w.appendPartition(query, "ol_w_id")
@@ -196,8 +193,7 @@ CREATE TABLE IF NOT EXISTS stock (
 	s_order_cnt INT, 
 	s_remote_cnt INT,
 	s_data VARCHAR(50),
-	PRIMARY KEY(s_w_id, s_i_id),
-	INDEX idx_stock_item (s_i_id)
+	PRIMARY KEY(s_w_id, s_i_id)
 )`
 
 	query = w.appendPartition(query, "s_w_id")

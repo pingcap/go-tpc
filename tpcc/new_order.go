@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -18,42 +17,51 @@ const (
 	newOrderUpdateStock    = `UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?`
 )
 
-func genNewOrderSelectItemsSQL(items []orderItem) string {
+var (
+	newOrderSelectItemSQLs      [16]string
+	newOrderSelectStockSQLs     [16]string
+	newOrderInsertOrderLineSQLs [16]string
+)
+
+func init() {
+	for i := 5; i <= 15; i++ {
+		newOrderSelectItemSQLs[i] = genNewOrderSelectItemsSQL(i)
+		newOrderSelectStockSQLs[i] = genNewOrderSelectStockSQL(i)
+		newOrderInsertOrderLineSQLs[i] = genNewOrderInsertOrderLineSQL(i)
+	}
+}
+
+func genNewOrderSelectItemsSQL(cnt int) string {
 	buf := bytes.NewBufferString("SELECT i_price, i_name, i_data, i_id FROM ITEM WHERE i_id IN (")
-	for i := range items {
+	for i := 0; i < cnt; i++ {
 		if i != 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteString(strconv.Itoa(items[i].olIID))
+		buf.WriteByte('?')
 	}
 	buf.WriteByte(')')
 	return buf.String()
 }
 
-func genNewOrderSelectStockSQL(w_id int, items []orderItem) string {
+func genNewOrderSelectStockSQL(cnt int) string {
 	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE (s_w_id, s_i_id) IN (")
-	wIDStr := strconv.Itoa(w_id)
-	for i := range items {
+	for i := 0; i < cnt; i++ {
 		if i != 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteByte('(')
-		buf.WriteString(wIDStr)
-		buf.WriteByte(',')
-		buf.WriteString(strconv.Itoa(items[i].olIID))
-		buf.WriteByte(')')
+		buf.WriteString("(?,?)")
 	}
 	buf.WriteString(") FOR UPDATE")
 	return buf.String()
 }
 
-func genNewOrderInsertOrderLineSQL(wID, dID, oID int, items []orderItem) string {
+func genNewOrderInsertOrderLineSQL(cnt int) string {
 	buf := bytes.NewBufferString("INSERT into order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES ")
-	for i, item := range items {
+	for i := 0; i < cnt; i++ {
 		if i != 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteString(fmt.Sprintf("(%v, %v, %v, %v, %v, %v, %v, %v, '%v')", oID, dID, wID, item.olNumber, item.olIID, item.olSupplyWID, item.olQuantity, item.olAmount, item.sDist))
+		buf.WriteString("(?,?,?,?,?,?,?,?,?)")
 	}
 	return buf.String()
 }
@@ -196,8 +204,12 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	}
 
 	// Process 6
-	selectItemSQL := genNewOrderSelectItemsSQL(items)
-	rows, err := s.Conn.QueryContext(ctx, selectItemSQL)
+	selectItemSQL := newOrderSelectItemSQLs[len(items)]
+	selectItemArgs := make([]interface{}, len(items))
+	for i := range items {
+		selectItemArgs[i] = items[i].olIID
+	}
+	rows, err := s.newOrderStmts[selectItemSQL].QueryContext(ctx, selectItemArgs...)
 	if err != nil {
 		return fmt.Errorf("exec %s failed %v", selectItemSQL, err)
 	}
@@ -225,8 +237,13 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	}
 
 	// Process 7
-	selectStockSQL := genNewOrderSelectStockSQL(d.wID, items)
-	rows, err = s.Conn.QueryContext(ctx, selectStockSQL)
+	selectStockSQL := newOrderSelectStockSQLs[len(items)]
+	selectStockArgs := make([]interface{}, len(items)*2)
+	for i := range items {
+		selectStockArgs[i*2] = d.wID
+		selectStockArgs[i*2+1] = items[i].olIID
+	}
+	rows, err = s.newOrderStmts[selectStockSQL].QueryContext(ctx, selectStockArgs...)
 	if err != nil {
 		return fmt.Errorf("exec %s failed %v", selectStockSQL, err)
 	}
@@ -265,8 +282,21 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	}
 
 	// Process 9
-	insertOrderLineSQL := genNewOrderInsertOrderLineSQL(d.wID, d.dID, oID, items)
-	if _, err = s.Conn.ExecContext(ctx, insertOrderLineSQL); err != nil {
+	insertOrderLineSQL := newOrderInsertOrderLineSQLs[len(items)]
+	insertOrderLineArgs := make([]interface{}, len(items)*9)
+	for i := range items {
+		item := &items[i]
+		insertOrderLineArgs[i*9] = oID
+		insertOrderLineArgs[i*9+1] = d.dID
+		insertOrderLineArgs[i*9+2] = d.wID
+		insertOrderLineArgs[i*9+3] = item.olNumber
+		insertOrderLineArgs[i*9+4] = item.olIID
+		insertOrderLineArgs[i*9+5] = item.olSupplyWID
+		insertOrderLineArgs[i*9+6] = item.olQuantity
+		insertOrderLineArgs[i*9+7] = item.olAmount
+		insertOrderLineArgs[i*9+8] = item.sDist
+	}
+	if _, err = s.newOrderStmts[insertOrderLineSQL].ExecContext(ctx, insertOrderLineArgs...); err != nil {
 		return fmt.Errorf("exec %s failed %v", insertOrderLineSQL, err)
 	}
 	return tx.Commit()

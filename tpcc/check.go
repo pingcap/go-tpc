@@ -358,17 +358,17 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 					   AND OL_D_ID = O_D_ID 
 					   AND OL_O_ID = O_ID 
 					   AND OL_DELIVERY_D IS NOT NULL 
-					   AND O_W_ID=c.c_w_id 
+					   AND O_W_ID=? 
 					   AND O_D_ID=c.C_D_ID 
 					   AND O_C_ID=c.C_ID) sm, (SELECT  sum(h_amount)  from  history 
-												WHERE H_C_W_ID=c.C_W_ID 
+												WHERE H_C_W_ID=? 
 												  AND H_C_D_ID=c.C_D_ID 
 												  AND H_C_ID=c.C_ID) smh 
 			 FROM customer c 
 			WHERE  c.c_w_id = ? ) t
    WHERE c1<>sm-smh`
 
-	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
+	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse, warehouse)
 	if err != nil {
 		return fmt.Errorf("Exec %s failed %v", query, err)
 	}
@@ -440,9 +440,9 @@ func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error 
 	query := `SELECT count(*) FROM (SELECT  c.c_id, c.c_d_id, c.c_balance c1, c_ytd_payment, 
 		(SELECT sum(ol_amount) FROM orders STRAIGHT_JOIN order_line 
 		WHERE OL_W_ID=O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D IS NOT NULL AND 
-		O_W_ID=c.c_w_id AND O_D_ID=c.C_D_ID AND O_C_ID=c.C_ID) sm FROM customer c WHERE  c.c_w_id = ?) t1 
+		O_W_ID=? AND O_D_ID=c.C_D_ID AND O_C_ID=c.C_ID) sm FROM customer c WHERE  c.c_w_id = ?) t1 
 		WHERE c1+c_ytd_payment <> sm`
-	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
+	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
 	if err != nil {
 		return fmt.Errorf("Exec %s failed %v", query, err)
 	}

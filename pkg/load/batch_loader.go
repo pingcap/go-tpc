@@ -87,7 +87,7 @@ func NewCSVBatchLoader(flock *util.Flock) *CSVBatchLoader {
 
 // InsertValue inserts a value, the loader may flush all pending values.
 func (b *CSVBatchLoader) InsertValue(ctx context.Context, query string) error {
-	fields := strings.Split(query, ",  ")
+	fields := strings.Split(query, ", ")
 	for i, field := range fields {
 		// remove '' in string type field
 		fields[i] = strings.Trim(field, `'`)

@@ -103,7 +103,6 @@ CREATE TABLE IF NOT EXISTS customer (
 
 	query = `
 CREATE TABLE IF NOT EXISTS history (
-	row_id BINARY(16) NOT NULL,
 	h_c_id INT NOT NULL,
 	h_c_d_id INT NOT NULL,
 	h_c_w_id INT NOT NULL,
@@ -112,7 +111,7 @@ CREATE TABLE IF NOT EXISTS history (
 	h_date DATETIME,
 	h_amount DECIMAL(6, 2),
 	h_data VARCHAR(24),
-	PRIMARY KEY(h_w_id, row_id),
+	INDEX idx_h_w_id (h_w_id),
 	INDEX idx_h_c_w_id (h_c_w_id)
 )`
 

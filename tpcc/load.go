@@ -2,13 +2,10 @@ package tpcc
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"strconv"
-	"strings"
 
-	"github.com/google/uuid"
 	"github.com/pingcap/go-tpc/pkg/load"
 )
 
@@ -43,7 +40,7 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 		iName := randChars(s.R, s.Buf, 14, 24)
 		iData := randOriginalString(s.R, s.Buf)
 
-		v := fmt.Sprintf(`%d,  %d,  '%s',  %f,  '%s'`, i+1, iImID, iName, iPrice, iData)
+		v := fmt.Sprintf(`%d, %d, '%s', %f, '%s'`, i+1, iImID, iName, iPrice, iData)
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -74,7 +71,7 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 	wTax := randTax(s.R)
 	wYtd := 300000.00
 
-	v := fmt.Sprintf(`%d,  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  %f,  %f`,
+	v := fmt.Sprintf(`%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f`,
 		warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)
 	if err := l.InsertValue(ctx, v); err != nil {
 		return err
@@ -120,7 +117,7 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 		sRemoteCnt := 0
 		sData := randOriginalString(s.R, s.Buf)
 
-		v := fmt.Sprintf(`%d,  %d,  %d,  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  %d,  %d,  %d,  '%s'`,
+		v := fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s'`,
 			sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -159,7 +156,7 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 		dYtd := 30000.00
 		dNextOID := 3001
 
-		v := fmt.Sprintf(`%d,  %d,  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  %f,  %f,  %d`, dID, dWID,
+		v := fmt.Sprintf(`%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d`, dID, dWID,
 			dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -218,7 +215,7 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 		cDeliveryCnt := 0
 		cData := randChars(s.R, s.Buf, 300, 500)
 
-		v := fmt.Sprintf(`%d,  %d,  %d,  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  '%s',  %f,  %f,  %f,  %f,  %d,  %d,  '%s'`,
+		v := fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s'`,
 			cID, cDID, cWID, cLast, cMiddle, cFirst, cStreet1, cStreet2, cCity, cState,
 			cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
 			cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)
@@ -235,7 +232,7 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 
 	s := w.getState(ctx)
 
-	hint := `INSERT INTO history (row_id, h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES `
+	hint := `INSERT INTO history (h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES `
 
 	var l load.BatchLoader
 	if w.cfg.OutputDir != "" {
@@ -257,20 +254,8 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 		hAmount := 10.00
 		hData := randChars(s.R, s.Buf, 12, 24)
 
-		id := `unhex(replace(uuid(), '-', ''))`
-		if w.cfg.OutputDir != "" {
-			uid, err := uuid.NewUUID()
-			if err != nil {
-				return err
-			}
-			bytes, err := hex.DecodeString(strings.Replace(uid.String(), "-", "", -1))
-			if err != nil {
-				return err
-			}
-			id = string(bytes)
-		}
-		v := fmt.Sprintf(`%s,  %d,  %d,  %d,  %d,  %d,  '%s',  %f,  '%s'`,
-			id, hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
+		v := fmt.Sprintf(`%d, %d, %d, %d, %d, '%s', %f, '%s'`,
+			hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
 		}
@@ -314,7 +299,7 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 		olCnts[i] = oOLCnt
 		oAllLocal := 1
 
-		v := fmt.Sprintf(`%d,  %d,  %d,  %d,  '%s',  '%s',  %d,  %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+		v := fmt.Sprintf(`%d, %d, %d, %d, '%s', '%s', %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
 		if err := l.InsertValue(ctx, v); err != nil {
 			return nil, err
 		}
@@ -344,7 +329,7 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 		noDID := district
 		noWID := warehouse
 
-		v := fmt.Sprintf(`%d,  %d,  %d`, noOID, noDID, noWID)
+		v := fmt.Sprintf(`%d, %d, %d`, noOID, noDID, noWID)
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
 		}
@@ -390,7 +375,7 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 				olAmount = float64(randInt(s.R, 1, 999999)) / 100.0
 			}
 			olDistInfo := randChars(s.R, s.Buf, 24, 24)
-			v := fmt.Sprintf(`%d,  %d,  %d,  %d,  %d,  %d,  %s,  %d,  %f,  '%s'`,
+			v := fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s'`,
 				olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
 				olDeliveryD, olQuantity, olAmount, olDistInfo)
 			if err := l.InsertValue(ctx, v); err != nil {

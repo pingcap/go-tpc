@@ -58,7 +58,6 @@ type Workloader struct {
 	createTableWg sync.WaitGroup
 	initLoadTime  string
 
-	mutex sync.Mutex
 	files map[string]*util.Flock
 
 	txns []txn
@@ -92,11 +91,9 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 				return nil, err
 			}
 		}
-		w.mutex = sync.Mutex{}
 		w.files = make(map[string]*util.Flock)
 
 		var fl *util.Flock
-		w.mutex.Lock()
 		tables := []string{"item", "customer", "district", "orders", "new_order", "order_line",
 			"history", "warehouse", "stock"}
 		for _, table := range tables {

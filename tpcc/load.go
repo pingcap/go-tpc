@@ -283,7 +283,7 @@ func (w *Workloader) loadOrder(ctx context.Context, warehouse int, district int)
 
 	s := w.getState(ctx)
 
-	hint := `INSERT INTO orders (o_id, o_c_id, o_d_id, o_w_id, o_entry_d, 
+	hint := `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, 
 o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 
 	var l load.BatchLoader
@@ -314,7 +314,7 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 		olCnts[i] = oOLCnt
 		oAllLocal := 1
 
-		v := fmt.Sprintf(`%d,  %d,  %d,  %d,  '%s',  %s,  %d,  %d`, oID, oCID, oDID, oWID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+		v := fmt.Sprintf(`%d,  %d,  %d,  %d,  '%s',  '%s',  %d,  %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
 		if err := l.InsertValue(ctx, v); err != nil {
 			return nil, err
 		}

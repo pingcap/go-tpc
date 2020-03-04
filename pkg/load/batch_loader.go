@@ -37,7 +37,7 @@ func NewSQLBatchLoader(conn *sql.Conn, hint string) *SQLBatchLoader {
 	}
 }
 
-// InsertValue inserts an value, the loader may flush all pending values.
+// InsertValue inserts a value, the loader may flush all pending values.
 func (b *SQLBatchLoader) InsertValue(ctx context.Context, query string) error {
 	sep := ", "
 	if b.count == 0 {
@@ -85,7 +85,7 @@ func NewCSVBatchLoader(flock *util.Flock) *CSVBatchLoader {
 	}
 }
 
-// InsertValue inserts an Insert value, the loader may flush all pending values.
+// InsertValue inserts a value, the loader may flush all pending values.
 func (b *CSVBatchLoader) InsertValue(ctx context.Context, query string) error {
 	fields := strings.Split(query, ",  ")
 	for i, field := range fields {

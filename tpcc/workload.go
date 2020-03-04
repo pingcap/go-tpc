@@ -325,9 +325,9 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 		if err := w.dropTable(ctx); err != nil {
 			return err
 		}
-		//for _, f := range w.files {
-		//	f.Close()
-		//}
+		for _, f := range w.files {
+			f.Close()
+		}
 	}
 	return nil
 }

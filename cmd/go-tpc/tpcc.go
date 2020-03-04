@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
-	"google.golang.org/appengine/log"
 )
 
 var tpccConfig tpcc.Config
@@ -19,7 +19,7 @@ func executeTpcc(action string, args []string) {
 	tpccConfig.Isolation = isolationLevel
 	w, err := tpcc.NewWorkloader(globalDB, &tpccConfig)
 	if err != nil {
-		log.Errorf(context.Background(), "failed to init work loader %v", err)
+		fmt.Printf("failed to init work loader %v\n", err)
 		os.Exit(1)
 	}
 

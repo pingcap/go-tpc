@@ -28,7 +28,7 @@ type SQLBatchLoader struct {
 	count      int
 }
 
-// NewSQLBatchLoader creates a batch loader for sql database
+// NewSQLBatchLoader creates a batch loader for database connection
 func NewSQLBatchLoader(conn *sql.Conn, hint string) *SQLBatchLoader {
 	return &SQLBatchLoader{
 		count:      0,
@@ -69,7 +69,7 @@ func (b *SQLBatchLoader) Flush(ctx context.Context) error {
 	return err
 }
 
-// BulkLoader helps us insert in batch
+// CSVBatchLoader helps us insert in batch
 type CSVBatchLoader struct {
 	buf        [][]string
 	writer     *csv.Writer

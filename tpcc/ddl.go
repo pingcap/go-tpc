@@ -112,7 +112,8 @@ CREATE TABLE IF NOT EXISTS history (
 	h_date DATETIME,
 	h_amount DECIMAL(6, 2),
 	h_data VARCHAR(24),
-	PRIMARY KEY(h_w_id, row_id)
+	PRIMARY KEY(h_w_id, row_id),
+	INDEX idx_h_c_w_id (h_c_w_id)
 )`
 
 	query = w.appendPartition(query, "h_w_id")

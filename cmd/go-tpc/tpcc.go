@@ -12,8 +12,10 @@ import (
 var tpccConfig tpcc.Config
 
 func executeTpcc(action string, args []string) {
-	openDB()
-	defer closeDB()
+	if tpccConfig.OutputDir == "" {
+		openDB()
+		defer closeDB()
+	}
 
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel

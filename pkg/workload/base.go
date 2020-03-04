@@ -20,9 +20,13 @@ type TpcState struct {
 
 // NewTpcState creates a base TpcState
 func NewTpcState(ctx context.Context, db *sql.DB) *TpcState {
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		panic(err.Error())
+	var conn *sql.Conn
+	var err error
+	if db != nil {
+		conn, err = db.Conn(ctx)
+		if err != nil {
+			panic(err.Error())
+		}
 	}
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))

@@ -104,9 +104,10 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 			fl = &util.Flock{f, &sync.Mutex{}}
 			w.files[table] = fl
 		}
+	} else {
+		w.createTableWg.Add(cfg.Threads)
 	}
 
-	w.createTableWg.Add(cfg.Threads)
 	return w, nil
 }
 
@@ -145,19 +146,22 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	closeStmts(s.stockLevelStmt)
 	closeStmts(s.orderStatusStmts)
 	// TODO: close stmts for delivery, order status, and stock level
-	s.Conn.Close()
+	if !w.DataGen() {
+		s.Conn.Close()
+	}
 }
 
 // Prepare implements Workloader interface
 func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
-	if threadID == 0 {
-		if err := w.createTable(ctx); err != nil {
-			return err
+	if !w.DataGen() {
+		if threadID == 0 {
+			if err := w.createTable(ctx); err != nil {
+				return err
+			}
 		}
+		w.createTableWg.Done()
+		w.createTableWg.Wait()
 	}
-
-	w.createTableWg.Done()
-	w.createTableWg.Wait()
 
 	// - 100,1000 rows in the ITEM table
 	// - 1 row in the WAREHOUSE table for each configured warehouse
@@ -365,3 +369,9 @@ func closeStmts(stmts map[string]*sql.Stmt) {
 		stmt.Close()
 	}
 }
+
+// DataGen returns a bool to represent whether to generate csv data or load data to db.
+func (w *Workloader) DataGen() bool {
+	return w.cfg.OutputDir != ""
+}
+

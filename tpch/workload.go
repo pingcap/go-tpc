@@ -140,3 +140,8 @@ func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
 func (w Workloader) Check(ctx context.Context, threadID int) error {
 	return nil
 }
+
+// DataGen returns a bool to represent whether to generate csv data or load data to db.
+func (w Workloader) DataGen() bool {
+	return false
+}

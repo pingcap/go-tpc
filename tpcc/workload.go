@@ -18,6 +18,9 @@ type contextKey string
 
 const stateKey = contextKey("tpcc")
 
+var tables = []string{tableItem, tableCustomer, tableDistrict, tableHistory,
+	tableNewOrder, tableOrderLine, tableOrders, tableStock, tableWareHouse}
+
 type txn struct {
 	name   string
 	action func(ctx context.Context, threadID int) error
@@ -47,6 +50,7 @@ type Config struct {
 	Isolation  int
 	CheckAll   bool
 	OutputDir  string
+	Tables     []string
 }
 
 // Workloader is TPCC workload
@@ -59,6 +63,8 @@ type Workloader struct {
 	initLoadTime  string
 
 	files map[string]*util.Flock
+	// tables is a set to keep the specified tables for generating csv file.
+	tables map[string]bool
 
 	txns []txn
 }
@@ -86,23 +92,45 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	if w.cfg.OutputDir != "" {
 		if _, err := os.Stat(w.cfg.OutputDir); err != nil {
 			if os.IsNotExist(err) {
-				os.Mkdir(w.cfg.OutputDir, os.ModePerm)
+				if err := os.Mkdir(w.cfg.OutputDir, os.ModePerm); err != nil {
+					return nil, err
+				}
 			} else {
 				return nil, err
 			}
 		}
 		w.files = make(map[string]*util.Flock)
 
-		var fl *util.Flock
-		tables := []string{"item", "customer", "district", "orders", "new_order", "order_line",
-			"history", "warehouse", "stock"}
+		w.tables = make(map[string]bool)
+		var val bool
+		if len(cfg.Tables) == 0 {
+			val = true
+		}
 		for _, table := range tables {
-			f, err := util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("test.%s.csv", table)))
-			if err != nil {
-				return nil, err
+			w.tables[table] = val
+		}
+
+		for _, t := range cfg.Tables {
+			if _, ok := w.tables[t]; !ok {
+				return nil, fmt.Errorf("\nTable %s is not supported.\nSupported tables: item, customer, district, "+
+					"orders, new_order, order_line, history, warehouse, stock.", t)
 			}
-			fl = &util.Flock{f, &sync.Mutex{}}
-			w.files[table] = fl
+			w.tables[t] = true
+		}
+
+		if !w.tables[tableOrders] && w.tables[tableOrderLine] {
+			return nil, fmt.Errorf("\nTable orders must be specified if you want to generate table order_line.")
+		}
+
+		for _, table := range tables {
+			if w.tables[table] {
+				f, err := util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("test.%s.csv", table)))
+				if err != nil {
+					return nil, err
+				}
+				fl := &util.Flock{f, &sync.Mutex{}}
+				w.files[table] = fl
+			}
 		}
 	} else {
 		w.createTableWg.Add(cfg.Threads)
@@ -220,10 +248,10 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		if err = w.loadHistory(ctx, warehouse, district); err != nil {
 			return fmt.Errorf("load history at warehouse %d district %d failed %v", warehouse, district, err)
 		}
-		// load order
+		// load orders
 		var olCnts []int
 		if olCnts, err = w.loadOrder(ctx, warehouse, district); err != nil {
-			return fmt.Errorf("load order at warehouse %d district %d failed %v", warehouse, district, err)
+			return fmt.Errorf("load orders at warehouse %d district %d failed %v", warehouse, district, err)
 		}
 		// loader new-order
 		if err = w.loadNewOrder(ctx, warehouse, district); err != nil {
@@ -374,4 +402,3 @@ func closeStmts(stmts map[string]*sql.Stmt) {
 func (w *Workloader) DataGen() bool {
 	return w.cfg.OutputDir != ""
 }
-

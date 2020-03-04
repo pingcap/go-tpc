@@ -21,13 +21,16 @@ const (
 )
 
 func (w *Workloader) loadItem(ctx context.Context) error {
+	if !w.tables[tableItem] {
+		return nil
+	}
 	fmt.Printf("load to item\n")
 	s := w.getState(ctx)
 	hint := "INSERT INTO item (i_id, i_im_id, i_name, i_price, i_data) VALUES "
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["item"])
+		l = load.NewCSVBatchLoader(w.files[tableItem])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -51,13 +54,16 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 }
 
 func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
+	if !w.tables[tableWareHouse] {
+		return nil
+	}
 	fmt.Printf("load to warehouse in warehouse %d\n", warehouse)
 	s := w.getState(ctx)
 	hint := "INSERT INTO warehouse (w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) VALUES "
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["warehouse"])
+		l = load.NewCSVBatchLoader(w.files[tableWareHouse])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -81,6 +87,9 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) loadStock(ctx context.Context, warehouse int) error {
+	if !w.tables[tableStock] {
+		return nil
+	}
 	fmt.Printf("load to stock in warehouse %d\n", warehouse)
 
 	s := w.getState(ctx)
@@ -91,7 +100,7 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["stock"])
+		l = load.NewCSVBatchLoader(w.files[tableStock])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -127,6 +136,9 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 }
 
 func (w *Workloader) loadDistrict(ctx context.Context, warehouse int) error {
+	if !w.tables[tableDistrict] {
+		return nil
+	}
 	fmt.Printf("load to district in warehouse %d\n", warehouse)
 
 	s := w.getState(ctx)
@@ -136,7 +148,7 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["district"])
+		l = load.NewCSVBatchLoader(w.files[tableDistrict])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -167,6 +179,9 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 }
 
 func (w *Workloader) loadCustomer(ctx context.Context, warehouse int, district int) error {
+	if !w.tables[tableCustomer] {
+		return nil
+	}
 	fmt.Printf("load to customer in warehouse %d district %d\n", warehouse, district)
 
 	s := w.getState(ctx)
@@ -177,7 +192,7 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["customer"])
+		l = load.NewCSVBatchLoader(w.files[tableCustomer])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -228,6 +243,9 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 }
 
 func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district int) error {
+	if !w.tables[tableHistory] {
+		return nil
+	}
 	fmt.Printf("load to history in warehouse %d district %d\n", warehouse, district)
 
 	s := w.getState(ctx)
@@ -236,7 +254,7 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["history"])
+		l = load.NewCSVBatchLoader(w.files[tableHistory])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -264,6 +282,9 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 }
 
 func (w *Workloader) loadOrder(ctx context.Context, warehouse int, district int) ([]int, error) {
+	if !w.tables[tableOrders] {
+		return nil, nil
+	}
 	fmt.Printf("load to orders in warehouse %d district %d\n", warehouse, district)
 
 	s := w.getState(ctx)
@@ -273,7 +294,7 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["orders"])
+		l = load.NewCSVBatchLoader(w.files[tableOrders])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -309,6 +330,9 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 }
 
 func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district int) error {
+	if !w.tables[tableNewOrder] {
+		return nil
+	}
 	fmt.Printf("load to new_order in warehouse %d district %d\n", warehouse, district)
 
 	s := w.getState(ctx)
@@ -317,7 +341,7 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["new_order"])
+		l = load.NewCSVBatchLoader(w.files[tableNewOrder])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -339,6 +363,9 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 }
 
 func (w *Workloader) loadOrderLine(ctx context.Context, warehouse int, district int, olCnts []int) error {
+	if !w.tables[tableOrderLine] {
+		return nil
+	}
 	fmt.Printf("load to order_line in warehouse %d district %d\n", warehouse, district)
 
 	s := w.getState(ctx)
@@ -348,7 +375,7 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(w.files["order_line"])
+		l = load.NewCSVBatchLoader(w.files[tableOrderLine])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}

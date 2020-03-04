@@ -15,13 +15,18 @@ func executeTpcc(action string, args []string) {
 	if tpccConfig.OutputDir == "" {
 		openDB()
 		defer closeDB()
+
+		if len(tpccConfig.Tables) > 0 {
+			fmt.Println("Cannot specify generated tables when csv.output flag not set")
+			os.Exit(1)
+		}
 	}
 
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
 	w, err := tpcc.NewWorkloader(globalDB, &tpccConfig)
 	if err != nil {
-		fmt.Printf("failed to init work loader %v\n", err)
+		fmt.Printf("Failed to init work loader: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -40,7 +45,8 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
 	cmd.PersistentFlags().StringVar(&tpccConfig.OutputDir, "csv.output", "", "Output directory for generating csv file when preparing")
-	// TODO: support specifying only generating one table of csv file.
+	cmd.PersistentFlags().StringArrayVar(&tpccConfig.Tables, "csv.tables", []string{}, "Specified tables to " +
+		"generate in csv file(repeated), valid only if csv.output is set. If not set, generate all tables by default.")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",

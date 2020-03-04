@@ -38,7 +38,8 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 
 	switch action {
 	case "prepare":
-		if dropData {
+		// Do cleanup only if dropData is set and not generate csv data.
+		if dropData && !w.DataGen() {
 			if err := w.Cleanup(ctx, index); err != nil {
 				return err
 			}

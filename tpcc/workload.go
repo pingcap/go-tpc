@@ -4,10 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path"
 	"sync"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
@@ -43,6 +46,7 @@ type Config struct {
 	UseFK      bool
 	Isolation  int
 	CheckAll   bool
+	OutputDir  string
 }
 
 // Workloader is TPCC workload
@@ -54,11 +58,14 @@ type Workloader struct {
 	createTableWg sync.WaitGroup
 	initLoadTime  string
 
+	mutex sync.Mutex
+	files map[string]*util.Flock
+
 	txns []txn
 }
 
 // NewWorkloader creates the tpc-c workloader
-func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
+func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	if cfg.Parts > cfg.Warehouses {
 		panic(fmt.Errorf("number warehouses %d must >= partition %d", cfg.Warehouses, cfg.Parts))
 	}
@@ -76,8 +83,34 @@ func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 		{name: "delivery", action: w.runDelivery, weight: 4},
 		{name: "stock_level", action: w.runStockLevel, weight: 4},
 	}
+
+	if w.cfg.OutputDir != "" {
+		if _, err := os.Stat(w.cfg.OutputDir); err != nil {
+			if os.IsNotExist(err) {
+				os.Mkdir(w.cfg.OutputDir, os.ModePerm)
+			} else {
+				return nil, err
+			}
+		}
+		w.mutex = sync.Mutex{}
+		w.files = make(map[string]*util.Flock)
+
+		var fl *util.Flock
+		w.mutex.Lock()
+		tables := []string{"item", "customer", "district", "orders", "new_order", "order_line",
+			"history", "warehouse", "stock"}
+		for _, table := range tables {
+			f, err := util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("test.%s.csv", table)))
+			if err != nil {
+				return nil, err
+			}
+			fl = &util.Flock{f, &sync.Mutex{}}
+			w.files[table] = fl
+		}
+	}
+
 	w.createTableWg.Add(cfg.Threads)
-	return w
+	return w, nil
 }
 
 // Name implements Workloader interface
@@ -140,7 +173,7 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	//			- 1 row in the HISTORY table
 	//		* 3,000 rows in the ORDER table
 	//			For each row in the ORDER table
-	//			- A number of orws in the ORDER-LINE table equal to O_OL_CNT,
+	//			- A number of rows in the ORDER-LINE table equal to O_OL_CNT,
 	//			  generated according to the rules for input data generation
 	//			  of the New-Order transaction
 	//  	* 900 rows in the NEW-ORDER table corresponding to the last 900 rows
@@ -157,7 +190,7 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		warehouse := i%w.cfg.Warehouses + 1
 
 		// load warehouse
-		if err := w.loadWarhouse(ctx, warehouse); err != nil {
+		if err := w.loadWarehouse(ctx, warehouse); err != nil {
 			return fmt.Errorf("load warehouse in %d failed %v", warehouse, err)
 		}
 		// load stock
@@ -165,7 +198,7 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 			return fmt.Errorf("load stock at warehouse %d failed %v", warehouse, err)
 		}
 
-		// load distict
+		// load district
 		if err := w.loadDistrict(ctx, warehouse); err != nil {
 			return fmt.Errorf("load district at wareshouse %d failed %v", warehouse, err)
 
@@ -182,7 +215,7 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		if err = w.loadCustomer(ctx, warehouse, district); err != nil {
 			return fmt.Errorf("load customer at warehouse %d district %d failed %v", warehouse, district, err)
 		}
-		// load hisotry
+		// load history
 		if err = w.loadHistory(ctx, warehouse, district); err != nil {
 			return fmt.Errorf("load history at warehouse %d district %d failed %v", warehouse, district, err)
 		}
@@ -292,6 +325,9 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 		if err := w.dropTable(ctx); err != nil {
 			return err
 		}
+		//for _, f := range w.files {
+		//	f.Close()
+		//}
 	}
 	return nil
 }

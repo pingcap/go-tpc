@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
+	"google.golang.org/appengine/log"
 )
 
 var tpccConfig tpcc.Config
@@ -15,7 +17,11 @@ func executeTpcc(action string, args []string) {
 
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
-	w := tpcc.NewWorkloader(globalDB, &tpccConfig)
+	w, err := tpcc.NewWorkloader(globalDB, &tpccConfig)
+	if err != nil {
+		log.Errorf(context.Background(), "failed to init work loader %v", err)
+		os.Exit(1)
+	}
 
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
@@ -31,6 +37,8 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.Parts, "parts", 1, "Number to partition warehouses")
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
+	cmd.PersistentFlags().StringVar(&tpccConfig.OutputDir, "csv.output", "", "Output directory for generating csv file when preparing")
+	// TODO: support specifying only generating one table of csv file.
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",

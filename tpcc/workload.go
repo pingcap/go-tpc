@@ -79,6 +79,7 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		db:           db,
 		cfg:          cfg,
 		initLoadTime: time.Now().Format(timeFormat),
+		tables:       make(map[string]bool),
 	}
 
 	w.txns = []txn{
@@ -87,6 +88,14 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		{name: "order_status", action: w.runOrderStatus, weight: 4},
 		{name: "delivery", action: w.runDelivery, weight: 4},
 		{name: "stock_level", action: w.runStockLevel, weight: 4},
+	}
+
+	var val bool
+	if len(cfg.Tables) == 0 {
+		val = true
+	}
+	for _, table := range tables {
+		w.tables[table] = val
 	}
 
 	if w.cfg.OutputDir != "" {
@@ -100,15 +109,6 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 			}
 		}
 		w.files = make(map[string]*util.Flock)
-
-		w.tables = make(map[string]bool)
-		var val bool
-		if len(cfg.Tables) == 0 {
-			val = true
-		}
-		for _, table := range tables {
-			w.tables[table] = val
-		}
 
 		for _, t := range cfg.Tables {
 			if _, ok := w.tables[t]; !ok {

@@ -19,6 +19,10 @@ make
 ./bin/go-tpc tpcc --warehouses 4 cleanup
 # Check consistency 
 ./bin/go-tpc tpcc --warehouses 4 check
+# Generate csv files
+./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data
+# Specified tables when generating csv files
+./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --csv.table history --csv.table orders
 ```
 
 ## TPC-H

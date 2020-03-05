@@ -44,11 +44,11 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 		iName := randChars(s.R, s.Buf, 14, 24)
 		iData := randOriginalString(s.R, s.Buf)
 
-		var v string
+		var v []string
 		if isDataGen {
-			v = fmt.Sprintf(`%d, %d, %s, %f, %s`, i+1, iImID, iName, iPrice, iData)
+			v = []string{string(i+1), string(iImID), iName, fmt.Sprintf("%f", iPrice), iData}
 		} else {
-			v = fmt.Sprintf(`%d, %d, '%s', %f, '%s'`, i+1, iImID, iName, iPrice, iData)
+			v = []string{fmt.Sprintf(`%d, %d, '%s', %f, '%s'`, i+1, iImID, iName, iPrice, iData)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -83,13 +83,13 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 	wTax := randTax(s.R)
 	wYtd := 300000.00
 
-	var v string
+	var v []string
 	if w.DataGen() {
-		v = fmt.Sprintf(`%d, %s, %s, %s, %s, %s, %s, %f, %f`,
-			warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)
+		v = []string{string(warehouse), wName, wStree1, wStree2, wCity, wState,
+			wZip, fmt.Sprintf("%f", wTax), fmt.Sprintf("%f", wYtd)}
 	} else {
-		v = fmt.Sprintf(`%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f`,
-			warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)
+		v = []string{fmt.Sprintf(`%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f`,
+			warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)}
 	}
 
 	if err := l.InsertValue(ctx, v); err != nil {
@@ -140,13 +140,13 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 		sRemoteCnt := 0
 		sData := randOriginalString(s.R, s.Buf)
 
-		var v string
+		var v []string
 		if isDataGen {
-			v = fmt.Sprintf(`%d, %d, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %d, %d, %d, %s`,
-				sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)
+			v = []string{string(sIID), string(sWID), string(sQuantity), sDist01, sDist02, sDist03, sDist04, sDist05, sDist06,
+				sDist07, sDist08, sDist09, sDist10, string(sYtd), string(sOrderCnt), string(sRemoteCnt), sData}
 		} else {
-			v = fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s'`,
-				sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)
+			v = []string{fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s'`,
+				sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -190,13 +190,13 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 		dYtd := 30000.00
 		dNextOID := 3001
 
-		var v string
+		var v []string
 		if isDataGen {
-			v = fmt.Sprintf(`%d, %d, %s, %s, %s, %s, %s, %s, %f, %f, %d`, dID, dWID,
-				dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)
+			v = []string{string(dID), string(dWID), dName, dStreet1, dStreet2, dCity, dState, dZip,
+				fmt.Sprintf("%f", dTax), fmt.Sprintf("%f", dYtd), string(dNextOID)}
 		} else {
-			v = fmt.Sprintf(`%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d`, dID, dWID,
-				dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)
+			v = []string{fmt.Sprintf(`%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d`, dID, dWID,
+				dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -259,17 +259,16 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 		cDeliveryCnt := 0
 		cData := randChars(s.R, s.Buf, 300, 500)
 
-		var v string
+		var v []string
 		if isDataGen {
-			v = fmt.Sprintf(`%d, %d, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %f, %f, %f, %f, %d, %d, %s`,
-				cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
-				cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
-				cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)
+			v = []string{string(cID), string(cDID), string(cWID), cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
+				cZip, cPhone, cSince, cCredit, fmt.Sprintf("%f", cCreditLim), fmt.Sprintf("%f", cDisCount),
+				fmt.Sprintf("%f", cBalance), fmt.Sprintf("%f", cYtdPayment), string(cPaymentCnt), string(cDeliveryCnt), cData}
 		} else {
-			v = fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s'`,
+			v = []string{fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s'`,
 				cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
 				cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
-				cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)
+				cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -310,13 +309,13 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 		hAmount := 10.00
 		hData := randChars(s.R, s.Buf, 12, 24)
 
-		var v string
+		var v []string
 		if w.DataGen() {
-			v = fmt.Sprintf(`%d, %d, %d, %d, %d, %s, %f, %s`,
-				hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
+			v = []string{string(hCID), string(hCDID), string(hCWID), string(hDID),
+				string(hWID), hDate, fmt.Sprintf("%f", hAmount), hData}
 		} else {
-			v = fmt.Sprintf(`%d, %d, %d, %d, %d, '%s', %f, '%s'`,
-				hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
+			v = []string{fmt.Sprintf(`%d, %d, %d, %d, %d, '%s', %f, '%s'`,
+				hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -366,11 +365,12 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 		olCnts[i] = oOLCnt
 		oAllLocal := 1
 
-		var v string
+		var v []string
 		if isDataGen {
-			v = fmt.Sprintf(`%d, %d, %d, %d, %s, %s, %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+			v = []string{string(oID), string(oDID), string(oWID), string(oCID), oEntryD,
+				oCarrierID, string(oOLCnt), string(oAllLocal)}
 		} else {
-			v = fmt.Sprintf(`%d, %d, %d, %d, '%s', %s, %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+			v = []string{fmt.Sprintf(`%d, %d, %d, %d, '%s', %s, %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -405,7 +405,13 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 		noDID := district
 		noWID := warehouse
 
-		v := fmt.Sprintf(`%d, %d, %d`, noOID, noDID, noWID)
+		var v []string
+		if w.DataGen() {
+			v = []string{string(noOID), string(noDID), string(noWID)}
+		} else {
+			v = []string{fmt.Sprintf(`%d, %d, %d`, noOID, noDID, noWID)}
+		}
+
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
 		}
@@ -456,15 +462,14 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 			}
 			olDistInfo := randChars(s.R, s.Buf, 24, 24)
 
-			var v string
+			var v []string
 			if isDataGen {
-				v = fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, %s`,
-					olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
-					olDeliveryD, olQuantity, olAmount, olDistInfo)
+				v = []string{string(olOID), string(olDID), string(olWID), string(olNumber), string(olIID),
+					string(olSupplyWID), olDeliveryD, string(olQuantity), fmt.Sprintf("%f", olAmount), olDistInfo}
 			} else {
-				v = fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s'`,
+				v = []string{fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s'`,
 					olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
-					olDeliveryD, olQuantity, olAmount, olDistInfo)
+					olDeliveryD, olQuantity, olAmount, olDistInfo)}
 			}
 
 			if err := l.InsertValue(ctx, v); err != nil {

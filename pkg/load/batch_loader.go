@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"os"
-	"strings"
 )
 
 const (
@@ -14,7 +13,7 @@ const (
 )
 
 type BatchLoader interface {
-	InsertValue(ctx context.Context, query string) error
+	InsertValue(ctx context.Context, query []string) error
 	Flush(ctx context.Context) error
 }
 
@@ -36,14 +35,14 @@ func NewSQLBatchLoader(conn *sql.Conn, hint string) *SQLBatchLoader {
 }
 
 // InsertValue inserts a value, the loader may flush all pending values.
-func (b *SQLBatchLoader) InsertValue(ctx context.Context, query string) error {
+func (b *SQLBatchLoader) InsertValue(ctx context.Context, query []string) error {
 	sep := ", "
 	if b.count == 0 {
 		b.buf.WriteString(b.insertHint)
 		sep = " "
 	}
 	b.buf.WriteString(sep)
-	b.buf.WriteString("(" + query + ")")
+	b.buf.WriteString("(" + query[0] + ")")
 
 	b.count++
 
@@ -82,9 +81,8 @@ func NewCSVBatchLoader(f *os.File) *CSVBatchLoader {
 }
 
 // InsertValue inserts a value, the loader may flush all pending values.
-func (b *CSVBatchLoader) InsertValue(ctx context.Context, query string) error {
-	fields := strings.Split(query, ", ")
-	b.buf = append(b.buf, fields)
+func (b *CSVBatchLoader) InsertValue(ctx context.Context, query []string) error {
+	b.buf = append(b.buf, query)
 
 	if len(b.buf) >= maxBatchCount {
 		return b.Flush(ctx)

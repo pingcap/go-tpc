@@ -84,10 +84,6 @@ func NewCSVBatchLoader(f *os.File) *CSVBatchLoader {
 // InsertValue inserts a value, the loader may flush all pending values.
 func (b *CSVBatchLoader) InsertValue(ctx context.Context, query string) error {
 	fields := strings.Split(query, ", ")
-	for i, field := range fields {
-		// remove '' in string type field
-		fields[i] = strings.Trim(field, `'`)
-	}
 	b.buf = append(b.buf, fields)
 
 	if len(b.buf) >= maxBatchCount {

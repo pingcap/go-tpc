@@ -29,7 +29,8 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 	hint := "INSERT INTO item (i_id, i_im_id, i_name, i_price, i_data) VALUES "
 
 	var l load.BatchLoader
-	if w.DataGen() {
+	isDataGen := w.DataGen()
+	if isDataGen {
 		l = load.NewCSVBatchLoader(s.files[tableItem])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
@@ -43,7 +44,12 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 		iName := randChars(s.R, s.Buf, 14, 24)
 		iData := randOriginalString(s.R, s.Buf)
 
-		v := fmt.Sprintf(`%d, %d, '%s', %f, '%s'`, i+1, iImID, iName, iPrice, iData)
+		var v string
+		if isDataGen {
+			v = fmt.Sprintf(`%d, %d, %s, %f, %s`, i+1, iImID, iName, iPrice, iData)
+		} else {
+			v = fmt.Sprintf(`%d, %d, '%s', %f, '%s'`, i+1, iImID, iName, iPrice, iData)
+		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -77,8 +83,15 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 	wTax := randTax(s.R)
 	wYtd := 300000.00
 
-	v := fmt.Sprintf(`%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f`,
-		warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)
+	var v string
+	if w.DataGen() {
+		v = fmt.Sprintf(`%d, %s, %s, %s, %s, %s, %s, %f, %f`,
+			warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)
+	} else {
+		v = fmt.Sprintf(`%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f`,
+			warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)
+	}
+
 	if err := l.InsertValue(ctx, v); err != nil {
 		return err
 	}
@@ -99,7 +112,8 @@ s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06,
 s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_data) VALUES `
 
 	var l load.BatchLoader
-	if w.DataGen() {
+	isDataGen := w.DataGen()
+	if isDataGen {
 		l = load.NewCSVBatchLoader(s.files[tableStock])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
@@ -126,8 +140,15 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 		sRemoteCnt := 0
 		sData := randOriginalString(s.R, s.Buf)
 
-		v := fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s'`,
-			sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)
+		var v string
+		if isDataGen {
+			v = fmt.Sprintf(`%d, %d, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %d, %d, %d, %s`,
+				sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)
+		} else {
+			v = fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s'`,
+				sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)
+		}
+
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
 		}
@@ -147,7 +168,8 @@ func (w *Workloader) loadDistrict(ctx context.Context, warehouse int) error {
 d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 
 	var l load.BatchLoader
-	if w.DataGen() {
+	isDataGen := w.DataGen()
+	if isDataGen {
 		l = load.NewCSVBatchLoader(s.files[tableDistrict])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
@@ -168,8 +190,14 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 		dYtd := 30000.00
 		dNextOID := 3001
 
-		v := fmt.Sprintf(`%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d`, dID, dWID,
-			dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)
+		var v string
+		if isDataGen {
+			v = fmt.Sprintf(`%d, %d, %s, %s, %s, %s, %s, %s, %f, %f, %d`, dID, dWID,
+				dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)
+		} else {
+			v = fmt.Sprintf(`%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d`, dID, dWID,
+				dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)
+		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -191,7 +219,8 @@ c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_cr
 c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VALUES `
 
 	var l load.BatchLoader
-	if w.DataGen() {
+	isDataGen := w.DataGen()
+	if isDataGen {
 		l = load.NewCSVBatchLoader(s.files[tableCustomer])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
@@ -230,10 +259,19 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 		cDeliveryCnt := 0
 		cData := randChars(s.R, s.Buf, 300, 500)
 
-		v := fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s'`,
-			cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
-			cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
-			cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)
+		var v string
+		if isDataGen {
+			v = fmt.Sprintf(`%d, %d, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %f, %f, %f, %f, %d, %d, %s`,
+				cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
+				cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
+				cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)
+		} else {
+			v = fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s'`,
+				cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
+				cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
+				cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)
+		}
+
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
 		}
@@ -272,8 +310,15 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 		hAmount := 10.00
 		hData := randChars(s.R, s.Buf, 12, 24)
 
-		v := fmt.Sprintf(`%d, %d, %d, %d, %d, '%s', %f, '%s'`,
-			hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
+		var v string
+		if w.DataGen() {
+			v = fmt.Sprintf(`%d, %d, %d, %d, %d, %s, %f, %s`,
+				hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
+		} else {
+			v = fmt.Sprintf(`%d, %d, %d, %d, %d, '%s', %f, '%s'`,
+				hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)
+		}
+
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
 		}
@@ -293,7 +338,8 @@ func (w *Workloader) loadOrder(ctx context.Context, warehouse int, district int)
 o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 
 	var l load.BatchLoader
-	if w.DataGen() {
+	isDataGen := w.DataGen()
+	if isDataGen {
 		l = load.NewCSVBatchLoader(s.files[tableOrders])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
@@ -320,7 +366,13 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 		olCnts[i] = oOLCnt
 		oAllLocal := 1
 
-		v := fmt.Sprintf(`%d, %d, %d, %d, '%s', %s, %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+		var v string
+		if isDataGen {
+			v = fmt.Sprintf(`%d, %d, %d, %d, %s, %s, %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+		} else {
+			v = fmt.Sprintf(`%d, %d, %d, %d, '%s', %s, %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)
+		}
+
 		if err := l.InsertValue(ctx, v); err != nil {
 			return nil, err
 		}
@@ -374,7 +426,8 @@ func (w *Workloader) loadOrderLine(ctx context.Context, warehouse int, district 
 ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VALUES `
 
 	var l load.BatchLoader
-	if w.DataGen() {
+	isDataGen := w.DataGen()
+	if isDataGen {
 		l = load.NewCSVBatchLoader(s.files[tableOrderLine])
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
@@ -402,9 +455,18 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 				olAmount = float64(randInt(s.R, 1, 999999)) / 100.0
 			}
 			olDistInfo := randChars(s.R, s.Buf, 24, 24)
-			v := fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s'`,
-				olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
-				olDeliveryD, olQuantity, olAmount, olDistInfo)
+
+			var v string
+			if isDataGen {
+				v = fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, %s`,
+					olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
+					olDeliveryD, olQuantity, olAmount, olDistInfo)
+			} else {
+				v = fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s'`,
+					olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
+					olDeliveryD, olQuantity, olAmount, olDistInfo)
+			}
+
 			if err := l.InsertValue(ctx, v); err != nil {
 				return err
 			}

@@ -186,7 +186,7 @@ func (w *Workloader) loadCustomer(ctx context.Context, warehouse int, district i
 
 	s := w.getState(ctx)
 
-	hint := `INSERT INTO customer (c_id, c_d_id, c_w_id, c_last, c_middle, c_first, 
+	hint := `INSERT INTO customer (c_id, c_d_id, c_w_id, c_first, c_middle, c_last, 
 c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_credit_lim,
 c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VALUES `
 
@@ -231,7 +231,7 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 		cData := randChars(s.R, s.Buf, 300, 500)
 
 		v := fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s'`,
-			cID, cDID, cWID, cLast, cMiddle, cFirst, cStreet1, cStreet2, cCity, cState,
+			cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
 			cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
 			cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)
 		if err := l.InsertValue(ctx, v); err != nil {

@@ -5,6 +5,18 @@ import (
 	"fmt"
 )
 
+const (
+	tableItem      = "item"
+	tableCustomer  = "customer"
+	tableDistrict  = "district"
+	tableOrders    = "orders"
+	tableNewOrder  = "new_order"
+	tableOrderLine = "order_line"
+	tableHistory   = "history"
+	tableWareHouse = "warehouse"
+	tableStock     = "stock"
+)
+
 func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName string, action string) error {
 	s := w.getState(ctx)
 	fmt.Printf("%s %s\n", action, tableName)
@@ -103,7 +115,6 @@ CREATE TABLE IF NOT EXISTS customer (
 
 	query = `
 CREATE TABLE IF NOT EXISTS history (
-	row_id BINARY(16) NOT NULL,
 	h_c_id INT NOT NULL,
 	h_c_d_id INT NOT NULL,
 	h_c_w_id INT NOT NULL,
@@ -112,7 +123,7 @@ CREATE TABLE IF NOT EXISTS history (
 	h_date DATETIME,
 	h_amount DECIMAL(6, 2),
 	h_data VARCHAR(24),
-	PRIMARY KEY(h_w_id, row_id),
+	INDEX idx_h_w_id (h_w_id),
 	INDEX idx_h_c_w_id (h_c_w_id)
 )`
 
@@ -230,10 +241,6 @@ CREATE TABLE IF NOT EXISTS item (
 
 func (w *Workloader) dropTable(ctx context.Context) error {
 	s := w.getState(ctx)
-	tables := []string{
-		"warehouse", "history", "new_order", "order_line", "orders", "customer", "district", "stock", "item",
-	}
-
 	for _, tbl := range tables {
 		fmt.Printf("DROP TABLE IF EXISTS %s\n", tbl)
 		if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s", tbl)); err != nil {

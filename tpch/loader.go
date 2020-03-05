@@ -9,16 +9,16 @@ import (
 )
 
 type sqlLoader struct {
-	*load.BatchLoader
+	*load.SQLBatchLoader
 	context.Context
 }
 
 func (s *sqlLoader) InsertValue(value string) error {
-	return s.BatchLoader.InsertValue(s.Context, value)
+	return s.SQLBatchLoader.InsertValue(s.Context, value)
 }
 
 func (s *sqlLoader) Flush() error {
-	return s.BatchLoader.Flush(s.Context)
+	return s.SQLBatchLoader.Flush(s.Context)
 }
 
 type orderLoader struct {
@@ -174,42 +174,42 @@ func (r *regionLoader) Load(item interface{}) error {
 }
 
 func newOrderLoader(ctx context.Context, conn *sql.Conn) *orderLoader {
-	return &orderLoader{sqlLoader{load.NewBatchLoader(conn,
+	return &orderLoader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO orders (O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) VALUES `),
 		ctx}}
 }
 func newLineItemLoader(ctx context.Context, conn *sql.Conn) *lineItemloader {
-	return &lineItemloader{sqlLoader{load.NewBatchLoader(conn,
+	return &lineItemloader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO lineitem (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) VALUES `),
 		ctx}}
 }
 func newCustLoader(ctx context.Context, conn *sql.Conn) *custLoader {
-	return &custLoader{sqlLoader{load.NewBatchLoader(conn,
+	return &custLoader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO customer (C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT) VALUES `),
 		ctx}}
 }
 func newPartLoader(ctx context.Context, conn *sql.Conn) *partLoader {
-	return &partLoader{sqlLoader{load.NewBatchLoader(conn,
+	return &partLoader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO part (P_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER, P_RETAILPRICE, P_COMMENT) VALUES `),
 		ctx}}
 }
 func newPartSuppLoader(ctx context.Context, conn *sql.Conn) *partSuppLoader {
-	return &partSuppLoader{sqlLoader{load.NewBatchLoader(conn,
+	return &partSuppLoader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO partsupp (PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, PS_COMMENT) VALUES `),
 		ctx}}
 }
 func newSuppLoader(ctx context.Context, conn *sql.Conn) *suppLoader {
-	return &suppLoader{sqlLoader{load.NewBatchLoader(conn,
+	return &suppLoader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO supplier (S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT) VALUES `),
 		ctx}}
 }
 func newNationLoader(ctx context.Context, conn *sql.Conn) *nationLoader {
-	return &nationLoader{sqlLoader{load.NewBatchLoader(conn,
+	return &nationLoader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO nation (N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT) VALUES `),
 		ctx}}
 }
 func newRegionLoader(ctx context.Context, conn *sql.Conn) *regionLoader {
-	return &regionLoader{sqlLoader{load.NewBatchLoader(conn,
+	return &regionLoader{sqlLoader{load.NewSQLBatchLoader(conn,
 		`INSERT INTO region (R_REGIONKEY, R_NAME, R_COMMENT) VALUES `),
 		ctx}}
 }

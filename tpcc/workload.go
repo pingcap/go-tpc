@@ -4,16 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path"
 	"sync"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
 type contextKey string
 
 const stateKey = contextKey("tpcc")
+
+var tables = []string{tableItem, tableCustomer, tableDistrict, tableHistory,
+	tableNewOrder, tableOrderLine, tableOrders, tableStock, tableWareHouse}
 
 type txn struct {
 	name   string
@@ -27,6 +33,7 @@ type tpccState struct {
 	*workload.TpcState
 	index int
 	decks []int
+	files map[string]*os.File
 
 	newOrderStmts    map[string]*sql.Stmt
 	orderStatusStmts map[string]*sql.Stmt
@@ -37,12 +44,15 @@ type tpccState struct {
 
 // Config is the configuration for tpcc workload
 type Config struct {
+	DBName     string
 	Threads    int
 	Parts      int
 	Warehouses int
 	UseFK      bool
 	Isolation  int
 	CheckAll   bool
+	OutputDir  string
+	Tables     []string
 }
 
 // Workloader is TPCC workload
@@ -54,11 +64,14 @@ type Workloader struct {
 	createTableWg sync.WaitGroup
 	initLoadTime  string
 
+	// tables is a set to keep the specified tables for generating csv file.
+	tables map[string]bool
+
 	txns []txn
 }
 
 // NewWorkloader creates the tpc-c workloader
-func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
+func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	if cfg.Parts > cfg.Warehouses {
 		panic(fmt.Errorf("number warehouses %d must >= partition %d", cfg.Warehouses, cfg.Parts))
 	}
@@ -67,6 +80,7 @@ func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 		db:           db,
 		cfg:          cfg,
 		initLoadTime: time.Now().Format(timeFormat),
+		tables:       make(map[string]bool),
 	}
 
 	w.txns = []txn{
@@ -76,8 +90,42 @@ func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 		{name: "delivery", action: w.runDelivery, weight: 4},
 		{name: "stock_level", action: w.runStockLevel, weight: 4},
 	}
-	w.createTableWg.Add(cfg.Threads)
-	return w
+
+	var val bool
+	if len(cfg.Tables) == 0 {
+		val = true
+	}
+	for _, table := range tables {
+		w.tables[table] = val
+	}
+
+	if w.cfg.OutputDir != "" {
+		if _, err := os.Stat(w.cfg.OutputDir); err != nil {
+			if os.IsNotExist(err) {
+				if err := os.Mkdir(w.cfg.OutputDir, os.ModePerm); err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, err
+			}
+		}
+
+		for _, t := range cfg.Tables {
+			if _, ok := w.tables[t]; !ok {
+				return nil, fmt.Errorf("\nTable %s is not supported.\nSupported tables: item, customer, district, "+
+					"orders, new_order, order_line, history, warehouse, stock.", t)
+			}
+			w.tables[t] = true
+		}
+
+		if !w.tables[tableOrders] && w.tables[tableOrderLine] {
+			return nil, fmt.Errorf("\nTable orders must be specified if you want to generate table order_line.")
+		}
+	} else {
+		w.createTableWg.Add(cfg.Threads)
+	}
+
+	return w, nil
 }
 
 // Name implements Workloader interface
@@ -99,6 +147,15 @@ func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Conte
 		}
 	}
 
+	if w.DataGen() {
+		s.files = make(map[string]*os.File)
+		for k, v := range w.tables {
+			if v {
+				s.files[k] = util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.%s.%d.csv", w.DBName(), k, threadID)))
+			}
+		}
+	}
+
 	s.index = len(s.decks) - 1
 
 	ctx = context.WithValue(ctx, stateKey, s)
@@ -115,19 +172,25 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	closeStmts(s.stockLevelStmt)
 	closeStmts(s.orderStatusStmts)
 	// TODO: close stmts for delivery, order status, and stock level
-	s.Conn.Close()
+	if s.Conn != nil {
+		s.Conn.Close()
+	}
+	for k, _ := range s.files {
+		s.files[k].Close()
+	}
 }
 
 // Prepare implements Workloader interface
 func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
-	if threadID == 0 {
-		if err := w.createTable(ctx); err != nil {
-			return err
+	if !w.DataGen() {
+		if threadID == 0 {
+			if err := w.createTable(ctx); err != nil {
+				return err
+			}
 		}
+		w.createTableWg.Done()
+		w.createTableWg.Wait()
 	}
-
-	w.createTableWg.Done()
-	w.createTableWg.Wait()
 
 	// - 100,1000 rows in the ITEM table
 	// - 1 row in the WAREHOUSE table for each configured warehouse
@@ -140,7 +203,7 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	//			- 1 row in the HISTORY table
 	//		* 3,000 rows in the ORDER table
 	//			For each row in the ORDER table
-	//			- A number of orws in the ORDER-LINE table equal to O_OL_CNT,
+	//			- A number of rows in the ORDER-LINE table equal to O_OL_CNT,
 	//			  generated according to the rules for input data generation
 	//			  of the New-Order transaction
 	//  	* 900 rows in the NEW-ORDER table corresponding to the last 900 rows
@@ -157,7 +220,7 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		warehouse := i%w.cfg.Warehouses + 1
 
 		// load warehouse
-		if err := w.loadWarhouse(ctx, warehouse); err != nil {
+		if err := w.loadWarehouse(ctx, warehouse); err != nil {
 			return fmt.Errorf("load warehouse in %d failed %v", warehouse, err)
 		}
 		// load stock
@@ -165,7 +228,7 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 			return fmt.Errorf("load stock at warehouse %d failed %v", warehouse, err)
 		}
 
-		// load distict
+		// load district
 		if err := w.loadDistrict(ctx, warehouse); err != nil {
 			return fmt.Errorf("load district at wareshouse %d failed %v", warehouse, err)
 
@@ -182,14 +245,14 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		if err = w.loadCustomer(ctx, warehouse, district); err != nil {
 			return fmt.Errorf("load customer at warehouse %d district %d failed %v", warehouse, district, err)
 		}
-		// load hisotry
+		// load history
 		if err = w.loadHistory(ctx, warehouse, district); err != nil {
 			return fmt.Errorf("load history at warehouse %d district %d failed %v", warehouse, district, err)
 		}
-		// load order
+		// load orders
 		var olCnts []int
 		if olCnts, err = w.loadOrder(ctx, warehouse, district); err != nil {
-			return fmt.Errorf("load order at warehouse %d district %d failed %v", warehouse, district, err)
+			return fmt.Errorf("load orders at warehouse %d district %d failed %v", warehouse, district, err)
 		}
 		// loader new-order
 		if err = w.loadNewOrder(ctx, warehouse, district); err != nil {
@@ -331,4 +394,14 @@ func closeStmts(stmts map[string]*sql.Stmt) {
 		}
 		stmt.Close()
 	}
+}
+
+// DataGen returns a bool to represent whether to generate csv data or load data to db.
+func (w *Workloader) DataGen() bool {
+	return w.cfg.OutputDir != ""
+}
+
+// DBName returns the name of test db.
+func (w *Workloader) DBName() string {
+	return w.cfg.DBName
 }

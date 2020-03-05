@@ -38,7 +38,8 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 
 	switch action {
 	case "prepare":
-		if dropData {
+		// Do cleanup only if dropData is set and not generate csv data.
+		if dropData && !w.DataGen() {
 			if err := w.Cleanup(ctx, index); err != nil {
 				return err
 			}
@@ -108,13 +109,17 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	wg.Wait()
 
 	if action == "prepare" {
-		// For prepare, we must check the data consistency after all prepare finished
-		checkPrepare(ctx, w)
+		if !w.DataGen() {
+			// For prepare, we must check the data consistency after all prepare finished
+			checkPrepare(ctx, w)
+		} else {
+			fmt.Println("Skip preparing checking. Please load CSV data into database and check later.")
+		}
 	}
 	outputCancel()
 
 	<-ch
 
-	fmt.Printf("Finished\n")
+	fmt.Println("Finished")
 	measurement.Output()
 }

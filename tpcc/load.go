@@ -31,7 +31,7 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 	var l load.BatchLoader
 	isDataGen := w.DataGen()
 	if isDataGen {
-		l = load.NewCSVBatchLoader(s.files[tableItem])
+		l = s.loaders[tableItem]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -69,7 +69,7 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(s.files[tableWareHouse])
+		l = s.loaders[tableWareHouse]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -114,7 +114,7 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 	var l load.BatchLoader
 	isDataGen := w.DataGen()
 	if isDataGen {
-		l = load.NewCSVBatchLoader(s.files[tableStock])
+		l = s.loaders[tableStock]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -170,7 +170,7 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 	var l load.BatchLoader
 	isDataGen := w.DataGen()
 	if isDataGen {
-		l = load.NewCSVBatchLoader(s.files[tableDistrict])
+		l = s.loaders[tableDistrict]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -221,7 +221,7 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 	var l load.BatchLoader
 	isDataGen := w.DataGen()
 	if isDataGen {
-		l = load.NewCSVBatchLoader(s.files[tableCustomer])
+		l = s.loaders[tableCustomer]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -291,7 +291,7 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(s.files[tableHistory])
+		l = s.loaders[tableHistory]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -339,7 +339,7 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 	var l load.BatchLoader
 	isDataGen := w.DataGen()
 	if isDataGen {
-		l = load.NewCSVBatchLoader(s.files[tableOrders])
+		l = s.loaders[tableOrders]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -393,7 +393,7 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 
 	var l load.BatchLoader
 	if w.DataGen() {
-		l = load.NewCSVBatchLoader(s.files[tableNewOrder])
+		l = s.loaders[tableNewOrder]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}
@@ -434,7 +434,7 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 	var l load.BatchLoader
 	isDataGen := w.DataGen()
 	if isDataGen {
-		l = load.NewCSVBatchLoader(s.files[tableOrderLine])
+		l = s.loaders[tableOrderLine]
 	} else {
 		l = load.NewSQLBatchLoader(s.Conn, hint)
 	}

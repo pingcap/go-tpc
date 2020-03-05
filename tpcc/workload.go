@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pingcap/go-tpc/pkg/load"
 	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
@@ -33,7 +34,7 @@ type tpccState struct {
 	*workload.TpcState
 	index int
 	decks []int
-	files map[string]*os.File
+	loaders map[string]*load.CSVBatchLoader
 
 	newOrderStmts    map[string]*sql.Stmt
 	orderStatusStmts map[string]*sql.Stmt
@@ -148,10 +149,11 @@ func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Conte
 	}
 
 	if w.DataGen() {
-		s.files = make(map[string]*os.File)
+		s.loaders = make(map[string]*load.CSVBatchLoader)
 		for k, v := range w.tables {
 			if v {
-				s.files[k] = util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.%s.%d.csv", w.DBName(), k, threadID)))
+				file := util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.%s.%d.csv", w.DBName(), k, threadID)))
+				s.loaders[k] = load.NewCSVBatchLoader(file)
 			}
 		}
 	}
@@ -175,8 +177,8 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	if s.Conn != nil {
 		s.Conn.Close()
 	}
-	for k, _ := range s.files {
-		s.files[k].Close()
+	for k, _ := range s.loaders {
+		s.loaders[k].Close(ctx)
 	}
 }
 

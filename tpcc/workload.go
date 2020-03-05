@@ -151,7 +151,8 @@ func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Conte
 	if w.DataGen() {
 		s.loaders = make(map[string]*load.CSVBatchLoader)
 		for k, v := range w.tables {
-			if v {
+			// table item only created at thread 0
+			if v && !(k == "item" && threadID != 0) {
 				file := util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.%s.%d.csv", w.DBName(), k, threadID)))
 				s.loaders[k] = load.NewCSVBatchLoader(file)
 			}

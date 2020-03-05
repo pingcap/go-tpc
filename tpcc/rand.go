@@ -17,43 +17,46 @@ func randInt(r *rand.Rand, min, max int) int {
 }
 
 const (
-	characters = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`
-	letters    = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`
-	numbers    = `1234567890`
+	characters    = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`
+	letters       = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`
+	numbers       = `1234567890`
+	lenCharacters = 62
+	lenLetters    = 26
+	lenNumbers    = 10
 )
 
-func randBuffer(r *rand.Rand, b *util.BufAllocator, min, max int, s string) []byte {
+func randBuffer(r *rand.Rand, b *util.BufAllocator, min, max int, num int) []byte {
 	buf := b.Alloc(randInt(r, min, max))
 	for i := range buf {
-		buf[i] = characters[r.Intn(len(s))]
+		buf[i] = characters[r.Intn(num)]
 	}
 	return buf
 }
 
 // refer 4.3.2.2
 func randChars(r *rand.Rand, b *util.BufAllocator, min, max int) string {
-	return util.String(randBuffer(r, b, min, max, characters))
+	return util.String(randBuffer(r, b, min, max, lenCharacters))
 }
 
 // refer 4.3.2.2
 func randLetters(r *rand.Rand, b *util.BufAllocator, min, max int) string {
-	return util.String(randBuffer(r, b, min, max, letters))
+	return util.String(randBuffer(r, b, min, max, lenLetters))
 }
 
 // refer 4.3.2.2
 func randNumbers(r *rand.Rand, b *util.BufAllocator, min, max int) string {
-	return util.String(randBuffer(r, b, min, max, numbers))
+	return util.String(randBuffer(r, b, min, max, lenNumbers))
 }
 
 // refer 4.3.2.7
 func randZip(r *rand.Rand, b *util.BufAllocator) string {
-	buf := randBuffer(r, b, 9, 9, numbers)
+	buf := randBuffer(r, b, 9, 9, lenNumbers)
 	copy(buf[4:], `11111`)
 	return util.String(buf)
 }
 
 func randState(r *rand.Rand, b *util.BufAllocator) string {
-	buf := randBuffer(r, b, 2, 2, letters)
+	buf := randBuffer(r, b, 2, 2, lenLetters)
 	return util.String(buf)
 }
 
@@ -68,7 +71,7 @@ const originalString = "ORIGINAL"
 // the string "ORIGINAL" must be held by 8 consecutive characters starting at a random position within buf
 func randOriginalString(r *rand.Rand, b *util.BufAllocator) string {
 	if r.Intn(10) == 0 {
-		buf := randBuffer(r, b, 26, 50, characters)
+		buf := randBuffer(r, b, 26, 50, lenCharacters)
 		index := r.Intn(len(buf) - 8)
 		copy(buf[index:], originalString)
 		return util.String(buf)

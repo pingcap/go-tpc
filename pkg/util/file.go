@@ -1,19 +1,15 @@
 package util
 
 import (
+	"fmt"
 	"os"
-	"sync"
 )
 
-func CreateFile(path string) (*os.File, error) {
+func CreateFile(path string) *os.File {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return nil, err
+		fmt.Printf("failed to create file %s, error %v", path, err)
+		os.Exit(1)
 	}
-	return f, nil
-}
-
-type Flock struct {
-	*os.File
-	*sync.Mutex
+	return f
 }

@@ -22,6 +22,7 @@ func executeTpcc(action string, args []string) {
 		}
 	}
 
+	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
 	w, err := tpcc.NewWorkloader(globalDB, &tpccConfig)

@@ -33,6 +33,7 @@ type tpccState struct {
 	*workload.TpcState
 	index int
 	decks []int
+	files map[string]*os.File
 
 	newOrderStmts    map[string]*sql.Stmt
 	orderStatusStmts map[string]*sql.Stmt
@@ -43,6 +44,7 @@ type tpccState struct {
 
 // Config is the configuration for tpcc workload
 type Config struct {
+	DBName     string
 	Threads    int
 	Parts      int
 	Warehouses int
@@ -62,7 +64,6 @@ type Workloader struct {
 	createTableWg sync.WaitGroup
 	initLoadTime  string
 
-	files map[string]*util.Flock
 	// tables is a set to keep the specified tables for generating csv file.
 	tables map[string]bool
 
@@ -108,7 +109,6 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 				return nil, err
 			}
 		}
-		w.files = make(map[string]*util.Flock)
 
 		for _, t := range cfg.Tables {
 			if _, ok := w.tables[t]; !ok {
@@ -120,17 +120,6 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 
 		if !w.tables[tableOrders] && w.tables[tableOrderLine] {
 			return nil, fmt.Errorf("\nTable orders must be specified if you want to generate table order_line.")
-		}
-
-		for _, table := range tables {
-			if w.tables[table] {
-				f, err := util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("test.%s.csv", table)))
-				if err != nil {
-					return nil, err
-				}
-				fl := &util.Flock{f, &sync.Mutex{}}
-				w.files[table] = fl
-			}
 		}
 	} else {
 		w.createTableWg.Add(cfg.Threads)
@@ -158,6 +147,15 @@ func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Conte
 		}
 	}
 
+	if w.DataGen() {
+		s.files = make(map[string]*os.File)
+		for k, v := range w.tables {
+			if v {
+				s.files[k] = util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.%s.%d.csv", w.DBName(), k, threadID)))
+			}
+		}
+	}
+
 	s.index = len(s.decks) - 1
 
 	ctx = context.WithValue(ctx, stateKey, s)
@@ -174,8 +172,11 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	closeStmts(s.stockLevelStmt)
 	closeStmts(s.orderStatusStmts)
 	// TODO: close stmts for delivery, order status, and stock level
-	if !w.DataGen() {
+	if s.Conn != nil {
 		s.Conn.Close()
+	}
+	for k, _ := range s.files {
+		s.files[k].Close()
 	}
 }
 
@@ -354,9 +355,6 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 		if err := w.dropTable(ctx); err != nil {
 			return err
 		}
-		for _, f := range w.files {
-			f.Close()
-		}
 	}
 	return nil
 }
@@ -401,4 +399,9 @@ func closeStmts(stmts map[string]*sql.Stmt) {
 // DataGen returns a bool to represent whether to generate csv data or load data to db.
 func (w *Workloader) DataGen() bool {
 	return w.cfg.OutputDir != ""
+}
+
+// DBName returns the name of test db.
+func (w *Workloader) DBName() string {
+	return w.cfg.DBName
 }

@@ -145,3 +145,8 @@ func (w Workloader) Check(ctx context.Context, threadID int) error {
 func (w Workloader) DataGen() bool {
 	return false
 }
+
+// DBName returns the name of test db.
+func (w Workloader) DBName() string {
+	return "not implemented"
+}

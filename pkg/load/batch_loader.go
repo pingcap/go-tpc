@@ -5,10 +5,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/csv"
+	"os"
 	"strings"
-	"sync"
-
-	"github.com/pingcap/go-tpc/pkg/util"
 )
 
 const (
@@ -73,15 +71,13 @@ func (b *SQLBatchLoader) Flush(ctx context.Context) error {
 type CSVBatchLoader struct {
 	buf        [][]string
 	writer     *csv.Writer
-	mutex      *sync.Mutex
 }
 
 // NewCSVBatchLoader creates a batch loader for csv format
-func NewCSVBatchLoader(flock *util.Flock) *CSVBatchLoader {
+func NewCSVBatchLoader(f *os.File) *CSVBatchLoader {
 	return &CSVBatchLoader{
 		buf:    make([][]string, 0, maxBatchCount),
-		writer: csv.NewWriter(flock.File),
-		mutex:  flock.Mutex,
+		writer: csv.NewWriter(f),
 	}
 }
 
@@ -107,11 +103,9 @@ func (b *CSVBatchLoader) Flush(ctx context.Context) error {
 		return nil
 	}
 
-	b.mutex.Lock()
 	err := b.writer.WriteAll(b.buf)
 	b.buf = b.buf[:0]
 	b.writer.Flush()
-	b.mutex.Unlock()
 
 	return err
 }

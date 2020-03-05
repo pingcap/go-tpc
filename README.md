@@ -23,6 +23,11 @@ make
 ./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data
 # Specified tables when generating csv files
 ./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --csv.table history --csv.table orders
+
+# Start pprof
+./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --pprof :10111
+# Enable Prometheus endpoint. Prometheus will use the same address with pprof
+./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --pprof :10111 --metrics
 ```
 
 ## TPC-H

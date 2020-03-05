@@ -32,7 +32,6 @@ var (
 	isolationLevel int
 	silence        bool
 	pprofAddr      string
-	enableMetrics  bool
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -64,7 +63,6 @@ func main() {
 	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	rootCmd.PersistentFlags().BoolVar(&enableMetrics, "metrics", false, "Enable Prometheus metrics")
 	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Address of pprof endpoint")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Database host")

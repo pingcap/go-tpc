@@ -8,26 +8,18 @@ import (
 	"os"
 
 	"github.com/pingcap/go-tpc/tpcc"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 )
 
 var tpccConfig tpcc.Config
 
-func startProfiling() {
+func executeTpcc(action string, args []string) {
 	if pprofAddr != "" {
-		if enableMetrics {
-			http.Handle ("/metrics", promhttp.Handler())
-		}
-
 		go func() {
 			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
 		}()
 	}
-}
 
-func executeTpcc(action string, args []string) {
-	startProfiling()
 	if tpccConfig.OutputDir == "" {
 		openDB()
 		defer closeDB()

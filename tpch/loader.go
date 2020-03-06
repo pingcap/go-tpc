@@ -14,7 +14,7 @@ type sqlLoader struct {
 }
 
 func (s *sqlLoader) InsertValue(value string) error {
-	return s.SQLBatchLoader.InsertValue(s.Context, value)
+	return s.SQLBatchLoader.InsertValue(s.Context, []string{value})
 }
 
 func (s *sqlLoader) Flush() error {

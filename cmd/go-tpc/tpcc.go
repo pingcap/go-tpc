@@ -13,7 +13,7 @@ import (
 
 var tpccConfig tpcc.Config
 
-func executeTpcc(action string, args []string) {
+func executeTpcc(action string) {
 	if pprofAddr != "" {
 		go func() {
 			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
@@ -60,36 +60,44 @@ func registerTpcc(root *cobra.Command) {
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("prepare", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("prepare")
 		},
 	}
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("run", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("run")
 		},
 	}
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",
 		Short: "Cleanup data for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("cleanup", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("cleanup")
 		},
 	}
 
 	var cmdCheck = &cobra.Command{
 		Use:   "check",
 		Short: "Check data consistency for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("check", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("check")
 		},
 	}
 
-	cmd.AddCommand(cmdRun, cmdPrepare, cmdCleanup, cmdCheck)
+	var cmdSchema = &cobra.Command{
+		Use: "schema",
+		Short: "Create schema for the workload",
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("schema")
+		},
+	}
+
+	cmd.AddCommand(cmdRun, cmdPrepare, cmdCleanup, cmdCheck, cmdSchema)
 
 	root.AddCommand(cmd)
 }

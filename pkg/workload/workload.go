@@ -14,6 +14,7 @@ type Workloader interface {
 	Run(ctx context.Context, threadID int) error
 	Cleanup(ctx context.Context, threadID int) error
 	Check(ctx context.Context, threadID int) error
+	CreateSchema(ctx context.Context) error
 	DataGen() bool
 	DBName() string
 }

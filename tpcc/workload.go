@@ -32,8 +32,8 @@ type txn struct {
 
 type tpccState struct {
 	*workload.TpcState
-	index int
-	decks []int
+	index   int
+	decks   []int
 	loaders map[string]*load.CSVBatchLoader
 
 	newOrderStmts    map[string]*sql.Stmt
@@ -187,7 +187,7 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	if !w.DataGen() {
 		if threadID == 0 {
-			if err := w.createTable(ctx); err != nil {
+			if err := w.CreateSchema(ctx); err != nil {
 				return err
 			}
 		}

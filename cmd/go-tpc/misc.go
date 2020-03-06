@@ -49,6 +49,8 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 		return w.Cleanup(ctx, index)
 	case "check":
 		return w.Check(ctx, index)
+	case "schema":
+		return w.CreateSchema(ctx)
 	}
 
 	for i := 0; i < count; i++ {
@@ -75,10 +77,6 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 }
 
 func executeWorkload(ctx context.Context, w workload.Workloader, action string) {
-	var wg sync.WaitGroup
-
-	wg.Add(threads)
-
 	outputCtx, outputCancel := context.WithCancel(ctx)
 	ch := make(chan struct{}, 1)
 	go func() {
@@ -95,6 +93,14 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 			}
 		}
 	}()
+
+	// Only use 1 thread to create schema.
+	if action == "schema" {
+		threads = 1
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(threads)
 
 	for i := 0; i < threads; i++ {
 		go func(index int) {

@@ -26,6 +26,9 @@ make
 
 # Start pprof
 ./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --pprof :10111
+
+# Create schema
+./bin/go-tpc tpcc schema
 ```
 
 ## TPC-H

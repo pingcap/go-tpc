@@ -42,7 +42,7 @@ func (b *SQLBatchLoader) InsertValue(ctx context.Context, query []string) error 
 		sep = " "
 	}
 	b.buf.WriteString(sep)
-	b.buf.WriteString("(" + query[0] + ")")
+	b.buf.WriteString(query[0])
 
 	b.count++
 

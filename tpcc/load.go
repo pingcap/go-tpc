@@ -46,9 +46,9 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 
 		var v []string
 		if isDataGen {
-			v = []string{string(i+1), string(iImID), iName, fmt.Sprintf("%f", iPrice), iData}
+			v = []string{strconv.Itoa(i+1), strconv.Itoa(iImID), iName, fmt.Sprintf("%f", iPrice), iData}
 		} else {
-			v = []string{fmt.Sprintf(`%d, %d, '%s', %f, '%s'`, i+1, iImID, iName, iPrice, iData)}
+			v = []string{fmt.Sprintf(`(%d, %d, '%s', %f, '%s')`, i+1, iImID, iName, iPrice, iData)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -85,10 +85,10 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 
 	var v []string
 	if w.DataGen() {
-		v = []string{string(warehouse), wName, wStree1, wStree2, wCity, wState,
+		v = []string{strconv.Itoa(warehouse), wName, wStree1, wStree2, wCity, wState,
 			wZip, fmt.Sprintf("%f", wTax), fmt.Sprintf("%f", wYtd)}
 	} else {
-		v = []string{fmt.Sprintf(`%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f`,
+		v = []string{fmt.Sprintf(`(%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f)`,
 			warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)}
 	}
 
@@ -142,10 +142,10 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 
 		var v []string
 		if isDataGen {
-			v = []string{string(sIID), string(sWID), string(sQuantity), sDist01, sDist02, sDist03, sDist04, sDist05, sDist06,
-				sDist07, sDist08, sDist09, sDist10, string(sYtd), string(sOrderCnt), string(sRemoteCnt), sData}
+			v = []string{strconv.Itoa(sIID), strconv.Itoa(sWID), strconv.Itoa(sQuantity), sDist01, sDist02, sDist03, sDist04, sDist05, sDist06,
+				sDist07, sDist08, sDist09, sDist10, strconv.Itoa(sYtd), strconv.Itoa(sOrderCnt), strconv.Itoa(sRemoteCnt), sData}
 		} else {
-			v = []string{fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s'`,
+			v = []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s')`,
 				sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)}
 		}
 
@@ -192,10 +192,10 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 
 		var v []string
 		if isDataGen {
-			v = []string{string(dID), string(dWID), dName, dStreet1, dStreet2, dCity, dState, dZip,
-				fmt.Sprintf("%f", dTax), fmt.Sprintf("%f", dYtd), string(dNextOID)}
+			v = []string{strconv.Itoa(dID), strconv.Itoa(dWID), dName, dStreet1, dStreet2, dCity, dState, dZip,
+				fmt.Sprintf("%f", dTax), fmt.Sprintf("%f", dYtd), strconv.Itoa(dNextOID)}
 		} else {
-			v = []string{fmt.Sprintf(`%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d`, dID, dWID,
+			v = []string{fmt.Sprintf(`(%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d)`, dID, dWID,
 				dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)}
 		}
 
@@ -261,11 +261,11 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 
 		var v []string
 		if isDataGen {
-			v = []string{string(cID), string(cDID), string(cWID), cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
+			v = []string{strconv.Itoa(cID), strconv.Itoa(cDID), strconv.Itoa(cWID), cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
 				cZip, cPhone, cSince, cCredit, fmt.Sprintf("%f", cCreditLim), fmt.Sprintf("%f", cDisCount),
-				fmt.Sprintf("%f", cBalance), fmt.Sprintf("%f", cYtdPayment), string(cPaymentCnt), string(cDeliveryCnt), cData}
+				fmt.Sprintf("%f", cBalance), fmt.Sprintf("%f", cYtdPayment), strconv.Itoa(cPaymentCnt), strconv.Itoa(cDeliveryCnt), cData}
 		} else {
-			v = []string{fmt.Sprintf(`%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s'`,
+			v = []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s')`,
 				cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
 				cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
 				cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)}
@@ -311,10 +311,10 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 
 		var v []string
 		if w.DataGen() {
-			v = []string{string(hCID), string(hCDID), string(hCWID), string(hDID),
-				string(hWID), hDate, fmt.Sprintf("%f", hAmount), hData}
+			v = []string{strconv.Itoa(hCID), strconv.Itoa(hCDID), strconv.Itoa(hCWID), strconv.Itoa(hDID),
+				strconv.Itoa(hWID), hDate, fmt.Sprintf("%f", hAmount), hData}
 		} else {
-			v = []string{fmt.Sprintf(`%d, %d, %d, %d, %d, '%s', %f, '%s'`,
+			v = []string{fmt.Sprintf(`(%d, %d, %d, %d, %d, '%s', %f, '%s')`,
 				hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)}
 		}
 
@@ -367,10 +367,10 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 
 		var v []string
 		if isDataGen {
-			v = []string{string(oID), string(oDID), string(oWID), string(oCID), oEntryD,
-				oCarrierID, string(oOLCnt), string(oAllLocal)}
+			v = []string{strconv.Itoa(oID), strconv.Itoa(oDID), strconv.Itoa(oWID), strconv.Itoa(oCID), oEntryD,
+				oCarrierID, strconv.Itoa(oOLCnt), strconv.Itoa(oAllLocal)}
 		} else {
-			v = []string{fmt.Sprintf(`%d, %d, %d, %d, '%s', %s, %d, %d`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)}
+			v = []string{fmt.Sprintf(`(%d, %d, %d, %d, '%s', %s, %d, %d)`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -407,9 +407,9 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 
 		var v []string
 		if w.DataGen() {
-			v = []string{string(noOID), string(noDID), string(noWID)}
+			v = []string{strconv.Itoa(noOID), strconv.Itoa(noDID), strconv.Itoa(noWID)}
 		} else {
-			v = []string{fmt.Sprintf(`%d, %d, %d`, noOID, noDID, noWID)}
+			v = []string{fmt.Sprintf(`(%d, %d, %d)`, noOID, noDID, noWID)}
 		}
 
 		if err := l.InsertValue(ctx, v); err != nil {
@@ -454,7 +454,11 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 			var olAmount float64
 			var olDeliveryD string
 			if olOID < 2101 {
-				olDeliveryD = fmt.Sprintf(`'%s'`, w.initLoadTime)
+				if isDataGen {
+					olDeliveryD = w.initLoadTime
+				} else {
+					olDeliveryD = `'` + w.initLoadTime + `'`
+				}
 				olAmount = 0.00
 			} else {
 				olDeliveryD = "NULL"
@@ -464,10 +468,10 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 
 			var v []string
 			if isDataGen {
-				v = []string{string(olOID), string(olDID), string(olWID), string(olNumber), string(olIID),
-					string(olSupplyWID), olDeliveryD, string(olQuantity), fmt.Sprintf("%f", olAmount), olDistInfo}
+				v = []string{strconv.Itoa(olOID), strconv.Itoa(olDID), strconv.Itoa(olWID), strconv.Itoa(olNumber), strconv.Itoa(olIID),
+					strconv.Itoa(olSupplyWID), olDeliveryD, strconv.Itoa(olQuantity), fmt.Sprintf("%f", olAmount), olDistInfo}
 			} else {
-				v = []string{fmt.Sprintf(`%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s'`,
+				v = []string{fmt.Sprintf(`(%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s')`,
 					olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
 					olDeliveryD, olQuantity, olAmount, olDistInfo)}
 			}

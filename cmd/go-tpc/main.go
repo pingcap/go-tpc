@@ -31,6 +31,7 @@ var (
 	outputInterval time.Duration
 	isolationLevel int
 	silence        bool
+	pprofAddr      string
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -60,8 +61,9 @@ func main() {
 		Use:   "go-tpc",
 		Short: "Benchmark database with different workloads",
 	}
-	runtime.GOMAXPROCS(runtime.NumCPU() / 2)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Address of pprof endpoint")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Database host")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "U", "root", "Database user")
@@ -69,7 +71,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "P", 4000, "Database port")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 16, "Thread concurrency")
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", "", "Database driver: mysql")
-	rootCmd.PersistentFlags().DurationVar(&totalTime, "time", 1<<63 - 1, "Total execution time")
+	rootCmd.PersistentFlags().DurationVar(&totalTime, "time", 1<<63-1, "Total execution time")
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 1000000, "Total execution count")
 	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")

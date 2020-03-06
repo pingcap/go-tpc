@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 
 	"github.com/pingcap/go-tpc/tpcc"
@@ -12,6 +14,12 @@ import (
 var tpccConfig tpcc.Config
 
 func executeTpcc(action string, args []string) {
+	if pprofAddr != "" {
+		go func() {
+			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
+		}()
+	}
+
 	if tpccConfig.OutputDir == "" {
 		openDB()
 		defer closeDB()

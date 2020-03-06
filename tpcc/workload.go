@@ -187,7 +187,7 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	if !w.DataGen() {
 		if threadID == 0 {
-			if err := w.CreateSchema(ctx); err != nil {
+			if err := w.CreateTables(ctx); err != nil {
 				return err
 			}
 		}
@@ -234,7 +234,6 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		// load district
 		if err := w.loadDistrict(ctx, warehouse); err != nil {
 			return fmt.Errorf("load district at wareshouse %d failed %v", warehouse, err)
-
 		}
 	}
 

@@ -21,7 +21,9 @@ func executeTpcc(action string) {
 	}
 
 	if tpccConfig.OutputDir == "" {
-		openDB()
+		if err := openDB(); err != nil {
+			os.Exit(1)
+		}
 		defer closeDB()
 
 		if len(tpccConfig.Tables) > 0 {

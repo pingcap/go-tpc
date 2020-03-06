@@ -50,7 +50,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 	case "check":
 		return w.Check(ctx, index)
 	case "schema":
-		return w.CreateSchema(ctx)
+		return w.CreateTables(ctx)
 	}
 
 	for i := 0; i < count; i++ {

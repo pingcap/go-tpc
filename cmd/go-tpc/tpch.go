@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/pingcap/go-tpc/tpch"
@@ -11,9 +12,12 @@ import (
 var tpchConfig tpch.Config
 
 func executeTpch(action string, _ []string) {
-	openDB()
+	if err := openDB(); err != nil {
+		os.Exit(1)
+	}
 	defer closeDB()
 
+	tpchConfig.DBName = dbName
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
 	w := tpch.NewWorkloader(globalDB, &tpchConfig)
 

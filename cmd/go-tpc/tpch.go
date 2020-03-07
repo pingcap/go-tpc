@@ -11,9 +11,7 @@ import (
 var tpchConfig tpch.Config
 
 func executeTpch(action string, _ []string) {
-	if err := openDB(); err != nil {
-		panic(err)
-	}
+	openDB()
 	defer closeDB()
 
 	tpchConfig.DBName = dbName

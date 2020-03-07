@@ -40,7 +40,6 @@ var (
 
 const (
 	unknownDB       = "Unknown database"
-	connectionError = "connection refused"
 	createDBDDL     = "CREATE DATABASE "
 	mysqlDriver     = "mysql"
 )
@@ -52,7 +51,7 @@ func closeDB() {
 	globalDB = nil
 }
 
-func openDB() error {
+func openDB() {
 	// TODO: support other drivers
 	var tmpDB *sql.DB
 	ds := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
@@ -60,7 +59,7 @@ func openDB() error {
 	var err error
 	globalDB, err = sql.Open(mysqlDriver, dsn)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	if err := globalDB.Ping(); err != nil {
 		errString := err.Error()
@@ -68,18 +67,14 @@ func openDB() error {
 			tmpDB, _ = sql.Open(mysqlDriver, ds)
 			defer tmpDB.Close()
 			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
-				return fmt.Errorf("failed to create database, err %v\n", err)
+				panic(fmt.Errorf("failed to create database, err %v\n", err))
 			}
-		} else if strings.Contains(errString, connectionError) {
-			globalDB = nil
-			return nil
 		} else {
-			return fmt.Errorf("failed to open database, err %v\n", err)
+			globalDB = nil
 		}
+	} else {
+		globalDB.SetMaxIdleConns(threads + 1)
 	}
-
-	globalDB.SetMaxIdleConns(threads + 1)
-	return nil
 }
 
 func main() {

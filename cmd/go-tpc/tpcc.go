@@ -20,9 +20,7 @@ func executeTpcc(action string) {
 		}()
 	}
 
-	if err := openDB(); err != nil {
-		panic(err)
-	}
+	openDB()
 	defer closeDB()
 
 	tpccConfig.DBName = dbName

@@ -42,8 +42,7 @@ For example:
 # Generate csv files
 ./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data
 # Specified tables when generating csv files
-./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --csv.table history --csv.table orders
-
+./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --csv.tables history,orders
 # Start pprof
 ./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --pprof :10111
 ```

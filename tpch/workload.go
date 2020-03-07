@@ -83,7 +83,7 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 	}
 	s := w.getState(ctx)
 
-	if err := w.CreateTables(ctx); err != nil {
+	if err := w.createTables(ctx); err != nil {
 		return err
 	}
 	sqlLoader := map[dbgen.Table]dbgen.Loader{

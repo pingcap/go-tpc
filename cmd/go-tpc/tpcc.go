@@ -20,17 +20,10 @@ func executeTpcc(action string) {
 		}()
 	}
 
-	if tpccConfig.OutputDir == "" {
-		if err := openDB(); err != nil {
-			os.Exit(1)
-		}
-		defer closeDB()
-
-		if len(tpccConfig.Tables) > 0 {
-			fmt.Println("Cannot specify generated tables when csv.output flag not set")
-			os.Exit(1)
-		}
+	if err := openDB(); err != nil {
+		panic(err)
 	}
+	defer closeDB()
 
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
@@ -56,7 +49,7 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
 	cmd.PersistentFlags().StringVar(&tpccConfig.OutputDir, "csv.output", "", "Output directory for generating csv file when preparing data")
-	cmd.PersistentFlags().StringArrayVar(&tpccConfig.Tables, "csv.table", []string{}, "Specified tables for " +
+	cmd.PersistentFlags().StringArrayVar(&tpccConfig.Tables, "csv.table", []string{}, "Specified tables for "+
 		"generating csv file(repeated), valid only if csv.output is set. If this flag is not set, generate all tables by default.")
 
 	var cmdPrepare = &cobra.Command{
@@ -91,15 +84,7 @@ func registerTpcc(root *cobra.Command) {
 		},
 	}
 
-	var cmdSchema = &cobra.Command{
-		Use: "schema",
-		Short: "Create schema for the workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("schema")
-		},
-	}
-
-	cmd.AddCommand(cmdRun, cmdPrepare, cmdCleanup, cmdCheck, cmdSchema)
+	cmd.AddCommand(cmdRun, cmdPrepare, cmdCleanup, cmdCheck)
 
 	root.AddCommand(cmd)
 }

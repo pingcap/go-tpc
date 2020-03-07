@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"github.com/pingcap/go-tpc/tpch"
@@ -13,7 +12,7 @@ var tpchConfig tpch.Config
 
 func executeTpch(action string, _ []string) {
 	if err := openDB(); err != nil {
-		os.Exit(1)
+		panic(err)
 	}
 	defer closeDB()
 

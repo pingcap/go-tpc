@@ -34,8 +34,8 @@ func (w *Workloader) appendPartition(query string, partKeys string) string {
 	return fmt.Sprintf("%s\n PARTITION BY HASH(%s)\n PARTITIONS %d", query, partKeys, w.cfg.Parts)
 }
 
-// CreateTables creates tables schema.
-func (w *Workloader) CreateTables(ctx context.Context) error {
+// createTables creates tables schema.
+func (w *Workloader) createTables(ctx context.Context) error {
 	// Warehouse
 	query := `
 CREATE TABLE IF NOT EXISTS warehouse (

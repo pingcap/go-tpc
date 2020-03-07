@@ -39,9 +39,10 @@ var (
 )
 
 const (
-	unknownDB   = "Unknown database"
-	createDBDDL = "CREATE DATABASE "
-	mysqlDriver = "mysql"
+	unknownDB       = "Unknown database"
+	connectionError = "connection refused"
+	createDBDDL     = "CREATE DATABASE "
+	mysqlDriver     = "mysql"
 )
 
 func closeDB() {
@@ -62,17 +63,18 @@ func openDB() error {
 		return err
 	}
 	if err := globalDB.Ping(); err != nil {
-		if strings.Contains(err.Error(), unknownDB) {
+		errString := err.Error()
+		if strings.Contains(errString, unknownDB) {
 			tmpDB, _ = sql.Open(mysqlDriver, ds)
 			defer tmpDB.Close()
 			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
-				fmt.Printf("failed to create database, err %v\n", err)
-				return err
+				return fmt.Errorf("failed to create database, err %v\n", err)
 			}
+		} else if strings.Contains(errString, connectionError) {
+			globalDB = nil
+			return nil
 		} else {
-			fmt.Printf("failed to open database, err %v\n", err)
-			globalDB.Close()
-			return err
+			return fmt.Errorf("failed to open database, err %v\n", err)
 		}
 	}
 

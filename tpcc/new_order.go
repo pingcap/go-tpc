@@ -32,7 +32,7 @@ func init() {
 }
 
 func genNewOrderSelectItemsSQL(cnt int) string {
-	buf := bytes.NewBufferString("SELECT i_price, i_name, i_data, i_id FROM ITEM WHERE i_id IN (")
+	buf := bytes.NewBufferString("SELECT i_price, i_name, i_data, i_id FROM item WHERE i_id IN (")
 	for i := 0; i < cnt; i++ {
 		if i != 0 {
 			buf.WriteByte(',')

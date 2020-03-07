@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -45,15 +46,15 @@ type tpccState struct {
 
 // Config is the configuration for tpcc workload
 type Config struct {
-	DBName     string
-	Threads    int
-	Parts      int
-	Warehouses int
-	UseFK      bool
-	Isolation  int
-	CheckAll   bool
-	OutputDir  string
-	Tables     []string
+	DBName          string
+	Threads         int
+	Parts           int
+	Warehouses      int
+	UseFK           bool
+	Isolation       int
+	CheckAll        bool
+	OutputDir       string
+	SpecifiedTables string
 }
 
 // Workloader is TPCC workload
@@ -65,7 +66,8 @@ type Workloader struct {
 	createTableWg sync.WaitGroup
 	initLoadTime  string
 
-	// tables is a set to keep the specified tables for generating csv file.
+	// tables is a set contains which table needs
+	// to be generated when preparing csv data.
 	tables map[string]bool
 
 	txns []txn
@@ -97,7 +99,7 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	}
 
 	var val bool
-	if len(cfg.Tables) == 0 {
+	if len(cfg.SpecifiedTables) == 0 {
 		val = true
 	}
 	for _, table := range tables {
@@ -115,12 +117,14 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 			}
 		}
 
-		for _, t := range cfg.Tables {
-			if _, ok := w.tables[t]; !ok {
-				return nil, fmt.Errorf("\nTable %s is not supported.\nSupported tables: item, customer, district, "+
-					"orders, new_order, order_line, history, warehouse, stock.", t)
+		if len(cfg.SpecifiedTables) > 0 {
+			for _, t := range strings.Split(cfg.SpecifiedTables, ",") {
+				if _, ok := w.tables[t]; !ok {
+					return nil, fmt.Errorf("\nTable %s is not supported.\nSupported tables: item, customer, district, "+
+						"orders, new_order, order_line, history, warehouse, stock.", t)
+				}
+				w.tables[t] = true
 			}
-			w.tables[t] = true
 		}
 
 		if !w.tables[tableOrders] && w.tables[tableOrderLine] {

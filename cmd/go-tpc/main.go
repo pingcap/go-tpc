@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,6 +38,12 @@ var (
 	globalCtx context.Context
 )
 
+const (
+	unknownDB       = "Unknown database"
+	createDBDDL     = "CREATE DATABASE "
+	mysqlDriver     = "mysql"
+)
+
 func closeDB() {
 	if globalDB != nil {
 		globalDB.Close()
@@ -46,14 +53,28 @@ func closeDB() {
 
 func openDB() {
 	// TODO: support other drivers
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", user, password, host, port, dbName)
+	var tmpDB *sql.DB
+	ds := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
+	dsn := ds + dbName
 	var err error
-	globalDB, err = sql.Open("mysql", dsn)
+	globalDB, err = sql.Open(mysqlDriver, dsn)
 	if err != nil {
 		panic(err)
 	}
-
-	globalDB.SetMaxIdleConns(threads + 1)
+	if err := globalDB.Ping(); err != nil {
+		errString := err.Error()
+		if strings.Contains(errString, unknownDB) {
+			tmpDB, _ = sql.Open(mysqlDriver, ds)
+			defer tmpDB.Close()
+			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
+				panic(fmt.Errorf("failed to create database, err %v\n", err))
+			}
+		} else {
+			globalDB = nil
+		}
+	} else {
+		globalDB.SetMaxIdleConns(threads + 1)
+	}
 }
 
 func main() {

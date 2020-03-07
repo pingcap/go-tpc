@@ -17,9 +17,9 @@ const (
 	tableStock     = "stock"
 )
 
-func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName string, action string) error {
+func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName string) error {
 	s := w.getState(ctx)
-	fmt.Printf("%s %s\n", action, tableName)
+	fmt.Printf("creating table %s\n", tableName)
 	if _, err := s.Conn.ExecContext(ctx, query); err != nil {
 		return err
 	}
@@ -34,7 +34,8 @@ func (w *Workloader) appendPartition(query string, partKeys string) string {
 	return fmt.Sprintf("%s\n PARTITION BY HASH(%s)\n PARTITIONS %d", query, partKeys, w.cfg.Parts)
 }
 
-func (w *Workloader) createTable(ctx context.Context) error {
+// createTables creates tables schema.
+func (w *Workloader) createTables(ctx context.Context) error {
 	// Warehouse
 	query := `
 CREATE TABLE IF NOT EXISTS warehouse (
@@ -52,7 +53,7 @@ CREATE TABLE IF NOT EXISTS warehouse (
 
 	query = w.appendPartition(query, "w_id")
 
-	if err := w.createTableDDL(ctx, query, "warehouse", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableWareHouse); err != nil {
 		return err
 	}
 
@@ -75,7 +76,7 @@ CREATE TABLE IF NOT EXISTS district (
 
 	query = w.appendPartition(query, "d_w_id")
 
-	if err := w.createTableDDL(ctx, query, "district", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableDistrict); err != nil {
 		return err
 	}
 
@@ -109,7 +110,7 @@ CREATE TABLE IF NOT EXISTS customer (
 
 	query = w.appendPartition(query, "c_w_id")
 
-	if err := w.createTableDDL(ctx, query, "customer", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableCustomer); err != nil {
 		return err
 	}
 
@@ -129,7 +130,7 @@ CREATE TABLE IF NOT EXISTS history (
 
 	query = w.appendPartition(query, "h_w_id")
 
-	if err := w.createTableDDL(ctx, query, "history", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableHistory); err != nil {
 		return err
 	}
 
@@ -142,7 +143,7 @@ CREATE TABLE IF NOT EXISTS new_order (
 )`
 
 	query = w.appendPartition(query, "no_w_id")
-	if err := w.createTableDDL(ctx, query, "new_order", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableNewOrder); err != nil {
 		return err
 	}
 
@@ -162,7 +163,7 @@ CREATE TABLE IF NOT EXISTS orders (
 )`
 
 	query = w.appendPartition(query, "o_w_id")
-	if err := w.createTableDDL(ctx, query, "orders", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableOrders); err != nil {
 		return err
 	}
 
@@ -182,7 +183,7 @@ CREATE TABLE IF NOT EXISTS orders (
 )`
 
 	query = w.appendPartition(query, "ol_w_id")
-	if err := w.createTableDDL(ctx, query, "order_line", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableOrderLine); err != nil {
 		return err
 	}
 
@@ -209,7 +210,7 @@ CREATE TABLE IF NOT EXISTS stock (
 )`
 
 	query = w.appendPartition(query, "s_w_id")
-	if err := w.createTableDDL(ctx, query, "stock", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableStock); err != nil {
 		return err
 	}
 
@@ -223,7 +224,7 @@ CREATE TABLE IF NOT EXISTS item (
 	PRIMARY KEY(i_id)
 )`
 
-	if err := w.createTableDDL(ctx, query, "item", "creating"); err != nil {
+	if err := w.createTableDDL(ctx, query, tableItem); err != nil {
 		return err
 	}
 

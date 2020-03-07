@@ -76,7 +76,6 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 
 func executeWorkload(ctx context.Context, w workload.Workloader, action string) {
 	var wg sync.WaitGroup
-
 	wg.Add(threads)
 
 	outputCtx, outputCancel := context.WithCancel(ctx)

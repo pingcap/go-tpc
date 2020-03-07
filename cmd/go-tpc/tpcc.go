@@ -13,22 +13,15 @@ import (
 
 var tpccConfig tpcc.Config
 
-func executeTpcc(action string, args []string) {
+func executeTpcc(action string) {
 	if pprofAddr != "" {
 		go func() {
 			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
 		}()
 	}
 
-	if tpccConfig.OutputDir == "" {
-		openDB()
-		defer closeDB()
-
-		if len(tpccConfig.Tables) > 0 {
-			fmt.Println("Cannot specify generated tables when csv.output flag not set")
-			os.Exit(1)
-		}
-	}
+	openDB()
+	defer closeDB()
 
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
@@ -54,38 +47,38 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
 	cmd.PersistentFlags().StringVar(&tpccConfig.OutputDir, "csv.output", "", "Output directory for generating csv file when preparing data")
-	cmd.PersistentFlags().StringArrayVar(&tpccConfig.Tables, "csv.table", []string{}, "Specified tables for " +
+	cmd.PersistentFlags().StringArrayVar(&tpccConfig.Tables, "csv.table", []string{}, "Specified tables for "+
 		"generating csv file(repeated), valid only if csv.output is set. If this flag is not set, generate all tables by default.")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("prepare", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("prepare")
 		},
 	}
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("run", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("run")
 		},
 	}
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",
 		Short: "Cleanup data for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("cleanup", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("cleanup")
 		},
 	}
 
 	var cmdCheck = &cobra.Command{
 		Use:   "check",
 		Short: "Check data consistency for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpcc("check", args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			executeTpcc("check")
 		},
 	}
 

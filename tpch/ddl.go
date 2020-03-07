@@ -14,7 +14,8 @@ func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName
 	return nil
 }
 
-func (w *Workloader) createTable(ctx context.Context) error {
+// createTables creates tables schema.
+func (w Workloader) createTables(ctx context.Context) error {
 	query := `
 CREATE TABLE IF NOT EXISTS nation (
     N_NATIONKEY BIGINT NOT NULL,

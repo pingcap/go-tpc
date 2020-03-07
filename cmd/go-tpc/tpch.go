@@ -14,6 +14,7 @@ func executeTpch(action string, _ []string) {
 	openDB()
 	defer closeDB()
 
+	tpchConfig.DBName = dbName
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
 	w := tpch.NewWorkloader(globalDB, &tpchConfig)
 

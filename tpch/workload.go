@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/pingcap/go-tpc/tpch/dbgen"
 	"time"
+
+	"github.com/pingcap/go-tpc/tpch/dbgen"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/workload"
@@ -17,6 +18,7 @@ const stateKey = contextKey("tpch")
 
 // Config is the configuration for tpch workload
 type Config struct {
+	DBName            string
 	RawQueries        string
 	QueryNames        []string
 	ScaleFactor       int
@@ -81,7 +83,7 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 	}
 	s := w.getState(ctx)
 
-	if err := w.createTable(ctx); err != nil {
+	if err := w.createTables(ctx); err != nil {
 		return err
 	}
 	sqlLoader := map[dbgen.Table]dbgen.Loader{
@@ -148,5 +150,5 @@ func (w Workloader) DataGen() bool {
 
 // DBName returns the name of test db.
 func (w Workloader) DBName() string {
-	return "not implemented"
+	return w.cfg.DBName
 }

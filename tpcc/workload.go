@@ -32,8 +32,8 @@ type txn struct {
 
 type tpccState struct {
 	*workload.TpcState
-	index int
-	decks []int
+	index   int
+	decks   []int
 	loaders map[string]*load.CSVBatchLoader
 
 	newOrderStmts    map[string]*sql.Stmt
@@ -73,6 +73,10 @@ type Workloader struct {
 
 // NewWorkloader creates the tpc-c workloader
 func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
+	if db == nil && cfg.OutputDir == "" {
+		panic(fmt.Errorf("failed to connect to database when loading data"))
+	}
+
 	if cfg.Parts > cfg.Warehouses {
 		panic(fmt.Errorf("number warehouses %d must >= partition %d", cfg.Warehouses, cfg.Parts))
 	}
@@ -122,7 +126,8 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		if !w.tables[tableOrders] && w.tables[tableOrderLine] {
 			return nil, fmt.Errorf("\nTable orders must be specified if you want to generate table order_line.")
 		}
-	} else {
+	}
+	if w.db != nil {
 		w.createTableWg.Add(cfg.Threads)
 	}
 
@@ -185,9 +190,9 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 
 // Prepare implements Workloader interface
 func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
-	if !w.DataGen() {
+	if w.db != nil {
 		if threadID == 0 {
-			if err := w.createTable(ctx); err != nil {
+			if err := w.createTables(ctx); err != nil {
 				return err
 			}
 		}
@@ -234,7 +239,6 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		// load district
 		if err := w.loadDistrict(ctx, warehouse); err != nil {
 			return fmt.Errorf("load district at wareshouse %d failed %v", warehouse, err)
-
 		}
 	}
 

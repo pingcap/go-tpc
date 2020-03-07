@@ -8,7 +8,27 @@ A toolbox to benchmark workloads in [TPC](http://www.tpc.org/)
 make
 ```
 
-## TPC-C
+## Usage
+
+By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn address, you can override it by setting below flags:
+
+```bash
+  -D, --db string           Database name (default "test")
+  -H, --host string         Database host (default "127.0.0.1")
+  -p, --password string     Database password
+  -P, --port int            Database port (default 4000)
+  -U, --user string         Database user (default "root")
+
+```
+
+For example:
+
+```bash
+./bin/go-tpc -H 127.0.0.1 -P 3306 -D tpcc ...
+```
+
+### TPC-C
+
 
 ```bash
 # Create 4 warehouses and use 4 partitions by HASH 
@@ -28,7 +48,7 @@ make
 ./bin/go-tpc tpcc --warehouses 4 prepare --csv.output data --pprof :10111
 ```
 
-## TPC-H
+### TPC-H
 
 ```bash
 # Prepare data with scale factor 1

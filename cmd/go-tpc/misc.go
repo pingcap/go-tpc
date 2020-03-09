@@ -51,7 +51,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 		return w.Check(ctx, index)
 	}
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < count || count <= 0; i++ {
 		err := w.Run(ctx, index)
 
 		select {

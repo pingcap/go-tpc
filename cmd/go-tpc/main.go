@@ -39,9 +39,9 @@ var (
 )
 
 const (
-	unknownDB       = "Unknown database"
-	createDBDDL     = "CREATE DATABASE "
-	mysqlDriver     = "mysql"
+	unknownDB   = "Unknown database"
+	createDBDDL = "CREATE DATABASE "
+	mysqlDriver = "mysql"
 )
 
 func closeDB() {
@@ -93,7 +93,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 16, "Thread concurrency")
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", "", "Database driver: mysql")
 	rootCmd.PersistentFlags().DurationVar(&totalTime, "time", 1<<63-1, "Total execution time")
-	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 1000000, "Total execution count")
+	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 0, "Total execution count, 0 means infinite")
 	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
 	rootCmd.PersistentFlags().BoolVar(&silence, "silence", false, "Don't print error when running workload")

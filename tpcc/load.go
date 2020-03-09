@@ -46,7 +46,7 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 
 		var v []string
 		if isDataGen {
-			v = []string{strconv.Itoa(i+1), strconv.Itoa(iImID), iName, fmt.Sprintf("%f", iPrice), iData}
+			v = []string{strconv.Itoa(i + 1), strconv.Itoa(iImID), iName, fmt.Sprintf("%f", iPrice), iData}
 		} else {
 			v = []string{fmt.Sprintf(`(%d, %d, '%s', %f, '%s')`, i+1, iImID, iName, iPrice, iData)}
 		}

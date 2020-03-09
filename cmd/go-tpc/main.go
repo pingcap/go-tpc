@@ -39,9 +39,9 @@ var (
 )
 
 const (
-	unknownDB       = "Unknown database"
-	createDBDDL     = "CREATE DATABASE "
-	mysqlDriver     = "mysql"
+	unknownDB   = "Unknown database"
+	createDBDDL = "CREATE DATABASE "
+	mysqlDriver = "mysql"
 )
 
 func closeDB() {

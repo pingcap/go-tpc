@@ -4,18 +4,27 @@ GO=GO15VENDOREXPERIMENT="1" CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) GO111MOD
 
 PACKAGE_LIST  := go list ./...| grep -vE "cmd"
 PACKAGES  := $$($(PACKAGE_LIST))
-FILES     := $$(find . -name "*.go" | grep -vE "vendor")
-GOFILTER := grep -vE 'vendor|render.Delims|bindata_assetfs|testutil|\.pb\.go'
-GOCHECKER := $(GOFILTER) | awk '{ print } END { if (NR > 0) { exit 1 } }'
+FILES_TO_FMT  := $(shell find . -path -prune -o -name '*.go' -print)
 
-all: build
+all: format test build
+
+format: vet fmt
 
 fmt:
 	@echo "gofmt"
-	@gofmt -s -l -w $(FILES) 2>&1 | $(GOCHECKER)
+	@gofmt -w ${FILES_TO_FMT}
+	@git diff --exit-code .
 
 test:
 	go test ./... -cover $(PACKAGES)
 
-build:
+build: mod
 	go build -o ./bin/go-tpc cmd/go-tpc/*
+
+vet:
+	go vet ./...
+
+mod:
+	@echo "go mod tidy"
+	GO111MODULE=on go mod tidy
+	@git diff --exit-code -- go.sum go.mod

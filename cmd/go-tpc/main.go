@@ -40,7 +40,7 @@ var (
 
 const (
 	unknownDB   = "Unknown database"
-	createDBDDL = "CREATE DATABASE "
+	createDBDDL = "CREATE DATABASE IF NOT EXISTS "
 	mysqlDriver = "mysql"
 )
 

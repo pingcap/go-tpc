@@ -100,7 +100,7 @@ func (b *CSVBatchLoader) Flush(ctx context.Context) error {
 	}
 
 	err := b.writer.WriteAll(b.buf)
-	b.buf = b.buf[:0]
+	b.buf = nil
 	b.writer.Flush()
 
 	return err

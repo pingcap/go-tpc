@@ -68,7 +68,6 @@ func (b *SQLBatchLoader) Flush(ctx context.Context) error {
 
 // CSVBatchLoader helps us insert in batch
 type CSVBatchLoader struct {
-	buf    [][]string
 	f      *os.File
 	writer *csv.Writer
 }
@@ -76,7 +75,6 @@ type CSVBatchLoader struct {
 // NewCSVBatchLoader creates a batch loader for csv format
 func NewCSVBatchLoader(f *os.File) *CSVBatchLoader {
 	return &CSVBatchLoader{
-		buf:    make([][]string, 0, maxBatchCount),
 		f:      f,
 		writer: csv.NewWriter(f),
 	}
@@ -84,26 +82,13 @@ func NewCSVBatchLoader(f *os.File) *CSVBatchLoader {
 
 // InsertValue inserts a value, the loader may flush all pending values.
 func (b *CSVBatchLoader) InsertValue(ctx context.Context, columns []string) error {
-	b.buf = append(b.buf, columns)
-
-	if len(b.buf) >= maxBatchCount {
-		return b.Flush(ctx)
-	}
-
-	return nil
+	return b.writer.Write(columns)
 }
 
 // Flush inserts all pending values
 func (b *CSVBatchLoader) Flush(ctx context.Context) error {
-	if len(b.buf) == 0 {
-		return nil
-	}
-
-	err := b.writer.WriteAll(b.buf)
-	b.buf = b.buf[:0]
 	b.writer.Flush()
-
-	return err
+	return nil
 }
 
 // Close closes the file.

@@ -88,7 +88,7 @@ func (b *CSVBatchLoader) InsertValue(ctx context.Context, columns []string) erro
 // Flush inserts all pending values
 func (b *CSVBatchLoader) Flush(ctx context.Context) error {
 	b.writer.Flush()
-	return nil
+	return b.writer.Error()
 }
 
 // Close closes the file.

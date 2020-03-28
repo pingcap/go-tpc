@@ -55,6 +55,12 @@ func (h *histogram) Measure(latency time.Duration) {
 	h.bucketCount[i] += 1
 }
 
+func (h *histogram) Empty() bool {
+	h.m.Lock()
+	defer h.m.Unlock()
+	return h.count == 0
+}
+
 func (h *histogram) Summary() string {
 	res := h.getInfo()
 

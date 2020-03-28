@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -61,8 +60,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 		}
 
 		if err != nil {
-			// For TiDB, we may meet too many conflict errors, so here just ignore it
-			if !silence && !strings.Contains(err.Error(), "conflict") {
+			if !silence {
 				fmt.Printf("execute %s failed, err %v\n", action, err)
 			}
 			if !ignoreError {
@@ -90,7 +88,7 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 				ch <- struct{}{}
 				return
 			case <-ticker.C:
-				measurement.Output()
+				measurement.Output(summaryReport)
 			}
 		}
 	}()
@@ -120,5 +118,5 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	<-ch
 
 	fmt.Println("Finished")
-	measurement.Output()
+	measurement.Output(true)
 }

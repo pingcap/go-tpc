@@ -12,37 +12,82 @@ import (
 type measurement struct {
 	sync.RWMutex
 
-	opMeasurement map[string]*histogram
+	outputCounter    int64
+	opCurMeasurement map[string]*histogram
+	opSumMeasurement map[string]*histogram
 }
 
-func (m *measurement) measure(op string, lan time.Duration) {
-	m.RLock()
-	opM, ok := m.opMeasurement[op]
-	m.RUnlock()
-
-	if !ok {
-		opM = newHistogram()
-		m.Lock()
-		m.opMeasurement[op] = opM
-		m.Unlock()
+func (m *measurement) getHist(op string, err error, current bool) *histogram {
+	opMeasurement := m.opSumMeasurement
+	if current {
+		opMeasurement = m.opCurMeasurement
 	}
 
-	opM.Measure(lan)
+	// Create hist of {op} and {op}_ERR at the same time, or else the TPM would be incorrect
+	opPairedKey := fmt.Sprintf("%s_ERR", op)
+	if err != nil {
+		op, opPairedKey = opPairedKey, op
+	}
+
+	m.RLock()
+	opM, ok := opMeasurement[op]
+	m.RUnlock()
+	if !ok {
+		opM = newHistogram()
+		opPairedM := newHistogram()
+		m.Lock()
+		opMeasurement[op] = opM
+		opMeasurement[opPairedKey] = opPairedM
+		m.Unlock()
+	}
+	return opM
 }
 
-func (m *measurement) output() {
+func (m *measurement) measure(op string, err error, lan time.Duration) {
+	m.getHist(op, err, true).Measure(lan)
+	m.getHist(op, err, false).Measure(lan)
+}
+
+func (m *measurement) takeCurMeasurement() (ret map[string]*histogram) {
 	m.RLock()
 	defer m.RUnlock()
-	keys := make([]string, len(m.opMeasurement))
+	ret, m.opCurMeasurement = m.opCurMeasurement, make(map[string]*histogram, 16)
+	return
+}
+
+func outputMeasurement(opMeasurement map[string]*histogram, prefix string) {
+	keys := make([]string, len(opMeasurement))
 	var i = 0
-	for k := range m.opMeasurement {
+	for k := range opMeasurement {
 		keys[i] = k
 		i += 1
 	}
 	sort.Strings(keys)
 
 	for _, op := range keys {
-		fmt.Printf("%-6s - %s\n", strings.ToUpper(op), m.opMeasurement[op].Summary())
+		hist := opMeasurement[op]
+		if !hist.Empty() {
+			fmt.Printf("%s%-6s - %s\n", prefix, strings.ToUpper(op), hist.Summary())
+		}
+	}
+}
+
+func (m *measurement) output(summaryReport bool) {
+	// Clear current measure data every time
+	var opCurMeasurement = m.takeCurMeasurement()
+
+	if summaryReport {
+		m.RLock()
+		defer m.RUnlock()
+		outputMeasurement(m.opSumMeasurement, "[SUM] ")
+	} else {
+		outputMeasurement(opCurMeasurement, "[CUR] ")
+		m.RLock()
+		defer m.RUnlock()
+		m.outputCounter += 1
+		if m.outputCounter%10 == 0 {
+			outputMeasurement(m.opSumMeasurement, "[SUM] ")
+		}
 	}
 }
 
@@ -50,16 +95,16 @@ func (m *measurement) getOpName() []string {
 	m.RLock()
 	defer m.RUnlock()
 
-	res := make([]string, 0, len(m.opMeasurement))
-	for op := range m.opMeasurement {
+	res := make([]string, 0, len(m.opSumMeasurement))
+	for op := range m.opSumMeasurement {
 		res = append(res, op)
 	}
 	return res
 }
 
 // Output prints the measurement summary.
-func Output() {
-	globalMeasure.output()
+func Output(summaryReport bool) {
+	globalMeasure.output(summaryReport)
 }
 
 // EnableWarmUp sets whether to enable warm-up.
@@ -81,12 +126,16 @@ func Measure(op string, lan time.Duration, err error) {
 	if !IsWarmUpFinished() {
 		return
 	}
+	globalMeasure.measure(op, err, lan)
+}
 
-	if err != nil {
-		op = fmt.Sprintf("%s_ERR", op)
+func newMeasurement() *measurement {
+	return &measurement{
+		sync.RWMutex{},
+		0,
+		make(map[string]*histogram, 16),
+		make(map[string]*histogram, 16),
 	}
-
-	globalMeasure.measure(op, lan)
 }
 
 var (
@@ -95,7 +144,6 @@ var (
 )
 
 func init() {
+	globalMeasure = newMeasurement()
 	warmUp = 0
-	globalMeasure = new(measurement)
-	globalMeasure.opMeasurement = make(map[string]*histogram, 16)
 }

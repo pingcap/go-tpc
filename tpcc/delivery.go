@@ -14,7 +14,7 @@ type deliveryData struct {
 }
 
 const (
-	deliverySelectNewOrder  = "SELECT no_o_id FROM new_order WHERE no_pk > ? ORDER BY no_pk LIMIT 1 FOR UPDATE"
+	deliverySelectNewOrder  = "SELECT no_o_id FROM new_order WHERE no_pk BETWEEN ? AND ? ORDER BY no_pk LIMIT 1 FOR UPDATE"
 	deliveryDeleteNewOrder  = `DELETE FROM new_order WHERE no_pk IN (?,?,?,?,?,?,?,?,?,?)`
 	deliveryUpdateOrder     = `UPDATE orders SET o_carrier_id = ? WHERE o_pk IN (?,?,?,?,?,?,?,?,?,?)`
 	deliverySelectOrders    = `SELECT o_d_id, o_c_id FROM orders WHERE o_pk IN (?,?,?,?,?,?,?,?,?,?)`
@@ -63,7 +63,7 @@ func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
 	}
 	orders := make([]deliveryOrder, 10)
 	for i := 0; i < districtPerWarehouse; i++ {
-		if err = s.deliveryStmts[deliverySelectNewOrder].QueryRowContext(ctx, getNOPK(d.wID, i+1, 0)).Scan(&orders[i].oID); err == sql.ErrNoRows {
+		if err = s.deliveryStmts[deliverySelectNewOrder].QueryRowContext(ctx, getNOPK(d.wID, i+1, 0), getNOPK(d.wID, i+2, 0)).Scan(&orders[i].oID); err == sql.ErrNoRows {
 			continue
 		} else if err != nil {
 			return fmt.Errorf("exec %s failed %v", deliverySelectNewOrder, err)

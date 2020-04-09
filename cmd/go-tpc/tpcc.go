@@ -6,6 +6,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
 
 	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ func executeTpcc(action string) {
 			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
 		}()
 	}
+	runtime.GOMAXPROCS(maxProcs)
 
 	openDB()
 	defer closeDB()

@@ -85,7 +85,6 @@ func main() {
 	}
 	var maxProcs int
 	rootCmd.PersistentFlags().IntVar(&maxProcs, "max-procs", 0, "runtime.GOMAXPROCS")
-	runtime.GOMAXPROCS(maxProcs)
 	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Address of pprof endpoint")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Database host")
@@ -109,6 +108,7 @@ func main() {
 
 	registerTpcc(rootCmd)
 	registerTpch(rootCmd)
+	runtime.GOMAXPROCS(maxProcs)
 
 	var cancel context.CancelFunc
 	globalCtx, cancel = context.WithCancel(context.Background())

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -34,6 +33,7 @@ var (
 	silence        bool
 	summaryReport  bool
 	pprofAddr      string
+	maxProcs       int
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -83,8 +83,7 @@ func main() {
 		Use:   "go-tpc",
 		Short: "Benchmark database with different workloads",
 	}
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
+	rootCmd.PersistentFlags().IntVar(&maxProcs, "max-procs", 0, "runtime.GOMAXPROCS")
 	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Address of pprof endpoint")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Database host")

@@ -319,11 +319,10 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		}
 
 		s.orderStatusStmts = map[string]*sql.Stmt{
-			orderStatusSelectCustomerCntByLast: prepareStmt(ctx, s.Conn, orderStatusSelectCustomerCntByLast),
-			orderStatusSelectCustomerByLast:    prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByLast),
-			orderStatusSelectCustomerByID:      prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByID),
-			orderStatusSelectLatestOrder:       prepareStmt(ctx, s.Conn, orderStatusSelectLatestOrder),
-			orderStatusSelectOrderLine:         prepareStmt(ctx, s.Conn, orderStatusSelectOrderLine),
+			orderStatusSelectCustomerByLast: prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByLast),
+			orderStatusSelectCustomerByID:   prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByID),
+			orderStatusSelectLatestOrder:    prepareStmt(ctx, s.Conn, orderStatusSelectLatestOrder),
+			orderStatusSelectOrderLine:      prepareStmt(ctx, s.Conn, orderStatusSelectOrderLine),
 		}
 		s.deliveryStmts = map[string]*sql.Stmt{
 			deliverySelectNewOrder:  prepareStmt(ctx, s.Conn, deliverySelectNewOrder),
@@ -335,8 +334,9 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 			deliveryUpdateCustomer:  prepareStmt(ctx, s.Conn, deliveryUpdateCustomer),
 		}
 		s.stockLevelStmt = map[string]*sql.Stmt{
-			stockLevelSelectDistrict: prepareStmt(ctx, s.Conn, stockLevelSelectDistrict),
-			stockLevelCount:          prepareStmt(ctx, s.Conn, stockLevelCount),
+			stockLevelSelectDistrict:       prepareStmt(ctx, s.Conn, stockLevelSelectDistrict),
+			stockLevelCount:                prepareStmt(ctx, s.Conn, stockLevelCount),
+			stockLevelSelectRecentOrderIDs: prepareStmt(ctx, s.Conn, stockLevelSelectRecentOrderIDs),
 		}
 	}
 

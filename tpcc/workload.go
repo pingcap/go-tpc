@@ -46,13 +46,14 @@ type tpccState struct {
 
 // Config is the configuration for tpcc workload
 type Config struct {
-	DBName          string
-	Threads         int
-	Parts           int
-	Warehouses      int
-	UseFK           bool
-	Isolation       int
-	CheckAll        bool
+	DBName     string
+	Threads    int
+	Parts      int
+	Warehouses int
+	UseFK      bool
+	Isolation  int
+	CheckAll   bool
+	// for prepare sub-command only
 	OutputDir       string
 	SpecifiedTables string
 }

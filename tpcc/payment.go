@@ -64,7 +64,7 @@ type paymentData struct {
 }
 
 func (w *Workloader) runPayment(ctx context.Context, thread int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	d := paymentData{
 		wID:     randInt(s.R, 1, w.cfg.Warehouses),

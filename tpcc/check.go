@@ -63,7 +63,7 @@ func (w *Workloader) check(ctx context.Context, threadID int, checkAll bool) err
 }
 
 func (w *Workloader) checkCondition1(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	// Entries in the WAREHOUSE and DISTRICT tables must satisfy the relationship:
 	// 	W_YTD = sum(D_YTD)
@@ -94,7 +94,7 @@ func (w *Workloader) checkCondition1(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	// Entries in the DISTRICT, ORDER, and NEW-ORDER tables must satisfy the relationship:
 	// D_NEXT_O_ID - 1 = max(O_ID) = max(NO_O_ID)
@@ -129,7 +129,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 
@@ -159,7 +159,7 @@ func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 
@@ -189,7 +189,7 @@ func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 
@@ -219,7 +219,7 @@ func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition6(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	// For any row in the ORDER table, O_OL_CNT must equal the number of rows in the ORDER-LINE table for the
 	// corresponding order defined by (O_W_ID, O_D_ID, O_ID) = (OL_W_ID, OL_D_ID, OL_O_ID).
@@ -257,7 +257,7 @@ WHERE T.o_ol_cnt != T.order_line_count`
 }
 
 func (w *Workloader) checkCondition7(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 
@@ -287,7 +287,7 @@ func (w *Workloader) checkCondition7(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition8(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 
@@ -317,7 +317,7 @@ func (w *Workloader) checkCondition8(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition9(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 
@@ -347,7 +347,7 @@ func (w *Workloader) checkCondition9(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 
@@ -392,7 +392,7 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 }
 
 func (w *Workloader) checkCondition11(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	// Entries in the CUSTOMER, ORDER and NEW-ORDER tables must satisfy the relationship:
 	// (count(*) from ORDER) - (count(*) from NEW-ORDER) = 2100
@@ -433,7 +433,7 @@ WHERE c_w_id = ? AND order_count - 2100 != new_order_count`
 }
 
 func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	var diff float64
 

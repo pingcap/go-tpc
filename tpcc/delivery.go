@@ -34,7 +34,7 @@ const (
 )
 
 func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	d := deliveryData{
 		wID:        randInt(s.R, 1, w.cfg.Warehouses),

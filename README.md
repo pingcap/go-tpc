@@ -40,11 +40,11 @@ For example:
 # Check consistency 
 ./bin/go-tpc tpcc --warehouses 4 check
 # Generate csv files
-./bin/go-tpc tpcc --warehouses 4 prepare --output data
+./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data
 # Specified tables when generating csv files
-./bin/go-tpc tpcc --warehouses 4 prepare --output data --tables history,orders
+./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --tables history,orders
 # Start pprof
-./bin/go-tpc tpcc --warehouses 4 prepare --output data --pprof :10111
+./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof :10111
 ```
 
 ### TPC-H

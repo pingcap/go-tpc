@@ -21,35 +21,21 @@ const (
 )
 
 func (w *Workloader) loadItem(ctx context.Context) error {
-	if !w.tables[tableItem] {
-		return nil
-	}
 	fmt.Printf("load to item\n")
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 	hint := "INSERT INTO item (i_id, i_im_id, i_name, i_price, i_data) VALUES "
 
-	var l load.BatchLoader
-	isDataGen := w.DataGen()
-	if isDataGen {
-		l = s.loaders[tableItem]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	for i := 0; i < maxItems; i++ {
 		s.Buf.Reset()
 
 		iImID := randInt(s.R, 1, 10000)
-		iPrice := float64(randInt(s.R, 100, 10000)) / float64(100.0)
+		iPrice := float64(randInt(s.R, 100, 10000)) / 100.0
 		iName := randChars(s.R, s.Buf, 14, 24)
 		iData := randOriginalString(s.R, s.Buf)
 
-		var v []string
-		if isDataGen {
-			v = []string{strconv.Itoa(i + 1), strconv.Itoa(iImID), iName, fmt.Sprintf("%f", iPrice), iData}
-		} else {
-			v = []string{fmt.Sprintf(`(%d, %d, '%s', %f, '%s')`, i+1, iImID, iName, iPrice, iData)}
-		}
+		v := []string{fmt.Sprintf(`(%d, %d, '%s', %f, '%s')`, i+1, iImID, iName, iPrice, iData)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -60,19 +46,11 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 }
 
 func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
-	if !w.tables[tableWareHouse] {
-		return nil
-	}
 	fmt.Printf("load to warehouse in warehouse %d\n", warehouse)
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 	hint := "INSERT INTO warehouse (w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) VALUES "
 
-	var l load.BatchLoader
-	if w.DataGen() {
-		l = s.loaders[tableWareHouse]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	wName := randChars(s.R, s.Buf, 6, 10)
 	wStree1 := randChars(s.R, s.Buf, 10, 20)
@@ -83,14 +61,8 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 	wTax := randTax(s.R)
 	wYtd := 300000.00
 
-	var v []string
-	if w.DataGen() {
-		v = []string{strconv.Itoa(warehouse), wName, wStree1, wStree2, wCity, wState,
-			wZip, fmt.Sprintf("%f", wTax), fmt.Sprintf("%f", wYtd)}
-	} else {
-		v = []string{fmt.Sprintf(`(%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f)`,
-			warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)}
-	}
+	v := []string{fmt.Sprintf(`(%d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f)`,
+		warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd)}
 
 	if err := l.InsertValue(ctx, v); err != nil {
 		return err
@@ -100,24 +72,15 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 }
 
 func (w *Workloader) loadStock(ctx context.Context, warehouse int) error {
-	if !w.tables[tableStock] {
-		return nil
-	}
 	fmt.Printf("load to stock in warehouse %d\n", warehouse)
 
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO stock (s_i_id, s_w_id, s_quantity, 
 s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, 
 s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_data) VALUES `
 
-	var l load.BatchLoader
-	isDataGen := w.DataGen()
-	if isDataGen {
-		l = s.loaders[tableStock]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	for i := 0; i < stockPerWarehouse; i++ {
 		s.Buf.Reset()
@@ -141,13 +104,8 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 		sData := randOriginalString(s.R, s.Buf)
 
 		var v []string
-		if isDataGen {
-			v = []string{strconv.Itoa(sIID), strconv.Itoa(sWID), strconv.Itoa(sQuantity), sDist01, sDist02, sDist03, sDist04, sDist05, sDist06,
-				sDist07, sDist08, sDist09, sDist10, strconv.Itoa(sYtd), strconv.Itoa(sOrderCnt), strconv.Itoa(sRemoteCnt), sData}
-		} else {
-			v = []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s')`,
-				sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)}
-		}
+		v = []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s')`,
+			sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -157,23 +115,14 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 }
 
 func (w *Workloader) loadDistrict(ctx context.Context, warehouse int) error {
-	if !w.tables[tableDistrict] {
-		return nil
-	}
 	fmt.Printf("load to district in warehouse %d\n", warehouse)
 
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO district (d_id, d_w_id, d_name, d_street_1, d_street_2, 
 d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 
-	var l load.BatchLoader
-	isDataGen := w.DataGen()
-	if isDataGen {
-		l = s.loaders[tableDistrict]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	for i := 0; i < districtPerWarehouse; i++ {
 		s.Buf.Reset()
@@ -190,14 +139,8 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 		dYtd := 30000.00
 		dNextOID := 3001
 
-		var v []string
-		if isDataGen {
-			v = []string{strconv.Itoa(dID), strconv.Itoa(dWID), dName, dStreet1, dStreet2, dCity, dState, dZip,
-				fmt.Sprintf("%f", dTax), fmt.Sprintf("%f", dYtd), strconv.Itoa(dNextOID)}
-		} else {
-			v = []string{fmt.Sprintf(`(%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d)`, dID, dWID,
-				dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)}
-		}
+		v := []string{fmt.Sprintf(`(%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %d)`, dID, dWID,
+			dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -207,24 +150,15 @@ d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 }
 
 func (w *Workloader) loadCustomer(ctx context.Context, warehouse int, district int) error {
-	if !w.tables[tableCustomer] {
-		return nil
-	}
 	fmt.Printf("load to customer in warehouse %d district %d\n", warehouse, district)
 
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO customer (c_id, c_d_id, c_w_id, c_first, c_middle, c_last, 
 c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_credit_lim,
 c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VALUES `
 
-	var l load.BatchLoader
-	isDataGen := w.DataGen()
-	if isDataGen {
-		l = s.loaders[tableCustomer]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	for i := 0; i < customerPerDistrict; i++ {
 		s.Buf.Reset()
@@ -259,17 +193,10 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 		cDeliveryCnt := 0
 		cData := randChars(s.R, s.Buf, 300, 500)
 
-		var v []string
-		if isDataGen {
-			v = []string{strconv.Itoa(cID), strconv.Itoa(cDID), strconv.Itoa(cWID), cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
-				cZip, cPhone, cSince, cCredit, fmt.Sprintf("%f", cCreditLim), fmt.Sprintf("%f", cDisCount),
-				fmt.Sprintf("%f", cBalance), fmt.Sprintf("%f", cYtdPayment), strconv.Itoa(cPaymentCnt), strconv.Itoa(cDeliveryCnt), cData}
-		} else {
-			v = []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s')`,
-				cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
-				cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
-				cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)}
-		}
+		v := []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s')`,
+			cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
+			cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
+			cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -280,21 +207,12 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 }
 
 func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district int) error {
-	if !w.tables[tableHistory] {
-		return nil
-	}
 	fmt.Printf("load to history in warehouse %d district %d\n", warehouse, district)
 
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO history (h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES `
-
-	var l load.BatchLoader
-	if w.DataGen() {
-		l = s.loaders[tableHistory]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	// 1 customer has 1 row
 	for i := 0; i < customerPerDistrict; i++ {
@@ -309,14 +227,8 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 		hAmount := 10.00
 		hData := randChars(s.R, s.Buf, 12, 24)
 
-		var v []string
-		if w.DataGen() {
-			v = []string{strconv.Itoa(hCID), strconv.Itoa(hCDID), strconv.Itoa(hCWID), strconv.Itoa(hDID),
-				strconv.Itoa(hWID), hDate, fmt.Sprintf("%f", hAmount), hData}
-		} else {
-			v = []string{fmt.Sprintf(`(%d, %d, %d, %d, %d, '%s', %f, '%s')`,
-				hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)}
-		}
+		v := []string{fmt.Sprintf(`(%d, %d, %d, %d, %d, '%s', %f, '%s')`,
+			hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -326,23 +238,14 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 }
 
 func (w *Workloader) loadOrder(ctx context.Context, warehouse int, district int) ([]int, error) {
-	if !w.tables[tableOrders] {
-		return nil, nil
-	}
 	fmt.Printf("load to orders in warehouse %d district %d\n", warehouse, district)
 
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, 
 o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 
-	var l load.BatchLoader
-	isDataGen := w.DataGen()
-	if isDataGen {
-		l = s.loaders[tableOrders]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	cids := rand.Perm(orderPerDistrict)
 	s.R.Shuffle(len(cids), func(i, j int) {
@@ -365,13 +268,7 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 		olCnts[i] = oOLCnt
 		oAllLocal := 1
 
-		var v []string
-		if isDataGen {
-			v = []string{strconv.Itoa(oID), strconv.Itoa(oDID), strconv.Itoa(oWID), strconv.Itoa(oCID), oEntryD,
-				oCarrierID, strconv.Itoa(oOLCnt), strconv.Itoa(oAllLocal)}
-		} else {
-			v = []string{fmt.Sprintf(`(%d, %d, %d, %d, '%s', %s, %d, %d)`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)}
-		}
+		v := []string{fmt.Sprintf(`(%d, %d, %d, %d, '%s', %s, %d, %d)`, oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return nil, err
@@ -382,21 +279,13 @@ o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 }
 
 func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district int) error {
-	if !w.tables[tableNewOrder] {
-		return nil
-	}
 	fmt.Printf("load to new_order in warehouse %d district %d\n", warehouse, district)
 
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES `
 
-	var l load.BatchLoader
-	if w.DataGen() {
-		l = s.loaders[tableNewOrder]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	for i := 0; i < newOrderPerDistrict; i++ {
 		s.Buf.Reset()
@@ -405,12 +294,7 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 		noDID := district
 		noWID := warehouse
 
-		var v []string
-		if w.DataGen() {
-			v = []string{strconv.Itoa(noOID), strconv.Itoa(noDID), strconv.Itoa(noWID)}
-		} else {
-			v = []string{fmt.Sprintf(`(%d, %d, %d)`, noOID, noDID, noWID)}
-		}
+		v := []string{fmt.Sprintf(`(%d, %d, %d)`, noOID, noDID, noWID)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
@@ -421,23 +305,14 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 }
 
 func (w *Workloader) loadOrderLine(ctx context.Context, warehouse int, district int, olCnts []int) error {
-	if !w.tables[tableOrderLine] {
-		return nil
-	}
 	fmt.Printf("load to order_line in warehouse %d district %d\n", warehouse, district)
 
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number,
 ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VALUES `
 
-	var l load.BatchLoader
-	isDataGen := w.DataGen()
-	if isDataGen {
-		l = s.loaders[tableOrderLine]
-	} else {
-		l = load.NewSQLBatchLoader(s.Conn, hint)
-	}
+	l := load.NewSQLBatchLoader(s.Conn, hint)
 
 	for i := 0; i < orderPerDistrict; i++ {
 		for j := 0; j < olCnts[i]; j++ {
@@ -454,11 +329,7 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 			var olAmount float64
 			var olDeliveryD string
 			if olOID < 2101 {
-				if isDataGen {
-					olDeliveryD = w.initLoadTime
-				} else {
-					olDeliveryD = `'` + w.initLoadTime + `'`
-				}
+				olDeliveryD = `'` + w.initLoadTime + `'`
 				olAmount = 0.00
 			} else {
 				olDeliveryD = "NULL"
@@ -466,15 +337,9 @@ ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VA
 			}
 			olDistInfo := randChars(s.R, s.Buf, 24, 24)
 
-			var v []string
-			if isDataGen {
-				v = []string{strconv.Itoa(olOID), strconv.Itoa(olDID), strconv.Itoa(olWID), strconv.Itoa(olNumber), strconv.Itoa(olIID),
-					strconv.Itoa(olSupplyWID), olDeliveryD, strconv.Itoa(olQuantity), fmt.Sprintf("%f", olAmount), olDistInfo}
-			} else {
-				v = []string{fmt.Sprintf(`(%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s')`,
-					olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
-					olDeliveryD, olQuantity, olAmount, olDistInfo)}
-			}
+			v := []string{fmt.Sprintf(`(%d, %d, %d, %d, %d, %d, %s, %d, %f, '%s')`,
+				olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
+				olDeliveryD, olQuantity, olAmount, olDistInfo)}
 
 			if err := l.InsertValue(ctx, v); err != nil {
 				return err

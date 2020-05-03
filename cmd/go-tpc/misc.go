@@ -11,6 +11,12 @@ import (
 )
 
 func checkPrepare(ctx context.Context, w workload.Workloader) {
+	// skip preparation check in csv case
+	if w.Name() == "tpcc-csv" {
+		fmt.Println("Skip preparing checking. Please load CSV data into database and check later.")
+		return
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(threads)
 	for i := 0; i < threads; i++ {

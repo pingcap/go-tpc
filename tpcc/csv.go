@@ -84,7 +84,7 @@ func NewCSVWorkloader(db *sql.DB, cfg *Config) (*CSVWorkLoader, error) {
 }
 
 func (c *CSVWorkLoader) Name() string {
-	return "tpcc"
+	return "tpcc-csv"
 }
 
 func (c *CSVWorkLoader) InitThread(ctx context.Context, threadID int) context.Context {
@@ -131,7 +131,6 @@ func (c *CSVWorkLoader) Prepare(ctx context.Context, threadID int) error {
 
 // CSV type doesn't support CheckPrepare
 func (c *CSVWorkLoader) CheckPrepare(_ context.Context, _ int) error {
-	fmt.Println("Skip preparing checking. Please load CSV data into database and check later.")
 	return nil
 }
 

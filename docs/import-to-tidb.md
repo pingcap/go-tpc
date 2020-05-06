@@ -74,7 +74,10 @@ test.district.12.csv   test.history.4.csv     test.new_order.9.csv   test.orders
 test.district.13.csv   test.history.5.csv     test.order_line.0.csv  test.orders.14.csv     test.stock.6.csv
 ```
 
-After exporting the files, we can check them in the directory. Here all CSV files conform to the naming scheme <db name>.<table name>.<thread number>.csv
+After exporting the files, we can check them in the directory. Here all CSV files conform to the naming scheme `<db name>.<table name>.<thread number>.csv`.
+
+Please note that no matter how many threads you are using, there is only `test.item.0.csv` for the item table since we only
+use one thread to create that.
 
 ### Import data using lightning
 

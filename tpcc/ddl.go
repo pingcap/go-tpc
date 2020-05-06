@@ -17,8 +17,17 @@ const (
 	tableStock     = "stock"
 )
 
-func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName string) error {
-	s := w.getState(ctx)
+type ddlManager struct {
+	parts int
+	useFK bool
+}
+
+func newDDLManager(parts int, useFK bool) *ddlManager {
+	return &ddlManager{parts: parts, useFK: useFK}
+}
+
+func (w *ddlManager) createTableDDL(ctx context.Context, query string, tableName string) error {
+	s := getTPCCState(ctx)
 	fmt.Printf("creating table %s\n", tableName)
 	if _, err := s.Conn.ExecContext(ctx, query); err != nil {
 		return err
@@ -26,16 +35,16 @@ func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName
 	return nil
 }
 
-func (w *Workloader) appendPartition(query string, partKeys string) string {
-	if w.cfg.Parts <= 1 {
+func (w *ddlManager) appendPartition(query string, partKeys string) string {
+	if w.parts <= 1 {
 		return query
 	}
 
-	return fmt.Sprintf("%s\n PARTITION BY HASH(%s)\n PARTITIONS %d", query, partKeys, w.cfg.Parts)
+	return fmt.Sprintf("%s\n PARTITION BY HASH(%s)\n PARTITIONS %d", query, partKeys, w.parts)
 }
 
 // createTables creates tables schema.
-func (w *Workloader) createTables(ctx context.Context) error {
+func (w *ddlManager) createTables(ctx context.Context) error {
 	// Warehouse
 	query := `
 CREATE TABLE IF NOT EXISTS warehouse (
@@ -228,11 +237,11 @@ CREATE TABLE IF NOT EXISTS item (
 		return err
 	}
 
-	if w.cfg.UseFK {
+	if w.useFK {
 		// TODO: Add foreign key constraint
 	}
 
-	if w.cfg.Parts > 1 {
+	if w.parts > 1 {
 		// TODO: add PARTITION
 
 	}
@@ -240,8 +249,8 @@ CREATE TABLE IF NOT EXISTS item (
 	return nil
 }
 
-func (w *Workloader) dropTable(ctx context.Context) error {
-	s := w.getState(ctx)
+func (w *ddlManager) dropTable(ctx context.Context) error {
+	s := getTPCCState(ctx)
 	for _, tbl := range tables {
 		fmt.Printf("DROP TABLE IF EXISTS %s\n", tbl)
 		if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s", tbl)); err != nil {

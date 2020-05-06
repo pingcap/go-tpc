@@ -30,7 +30,7 @@ type orderStatusData struct {
 }
 
 func (w *Workloader) runOrderStatus(ctx context.Context, thread int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 	d := orderStatusData{
 		wID: randInt(s.R, 1, w.cfg.Warehouses),
 		dID: randInt(s.R, 1, districtPerWarehouse),

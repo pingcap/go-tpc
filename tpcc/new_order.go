@@ -67,7 +67,7 @@ func genNewOrderInsertOrderLineSQL(cnt int) string {
 }
 
 func (w *Workloader) otherWarehouse(ctx context.Context, warehouse int) int {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	if w.cfg.Warehouses == 1 {
 		return warehouse
@@ -118,7 +118,7 @@ type newOrderData struct {
 }
 
 func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	// refer 2.4.1
 	d := newOrderData{

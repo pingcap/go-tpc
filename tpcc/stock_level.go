@@ -9,7 +9,7 @@ WHERE ol_w_id = ? AND ol_d_id = ? AND ol_o_id < ? AND ol_o_id >= ? - 20 AND s_w_
 const stockLevelSelectDistrict = `SELECT d_next_o_id FROM district WHERE d_w_id = ? AND d_id = ?`
 
 func (w *Workloader) runStockLevel(ctx context.Context, thread int) error {
-	s := w.getState(ctx)
+	s := getTPCCState(ctx)
 
 	tx, err := w.beginTx(ctx)
 	if err != nil {

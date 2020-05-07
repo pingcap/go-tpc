@@ -4,9 +4,18 @@ A toolbox to benchmark workloads in [TPC](http://www.tpc.org/)
 
 ## Install
 
+### Download binary
+
+You can download the pre-built binary [here](https://github.com/pingcap/go-tpc/releases)
+
+### Build from source
+
 ```bash
-make
+git clone https://github.com/pingcap/go-tpc.git
+make build
 ```
+
+Then you can find the `go-tpc` binary file in the `/bin` directory.
 
 ## Usage
 
@@ -46,6 +55,8 @@ For example:
 # Start pprof
 ./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof :10111
 ```
+
+If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
 
 ### TPC-H
 

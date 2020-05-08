@@ -115,6 +115,7 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
+	defer rows.Close()
 	measurement.Measure(queryName, time.Now().Sub(start), err)
 
 	if err != nil {

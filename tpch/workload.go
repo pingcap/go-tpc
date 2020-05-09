@@ -18,11 +18,12 @@ const stateKey = contextKey("tpch")
 
 // Config is the configuration for tpch workload
 type Config struct {
-	DBName            string
-	RawQueries        string
-	QueryNames        []string
-	ScaleFactor       int
-	EnableOutputCheck bool
+	DBName               string
+	RawQueries           string
+	QueryNames           []string
+	ScaleFactor          int
+	EnableOutputCheck    bool
+	CreateTiFlashReplica bool
 }
 
 type tpchState struct {

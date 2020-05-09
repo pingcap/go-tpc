@@ -52,6 +52,11 @@ func registerTpch(root *cobra.Command) {
 		},
 	}
 
+	cmdPrepare.PersistentFlags().BoolVar(&tpchConfig.CreateTiFlashReplica,
+		"tiflash",
+		false,
+		"Create tiflash replica")
+
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",

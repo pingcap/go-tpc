@@ -107,6 +107,7 @@ func DbGen(loaders map[Table]Loader) error {
 	}
 
 	for _, i := range []Table{TNation, TRegion, TCust, TSupp, TPartPsupp, TOrderLine} {
+		fmt.Printf("generating %s\n", tDefs[i].comment)
 		rowCnt := tDefs[i].base
 		if i < TNation {
 			rowCnt *= scale
@@ -114,6 +115,7 @@ func DbGen(loaders map[Table]Loader) error {
 		if err := genTbl(i, 1, rowCnt); err != nil {
 			return fmt.Errorf("fail to generate %s, err: %v", tDefs[i].name, err)
 		}
+		fmt.Printf("generate %s done\n", tDefs[i].comment)
 	}
 	return nil
 }

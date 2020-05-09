@@ -44,11 +44,6 @@ func registerTpch(root *cobra.Command) {
 		false,
 		"Check output data, only when the scale factor equals 1")
 
-	cmd.PersistentFlags().BoolVar(&tpchConfig.CreateTiFlashReplica,
-		"tiflash",
-		false,
-		"Create tiflash replica")
-
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
@@ -56,6 +51,11 @@ func registerTpch(root *cobra.Command) {
 			executeTpch("prepare", args)
 		},
 	}
+
+	cmdPrepare.PersistentFlags().BoolVar(&tpchConfig.CreateTiFlashReplica,
+		"tiflash",
+		false,
+		"Create tiflash replica")
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",

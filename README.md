@@ -63,6 +63,8 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 ```bash
 # Prepare data with scale factor 1
 ./bin/go-tpc tpch --sf=1 prepare
+# Prepare data with scale factor 1, create tiflash replica, and analyze table after data loaded
+./bin/go-tpc tpch --sf 1 --analyze --tiflash prepare
 # Run TPCH workloads with result checking
 ./bin/go-tpc tpch --sf=1 --check=true run
 # Run TPCH workloads without result checking

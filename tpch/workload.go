@@ -16,6 +16,14 @@ type contextKey string
 
 const stateKey = contextKey("tpch")
 
+// analyzeConfig is the configuration for analyze after data loaded
+type analyzeConfig struct {
+	Enable                     bool
+	BuildStatsConcurrency      int
+	DistsqlScanConcurrency     int
+	IndexSerialScanConcurrency int
+}
+
 // Config is the configuration for tpch workload
 type Config struct {
 	DBName               string
@@ -24,6 +32,7 @@ type Config struct {
 	ScaleFactor          int
 	EnableOutputCheck    bool
 	CreateTiFlashReplica bool
+	AnalyzeTable         analyzeConfig
 }
 
 type tpchState struct {
@@ -98,7 +107,29 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 		dbgen.TRegion: newRegionLoader(ctx, s.Conn),
 	}
 	dbgen.InitDbGen(int64(w.cfg.ScaleFactor))
-	return dbgen.DbGen(sqlLoader)
+	if err := dbgen.DbGen(sqlLoader); err != nil {
+		return err
+	}
+
+	// After data loaded, analyze tables to speed up queries.
+	if w.cfg.AnalyzeTable.Enable {
+		if err := w.analyzeTables(ctx, w.cfg.AnalyzeTable); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (w Workloader) analyzeTables(ctx context.Context, acfg analyzeConfig) error {
+	s := w.getState(ctx)
+	for _, tbl := range allTables {
+		fmt.Printf("analyzing table %s\n", tbl)
+		if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("SET @@session.tidb_build_stats_concurrency=%d; SET @@session.tidb_distsql_scan_concurrency=%d; SET @@session.tidb_index_serial_scan_concurrency=%d; ANALYZE TABLE %s", acfg.BuildStatsConcurrency, acfg.DistsqlScanConcurrency, acfg.IndexSerialScanConcurrency, tbl)); err != nil {
+			return err
+		}
+		fmt.Printf("analyze table %s done\n", tbl)
+	}
+	return nil
 }
 
 // CheckPrepare checks prepare

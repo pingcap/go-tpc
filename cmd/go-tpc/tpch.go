@@ -57,6 +57,24 @@ func registerTpch(root *cobra.Command) {
 		false,
 		"Create tiflash replica")
 
+	cmdPrepare.PersistentFlags().BoolVar(&tpchConfig.AnalyzeTable.Enable,
+		"analyze",
+		false,
+		"After data loaded, analyze table to collect column statistics")
+	// https://pingcap.com/docs/stable/reference/performance/statistics/#control-analyze-concurrency
+	cmdPrepare.PersistentFlags().IntVar(&tpchConfig.AnalyzeTable.BuildStatsConcurrency,
+		"tidb_build_stats_concurrency",
+		4,
+		"tidb_build_stats_concurrency param for analyze jobs")
+	cmdPrepare.PersistentFlags().IntVar(&tpchConfig.AnalyzeTable.DistsqlScanConcurrency,
+		"tidb_distsql_scan_concurrency",
+		15,
+		"tidb_distsql_scan_concurrency param for analyze jobs")
+	cmdPrepare.PersistentFlags().IntVar(&tpchConfig.AnalyzeTable.IndexSerialScanConcurrency,
+		"tidb_index_serial_scan_concurrency",
+		1,
+		"tidb_index_serial_scan_concurrency param for analyze jobs")
+
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",

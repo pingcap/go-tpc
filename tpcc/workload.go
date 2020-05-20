@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -20,11 +22,11 @@ var tables = []string{tableItem, tableCustomer, tableDistrict, tableHistory,
 	tableNewOrder, tableOrderLine, tableOrders, tableStock, tableWareHouse}
 
 type txn struct {
-	name   string
-	action func(ctx context.Context, threadID int) error
-	weight int
-	// keyingTime time.Duration
-	// thinkingTime time.Duration
+	name         string
+	action       func(ctx context.Context, threadID int) error
+	weight       int
+	keyingTime   float64
+	thinkingTime float64
 }
 
 type tpccState struct {
@@ -49,6 +51,10 @@ type Config struct {
 	UseFK      bool
 	Isolation  int
 	CheckAll   bool
+
+	// whether to involve keying time and thinking time
+	Keying   bool
+	Thinking bool
 
 	// for prepare sub-command only
 	OutputType      string
@@ -88,11 +94,11 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	}
 
 	w.txns = []txn{
-		{name: "new_order", action: w.runNewOrder, weight: 45},
-		{name: "payment", action: w.runPayment, weight: 43},
-		{name: "order_status", action: w.runOrderStatus, weight: 4},
-		{name: "delivery", action: w.runDelivery, weight: 4},
-		{name: "stock_level", action: w.runStockLevel, weight: 4},
+		{name: "new_order", action: w.runNewOrder, weight: 45, keyingTime: 18, thinkingTime: 12},
+		{name: "payment", action: w.runPayment, weight: 43, keyingTime: 3, thinkingTime: 12},
+		{name: "order_status", action: w.runOrderStatus, weight: 4, keyingTime: 2, thinkingTime: 10},
+		{name: "delivery", action: w.runDelivery, weight: 4, keyingTime: 2, thinkingTime: 5},
+		{name: "stock_level", action: w.runStockLevel, weight: 4, keyingTime: 2, thinkingTime: 5},
 	}
 
 	if w.db != nil {
@@ -233,10 +239,29 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	txnIndex := s.decks[s.R.Intn(len(s.decks))]
 	txn := w.txns[txnIndex]
 
+	// For each transaction type, the Keying Time is constant
+	// and must be a minimum of 18 seconds for New Order,
+	// 3 seconds for Payment,
+	// and 2 seconds each for Order-Status, Delivery, and Stock-Level.
+	if w.cfg.Keying {
+		time.Sleep(time.Duration(txn.keyingTime * float64(time.Second)))
+	}
+
 	start := time.Now()
 	err := txn.action(ctx, threadID)
 
 	measurement.Measure(txn.name, time.Now().Sub(start), err)
+
+	// 5.2.5.4, For each transaction type, think time is taken independently from a negative exponential distribution.
+	// Think time, T t , is computed from the following equation: Tt = -log(r) * (mean think time),
+	// r = random number uniformly distributed between 0 and 1
+	if w.cfg.Thinking {
+		thinkTime := -math.Log(rand.Float64()) * txn.thinkingTime
+		if thinkTime > txn.thinkingTime*10 {
+			thinkTime = txn.thinkingTime * 10
+		}
+		time.Sleep(time.Duration(thinkTime * float64(time.Second)))
+	}
 
 	// TODO: add check
 	return err

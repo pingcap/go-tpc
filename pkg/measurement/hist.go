@@ -23,7 +23,7 @@ type histInfo struct {
 	count   int64
 	ops     float64
 	avg     int64
-	p95     int64
+	p90     int64
 	p99     int64
 	p999    int64
 }
@@ -70,7 +70,7 @@ func (h *histogram) Summary() string {
 	buf.WriteString(fmt.Sprintf("TPM: %.1f, ", res.ops*60))
 	buf.WriteString(fmt.Sprintf("Sum(ms): %d, ", res.sum))
 	buf.WriteString(fmt.Sprintf("Avg(ms): %d, ", res.avg))
-	buf.WriteString(fmt.Sprintf("95th(ms): %d, ", res.p95))
+	buf.WriteString(fmt.Sprintf("90th(ms): %d, ", res.p90))
 	buf.WriteString(fmt.Sprintf("99th(ms): %d, ", res.p99))
 	buf.WriteString(fmt.Sprintf("99.9th(ms): %d", res.p999))
 
@@ -80,7 +80,7 @@ func (h *histogram) Summary() string {
 func (h *histogram) getInfo() histInfo {
 	elapsed := time.Now().Sub(h.startTime).Seconds()
 
-	per95 := int64(0)
+	per90 := int64(0)
 	per99 := int64(0)
 	per999 := int64(0)
 	opCount := int64(0)
@@ -96,8 +96,8 @@ func (h *histogram) getInfo() histInfo {
 	for i, hc := range h.bucketCount {
 		opCount += hc
 		per := float64(opCount) / float64(count)
-		if per95 == 0 && per >= 0.95 {
-			per95 = int64(h.buckets[i])
+		if per90 == 0 && per >= 0.90 {
+			per90 = int64(h.buckets[i])
 		}
 
 		if per99 == 0 && per >= 0.99 {
@@ -116,7 +116,7 @@ func (h *histogram) getInfo() histInfo {
 		count:   count,
 		ops:     ops,
 		avg:     avg,
-		p95:     per95,
+		p90:     per90,
 		p99:     per99,
 		p999:    per999,
 	}

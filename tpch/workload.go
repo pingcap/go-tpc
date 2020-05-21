@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
-
-	"github.com/pingcap/go-tpc/tpch/dbgen"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/workload"
+	"github.com/pingcap/go-tpc/tpch/dbgen"
 )
 
 type contextKey string
@@ -44,13 +45,17 @@ type tpchState struct {
 type Workloader struct {
 	db  *sql.DB
 	cfg *Config
+
+	// stats
+	measurement *measurement.Measurement
 }
 
 // NewWorkloader new work loader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	return Workloader{
-		db:  db,
-		cfg: cfg,
+		db:          db,
+		cfg:         cfg,
+		measurement: measurement.NewMeasurement(),
 	}
 }
 
@@ -148,7 +153,7 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
 	defer rows.Close()
-	measurement.Measure(queryName, time.Now().Sub(start), err)
+	w.measurement.Measure(queryName, time.Now().Sub(start), err)
 
 	if err != nil {
 		return fmt.Errorf("execute %s failed %v", queryName, err)
@@ -174,6 +179,27 @@ func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
 // Check checks data
 func (w Workloader) Check(ctx context.Context, threadID int) error {
 	return nil
+}
+
+func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+	keys := make([]string, len(opMeasurement))
+	var i = 0
+	for k := range opMeasurement {
+		keys[i] = k
+		i += 1
+	}
+	sort.Strings(keys)
+
+	for _, op := range keys {
+		hist := opMeasurement[op]
+		if !hist.Empty() {
+			fmt.Printf("%s%s: %.2fs\n", prefix, strings.ToUpper(op), float64(hist.GetInfo().Avg)/1000)
+		}
+	}
+}
+
+func (w Workloader) OutputStats(ifSummaryReport bool) {
+	w.measurement.Output(ifSummaryReport, outputRtMeasurement)
 }
 
 // DBName returns the name of test db.

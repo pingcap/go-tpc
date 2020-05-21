@@ -2,25 +2,23 @@ package measurement
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-type measurement struct {
+type Measurement struct {
+	warmUp int32 // use as bool, 1 means in warmup progress, 0 means warmup finished.
 	sync.RWMutex
 
-	outputCounter    int64
-	opCurMeasurement map[string]*histogram
-	opSumMeasurement map[string]*histogram
+	OpCurMeasurement map[string]*Histogram
+	OpSumMeasurement map[string]*Histogram
 }
 
-func (m *measurement) getHist(op string, err error, current bool) *histogram {
-	opMeasurement := m.opSumMeasurement
+func (m *Measurement) getHist(op string, err error, current bool) *Histogram {
+	opMeasurement := m.OpSumMeasurement
 	if current {
-		opMeasurement = m.opCurMeasurement
+		opMeasurement = m.OpCurMeasurement
 	}
 
 	// Create hist of {op} and {op}_ERR at the same time, or else the TPM would be incorrect
@@ -33,8 +31,8 @@ func (m *measurement) getHist(op string, err error, current bool) *histogram {
 	opM, ok := opMeasurement[op]
 	m.RUnlock()
 	if !ok {
-		opM = newHistogram()
-		opPairedM := newHistogram()
+		opM = NewHistogram()
+		opPairedM := NewHistogram()
 		m.Lock()
 		opMeasurement[op] = opM
 		opMeasurement[opPairedKey] = opPairedM
@@ -43,107 +41,69 @@ func (m *measurement) getHist(op string, err error, current bool) *histogram {
 	return opM
 }
 
-func (m *measurement) measure(op string, err error, lan time.Duration) {
+func (m *Measurement) measure(op string, err error, lan time.Duration) {
 	m.getHist(op, err, true).Measure(lan)
 	m.getHist(op, err, false).Measure(lan)
 }
 
-func (m *measurement) takeCurMeasurement() (ret map[string]*histogram) {
+func (m *Measurement) takeCurMeasurement() (ret map[string]*Histogram) {
 	m.RLock()
 	defer m.RUnlock()
-	ret, m.opCurMeasurement = m.opCurMeasurement, make(map[string]*histogram, 16)
+	ret, m.OpCurMeasurement = m.OpCurMeasurement, make(map[string]*Histogram, 16)
 	return
 }
 
-func outputMeasurement(opMeasurement map[string]*histogram, prefix string) {
-	keys := make([]string, len(opMeasurement))
-	var i = 0
-	for k := range opMeasurement {
-		keys[i] = k
-		i += 1
-	}
-	sort.Strings(keys)
-
-	for _, op := range keys {
-		hist := opMeasurement[op]
-		if !hist.Empty() {
-			fmt.Printf("%s%-6s - %s\n", prefix, strings.ToUpper(op), hist.Summary())
-		}
-	}
-}
-
-func (m *measurement) output(summaryReport bool) {
-	// Clear current measure data every time
-	var opCurMeasurement = m.takeCurMeasurement()
-
-	if summaryReport {
-		m.RLock()
-		defer m.RUnlock()
-		outputMeasurement(m.opSumMeasurement, "[SUM] ")
-	} else {
-		outputMeasurement(opCurMeasurement, "[CUR] ")
-		m.RLock()
-		defer m.RUnlock()
-		m.outputCounter += 1
-		if m.outputCounter%10 == 0 {
-			outputMeasurement(m.opSumMeasurement, "[SUM] ")
-		}
-	}
-}
-
-func (m *measurement) getOpName() []string {
+func (m *Measurement) getOpName() []string {
 	m.RLock()
 	defer m.RUnlock()
 
-	res := make([]string, 0, len(m.opSumMeasurement))
-	for op := range m.opSumMeasurement {
+	res := make([]string, 0, len(m.OpSumMeasurement))
+	for op := range m.OpSumMeasurement {
 		res = append(res, op)
 	}
 	return res
 }
 
 // Output prints the measurement summary.
-func Output(summaryReport bool) {
-	globalMeasure.output(summaryReport)
+func (m *Measurement) Output(ifSummaryReport bool, outputFunc func(string, map[string]*Histogram)) {
+	if ifSummaryReport {
+		m.RLock()
+		defer m.RUnlock()
+		outputFunc("[Summary] ", m.OpSumMeasurement)
+		return
+	}
+	// Clear current measure data every time
+	var opCurMeasurement = m.takeCurMeasurement()
+	outputFunc("[Current] ", opCurMeasurement)
 }
 
 // EnableWarmUp sets whether to enable warm-up.
-func EnableWarmUp(b bool) {
+func (m *Measurement) EnableWarmUp(b bool) {
 	if b {
-		atomic.StoreInt32(&warmUp, 1)
+		atomic.StoreInt32(&m.warmUp, 1)
 	} else {
-		atomic.StoreInt32(&warmUp, 0)
+		atomic.StoreInt32(&m.warmUp, 0)
 	}
 }
 
 // IsWarmUpFinished returns whether warm-up is finished or not.
-func IsWarmUpFinished() bool {
-	return atomic.LoadInt32(&warmUp) == 0
+func (m *Measurement) IsWarmUpFinished() bool {
+	return atomic.LoadInt32(&m.warmUp) == 0
 }
 
 // Measure measures the operation.
-func Measure(op string, lan time.Duration, err error) {
-	if !IsWarmUpFinished() {
+func (m *Measurement) Measure(op string, lan time.Duration, err error) {
+	if !m.IsWarmUpFinished() {
 		return
 	}
-	globalMeasure.measure(op, err, lan)
+	m.measure(op, err, lan)
 }
 
-func newMeasurement() *measurement {
-	return &measurement{
-		sync.RWMutex{},
+func NewMeasurement() *Measurement {
+	return &Measurement{
 		0,
-		make(map[string]*histogram, 16),
-		make(map[string]*histogram, 16),
+		sync.RWMutex{},
+		make(map[string]*Histogram, 16),
+		make(map[string]*Histogram, 16),
 	}
-}
-
-var (
-	globalMeasure *measurement
-	warmUp        int32 // use as bool, 1 means in warmup progress, 0 means warmup finished.
-)
-
-func init() {
-	globalMeasure = newMeasurement()
-	warmUp = 0
 }

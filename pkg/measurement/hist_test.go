@@ -7,7 +7,7 @@ import (
 )
 
 func TestHist(t *testing.T) {
-	h := newHistogram()
+	h := NewHistogram()
 	for i := 0; i < 100; i++ {
 		n := rand.Intn(100)
 		h.Measure(time.Millisecond * time.Duration(n))

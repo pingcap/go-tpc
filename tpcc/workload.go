@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -73,6 +75,10 @@ type Workloader struct {
 	ddlManager *ddlManager
 
 	txns []txn
+
+	// stats
+	rtMeasurement       *measurement.Measurement
+	waitTimeMeasurement *measurement.Measurement
 }
 
 // NewWorkloader creates the tpc-c workloader
@@ -86,10 +92,12 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	}
 
 	w := &Workloader{
-		db:           db,
-		cfg:          cfg,
-		initLoadTime: time.Now().Format(timeFormat),
-		ddlManager:   newDDLManager(cfg.Parts, cfg.UseFK),
+		db:                  db,
+		cfg:                 cfg,
+		initLoadTime:        time.Now().Format(timeFormat),
+		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK),
+		rtMeasurement:       measurement.NewMeasurement(),
+		waitTimeMeasurement: measurement.NewMeasurement(),
 	}
 
 	w.txns = []txn{
@@ -243,23 +251,27 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	// 3 seconds for Payment,
 	// and 2 seconds each for Order-Status, Delivery, and Stock-Level.
 	if w.cfg.Wait {
+		start := time.Now()
 		time.Sleep(time.Duration(txn.keyingTime * float64(time.Second)))
+		w.waitTimeMeasurement.Measure(fmt.Sprintf("keyingTime-%s", txn.name), time.Now().Sub(start), nil)
 	}
 
 	start := time.Now()
 	err := txn.action(ctx, threadID)
 
-	measurement.Measure(txn.name, time.Now().Sub(start), err)
+	w.rtMeasurement.Measure(txn.name, time.Now().Sub(start), err)
 
 	// 5.2.5.4, For each transaction type, think time is taken independently from a negative exponential distribution.
 	// Think time, T t , is computed from the following equation: Tt = -log(r) * (mean think time),
 	// r = random number uniformly distributed between 0 and 1
 	if w.cfg.Wait {
+		start := time.Now()
 		thinkTime := -math.Log(rand.Float64()) * txn.thinkingTime
 		if thinkTime > txn.thinkingTime*10 {
 			thinkTime = txn.thinkingTime * 10
 		}
-		time.Sleep(time.Duration(thinkTime * float64(time.Second)))
+		time.Sleep(time.Duration(txn.keyingTime * float64(time.Second)))
+		w.waitTimeMeasurement.Measure(fmt.Sprintf("thinkingTime-%s", txn.name), time.Now().Sub(start), nil)
 	}
 	// TODO: add check
 	return err
@@ -273,6 +285,51 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 		}
 	}
 	return nil
+}
+
+func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+	keys := make([]string, len(opMeasurement))
+	var i = 0
+	for k := range opMeasurement {
+		keys[i] = k
+		i += 1
+	}
+	sort.Strings(keys)
+
+	for _, op := range keys {
+		hist := opMeasurement[op]
+		if !hist.Empty() {
+			fmt.Printf("%s%-6s - %s\n", prefix, strings.ToUpper(op), hist.Summary())
+		}
+	}
+}
+
+func outputWaitTimesMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+	keys := make([]string, len(opMeasurement))
+	var i = 0
+	for k := range opMeasurement {
+		keys[i] = k
+		i += 1
+	}
+	sort.Strings(keys)
+
+	for _, op := range keys {
+		hist := opMeasurement[op]
+		if !hist.Empty() {
+			fmt.Printf("%s%-6s - %.1fs\n", prefix, strings.ToUpper(op), float64(hist.GetInfo().Avg)/1000)
+		}
+	}
+}
+func (w *Workloader) OutputStats(ifSummaryReport bool) {
+	w.rtMeasurement.Output(ifSummaryReport, outputRtMeasurement)
+	if w.cfg.Wait {
+		w.waitTimeMeasurement.Output(ifSummaryReport, outputWaitTimesMeasurement)
+	}
+}
+
+// DBName returns the name of test db.
+func (w *Workloader) DBName() string {
+	return w.cfg.DBName
 }
 
 func (w *Workloader) beginTx(ctx context.Context) (*sql.Tx, error) {
@@ -310,9 +367,4 @@ func closeStmts(stmts map[string]*sql.Stmt) {
 		}
 		stmt.Close()
 	}
-}
-
-// DBName returns the name of test db.
-func (w *Workloader) DBName() string {
-	return w.cfg.DBName
 }

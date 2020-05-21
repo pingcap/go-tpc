@@ -52,9 +52,8 @@ type Config struct {
 	Isolation  int
 	CheckAll   bool
 
-	// whether to involve keying time and thinking time
-	Keying   bool
-	Thinking bool
+	// whether to involve wait times(keying time&thinking time)
+	Wait bool
 
 	// for prepare sub-command only
 	OutputType      string
@@ -243,7 +242,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	// and must be a minimum of 18 seconds for New Order,
 	// 3 seconds for Payment,
 	// and 2 seconds each for Order-Status, Delivery, and Stock-Level.
-	if w.cfg.Keying {
+	if w.cfg.Wait {
 		time.Sleep(time.Duration(txn.keyingTime * float64(time.Second)))
 	}
 
@@ -255,14 +254,13 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	// 5.2.5.4, For each transaction type, think time is taken independently from a negative exponential distribution.
 	// Think time, T t , is computed from the following equation: Tt = -log(r) * (mean think time),
 	// r = random number uniformly distributed between 0 and 1
-	if w.cfg.Thinking {
+	if w.cfg.Wait {
 		thinkTime := -math.Log(rand.Float64()) * txn.thinkingTime
 		if thinkTime > txn.thinkingTime*10 {
 			thinkTime = txn.thinkingTime * 10
 		}
 		time.Sleep(time.Duration(thinkTime * float64(time.Second)))
 	}
-
 	// TODO: add check
 	return err
 }

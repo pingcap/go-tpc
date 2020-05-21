@@ -44,8 +44,8 @@ For example:
 ./bin/go-tpc tpcc --warehouses 4 --parts 4 prepare
 # Run TPCC workloads
 ./bin/go-tpc tpcc --warehouses 4 run
-# Run TPCC involving wait times(keying time and thinking time) on every transactions
-./bin/go-tpc tpcc --warehouses 4 run --keying --thinking
+# Run TPCC including wait times(keying & thinking time) on every transactions
+./bin/go-tpc tpcc --warehouses 4 run --wait
 # Cleanup 
 ./bin/go-tpc tpcc --warehouses 4 cleanup
 # Check consistency 

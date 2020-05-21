@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type histogram struct {
+type Histogram struct {
 	m           sync.RWMutex
 	bucketCount []int64
 	buckets     []int
@@ -17,19 +17,19 @@ type histogram struct {
 	startTime   time.Time
 }
 
-type histInfo struct {
-	elapsed float64
-	sum     int64
-	count   int64
-	ops     float64
-	avg     int64
-	p90     int64
-	p99     int64
-	p999    int64
+type HistInfo struct {
+	Elapsed float64
+	Sum     int64
+	Count   int64
+	Ops     float64
+	Avg     int64
+	P90     int64
+	P99     int64
+	P999    int64
 }
 
-func newHistogram() *histogram {
-	h := new(histogram)
+func NewHistogram() *Histogram {
+	h := new(Histogram)
 	h.startTime = time.Now()
 	// Unit 1ms
 	h.buckets = []int{1, 2, 4, 8, 9, 12, 16, 20, 24, 32, 40, 48, 64, 80,
@@ -38,7 +38,7 @@ func newHistogram() *histogram {
 	return h
 }
 
-func (h *histogram) Measure(latency time.Duration) {
+func (h *Histogram) Measure(latency time.Duration) {
 	n := int64(latency / time.Millisecond)
 
 	i := sort.SearchInts(h.buckets, int(n))
@@ -55,29 +55,29 @@ func (h *histogram) Measure(latency time.Duration) {
 	h.bucketCount[i] += 1
 }
 
-func (h *histogram) Empty() bool {
+func (h *Histogram) Empty() bool {
 	h.m.Lock()
 	defer h.m.Unlock()
 	return h.count == 0
 }
 
-func (h *histogram) Summary() string {
-	res := h.getInfo()
+func (h *Histogram) Summary() string {
+	res := h.GetInfo()
 
 	buf := new(bytes.Buffer)
-	buf.WriteString(fmt.Sprintf("Takes(s): %.1f, ", res.elapsed))
-	buf.WriteString(fmt.Sprintf("Count: %d, ", res.count))
-	buf.WriteString(fmt.Sprintf("TPM: %.1f, ", res.ops*60))
-	buf.WriteString(fmt.Sprintf("Sum(ms): %d, ", res.sum))
-	buf.WriteString(fmt.Sprintf("Avg(ms): %d, ", res.avg))
-	buf.WriteString(fmt.Sprintf("90th(ms): %d, ", res.p90))
-	buf.WriteString(fmt.Sprintf("99th(ms): %d, ", res.p99))
-	buf.WriteString(fmt.Sprintf("99.9th(ms): %d", res.p999))
+	buf.WriteString(fmt.Sprintf("Takes(s): %.1f, ", res.Elapsed))
+	buf.WriteString(fmt.Sprintf("Count: %d, ", res.Count))
+	buf.WriteString(fmt.Sprintf("TPM: %.1f, ", res.Ops*60))
+	buf.WriteString(fmt.Sprintf("Sum(ms): %d, ", res.Sum))
+	buf.WriteString(fmt.Sprintf("Avg(ms): %d, ", res.Avg))
+	buf.WriteString(fmt.Sprintf("90th(ms): %d, ", res.P90))
+	buf.WriteString(fmt.Sprintf("99th(ms): %d, ", res.P99))
+	buf.WriteString(fmt.Sprintf("99.9th(ms): %d", res.P999))
 
 	return buf.String()
 }
 
-func (h *histogram) getInfo() histInfo {
+func (h *Histogram) GetInfo() HistInfo {
 	elapsed := time.Now().Sub(h.startTime).Seconds()
 
 	per90 := int64(0)
@@ -110,15 +110,15 @@ func (h *histogram) getInfo() histInfo {
 	}
 
 	ops := float64(count) / elapsed
-	info := histInfo{
-		elapsed: elapsed,
-		sum:     sum,
-		count:   count,
-		ops:     ops,
-		avg:     avg,
-		p90:     per90,
-		p99:     per99,
-		p999:    per999,
+	info := HistInfo{
+		Elapsed: elapsed,
+		Sum:     sum,
+		Count:   count,
+		Ops:     ops,
+		Avg:     avg,
+		P90:     per90,
+		P99:     per99,
+		P999:    per999,
 	}
 	return info
 }

@@ -149,6 +149,9 @@ func (c *CSVWorkLoader) Check(_ context.Context, _ int) error {
 	return nil
 }
 
+// OutputStats just do nothing
+func (c *CSVWorkLoader) OutputStats(_ bool) {}
+
 func (c *CSVWorkLoader) DBName() string {
 	return c.cfg.DBName
 }

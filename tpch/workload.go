@@ -152,6 +152,9 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("execute query %s failed %v", query, err)
+	}
 	defer rows.Close()
 	w.measurement.Measure(queryName, time.Now().Sub(start), err)
 

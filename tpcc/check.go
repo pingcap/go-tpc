@@ -72,7 +72,7 @@ func (w *Workloader) checkCondition1(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -107,7 +107,7 @@ func (w *Workloader) checkCondition2(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -137,7 +137,7 @@ func (w *Workloader) checkCondition3(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -167,7 +167,7 @@ func (w *Workloader) checkCondition4(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -197,7 +197,7 @@ func (w *Workloader) checkCondition5(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -234,7 +234,7 @@ WHERE T.o_ol_cnt != T.order_line_count`
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -265,7 +265,7 @@ func (w *Workloader) checkCondition7(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -295,7 +295,7 @@ func (w *Workloader) checkCondition8(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -325,7 +325,7 @@ func (w *Workloader) checkCondition9(ctx context.Context, warehouse int) error {
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -370,7 +370,7 @@ func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error 
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -411,7 +411,7 @@ WHERE c_w_id = ? AND order_count - 2100 != new_order_count`
 
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 
@@ -444,7 +444,7 @@ func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error 
 		WHERE c1+c_ytd_payment <> sm`
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
 	if err != nil {
-		return fmt.Errorf("Exec %s failed %v", query, err)
+		return fmt.Errorf("exec %s failed %v", query, err)
 	}
 	defer rows.Close()
 

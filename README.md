@@ -50,10 +50,10 @@ For example:
 ./bin/go-tpc tpcc --warehouses 4 cleanup
 # Check consistency 
 ./bin/go-tpc tpcc --warehouses 4 check
-# Generate csv files
-./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data
+# Generate csv files (split to 100 files each table)
+./bin/go-tpc tpcc --warehouses 4 prepare -T 100 --output-type csv --output-dir data
 # Specified tables when generating csv files
-./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --tables history,orders
+./bin/go-tpc tpcc --warehouses 4 prepare -T 100 --output-type csv --output-dir data --tables history,orders
 # Start pprof
 ./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof :10111
 ```

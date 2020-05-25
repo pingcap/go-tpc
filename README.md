@@ -30,6 +30,11 @@ By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn add
 
 ```
 
+> **Note:**
+>
+> When exporting csv files to a directory, `go-tpc` will also create the necessary tables for further data input if 
+> the provided database address is accessible.
+    
 For example:
 
 ```bash

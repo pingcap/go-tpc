@@ -15,7 +15,7 @@ git clone https://github.com/pingcap/go-tpc.git
 make build
 ```
 
-Then you can find the `go-tpc` binary file in the `/bin` directory.
+Then you can find the `go-tpc` binary file in the `./bin` directory.
 
 ## Usage
 
@@ -43,18 +43,34 @@ For example:
 
 ### TPC-C
 
-
+#### prepare
 ```bash
 # Create 4 warehouses and use 4 partitions by HASH 
 ./bin/go-tpc tpcc --warehouses 4 --parts 4 prepare
-# Run TPCC workloads
+```
+
+#### run
+```bash
+# Run TPCC workloads, you can just run or add --wait option to including wait times
 ./bin/go-tpc tpcc --warehouses 4 run
 # Run TPCC including wait times(keying & thinking time) on every transactions
 ./bin/go-tpc tpcc --warehouses 4 run --wait
+```
+
+#### check
+```bash
+# Check consistency. you can check after prepare or after run
+./bin/go-tpc tpcc --warehouses 4 check
+```
+
+#### clean up
+```bash
 # Cleanup 
 ./bin/go-tpc tpcc --warehouses 4 cleanup
-# Check consistency 
-./bin/go-tpc tpcc --warehouses 4 check
+```
+
+#### other usages
+```bash
 # Generate csv files (split to 100 files each table)
 ./bin/go-tpc tpcc --warehouses 4 prepare -T 100 --output-type csv --output-dir data
 # Specified tables when generating csv files
@@ -63,19 +79,28 @@ For example:
 ./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof :10111
 ```
 
-If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
+If you want to import tpcc csv data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
 
 ### TPC-H
 
+#### prepare
 ```bash
 # Prepare data with scale factor 1
 ./bin/go-tpc tpch --sf=1 prepare
 # Prepare data with scale factor 1, create tiflash replica, and analyze table after data loaded
 ./bin/go-tpc tpch --sf 1 --analyze --tiflash prepare
+```
+
+#### run
+```bash
 # Run TPCH workloads with result checking
 ./bin/go-tpc tpch --sf=1 --check=true run
 # Run TPCH workloads without result checking
 ./bin/go-tpc tpch --sf=1 run
+```
+
+#### clean up
+```bash
 # Cleanup
 ./bin/go-tpc tpch cleanup
 ```

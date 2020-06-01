@@ -79,7 +79,7 @@ For example:
 ./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof :10111
 ```
 
-If you want to import tpcc csv data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
+If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
 
 ### TPC-H
 

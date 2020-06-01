@@ -44,12 +44,14 @@ For example:
 ### TPC-C
 
 #### Prepare
+
 ```bash
 # Create 4 warehouses and use 4 partitions by HASH 
 ./bin/go-tpc tpcc --warehouses 4 --parts 4 prepare
 ```
 
-#### run
+#### Run
+
 ```bash
 # Run TPCC workloads, you can just run or add --wait option to including wait times
 ./bin/go-tpc tpcc --warehouses 4 run
@@ -57,13 +59,15 @@ For example:
 ./bin/go-tpc tpcc --warehouses 4 run --wait
 ```
 
-#### check
+#### Check
+
 ```bash
 # Check consistency. you can check after prepare or after run
 ./bin/go-tpc tpcc --warehouses 4 check
 ```
 
-#### clean up
+#### Clean up
+
 ```bash
 # Cleanup 
 ./bin/go-tpc tpcc --warehouses 4 cleanup
@@ -83,7 +87,8 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 
 ### TPC-H
 
-#### prepare
+#### Prepare
+
 ```bash
 # Prepare data with scale factor 1
 ./bin/go-tpc tpch --sf=1 prepare
@@ -91,7 +96,8 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 ./bin/go-tpc tpch --sf 1 --analyze --tiflash prepare
 ```
 
-#### run
+#### Run
+
 ```bash
 # Run TPCH workloads with result checking
 ./bin/go-tpc tpch --sf=1 --check=true run
@@ -99,7 +105,8 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 ./bin/go-tpc tpch --sf=1 run
 ```
 
-#### clean up
+#### Clean up
+
 ```bash
 # Cleanup
 ./bin/go-tpc tpch cleanup

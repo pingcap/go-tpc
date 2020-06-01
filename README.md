@@ -73,7 +73,7 @@ For example:
 ./bin/go-tpc tpcc --warehouses 4 cleanup
 ```
 
-#### other usages
+#### Other usages
 ```bash
 # Generate csv files (split to 100 files each table)
 ./bin/go-tpc tpcc --warehouses 4 prepare -T 100 --output-type csv --output-dir data

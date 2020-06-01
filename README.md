@@ -43,7 +43,7 @@ For example:
 
 ### TPC-C
 
-#### prepare
+#### Prepare
 ```bash
 # Create 4 warehouses and use 4 partitions by HASH 
 ./bin/go-tpc tpcc --warehouses 4 --parts 4 prepare

@@ -17,10 +17,9 @@ c_credit, c_credit_lim, c_discount, c_balance, c_since FROM customer WHERE c_w_i
 AND c_id = ? FOR UPDATE`
 	paymentUpdateCustomer = `UPDATE customer SET c_balance = c_balance - ?, c_ytd_payment = c_ytd_payment + ?, 
 c_payment_cnt = c_payment_cnt + 1 WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
-	paymentSelectCustomerData     = `SELECT c_data FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
-	paymentUpdateCustomerWithData = `UPDATE customer SET c_balance = c_balance - ?, c_ytd_payment = c_ytd_payment + ?, 
-c_payment_cnt = c_payment_cnt + 1, c_data = ? WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
-	paymentInsertHistory = `INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id, h_w_id, h_date, h_amount, h_data)
+	paymentSelectCustomerData = `SELECT c_data FROM customer_data WHERE c_uid = ?`
+	paymentUpdateCustomerData = `UPDATE customer_data set c_data = ? WHERE c_uid = ?`
+	paymentInsertHistory      = `INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id, h_w_id, h_date, h_amount, h_data)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
@@ -145,7 +144,7 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 
 	if d.cCredit == "BC" {
 		// Process 7
-		if err := s.paymentStmts[paymentSelectCustomerData].QueryRowContext(ctx, d.cWID, d.cDID, d.cID).Scan(&d.cData); err != nil {
+		if err := s.paymentStmts[paymentSelectCustomerData].QueryRowContext(ctx, getCustomerUID(d.cWID, d.cDID, d.cID)).Scan(&d.cData); err != nil {
 			return fmt.Errorf("exec %s failed %v", paymentSelectCustomerData, err)
 		}
 
@@ -158,8 +157,11 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 		}
 
 		// Process 8
-		if _, err := s.paymentStmts[paymentUpdateCustomerWithData].ExecContext(ctx, d.hAmount, d.hAmount, newData, d.cWID, d.cDID, d.cID); err != nil {
-			return fmt.Errorf("exec %s failed %v", paymentUpdateCustomerWithData, err)
+		if _, err := s.paymentStmts[paymentUpdateCustomer].ExecContext(ctx, d.hAmount, d.hAmount, d.cWID, d.cDID, d.cID); err != nil {
+			return fmt.Errorf("exec %s failed %v", paymentUpdateCustomer, err)
+		}
+		if _, err := s.paymentStmts[paymentUpdateCustomerData].ExecContext(ctx, newData, getCustomerUID(d.cWID, d.cDID, d.cID)); err != nil {
+			return fmt.Errorf("exec %s failed %v", paymentUpdateCustomerData, err)
 		}
 	} else {
 		// Process 9

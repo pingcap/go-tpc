@@ -197,6 +197,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		for i := 5; i <= 15; i++ {
 			s.newOrderStmts[newOrderSelectItemSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderSelectItemSQLs[i])
 			s.newOrderStmts[newOrderSelectStockSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderSelectStockSQLs[i])
+			s.newOrderStmts[newOrderSelectStockDataSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderSelectStockDataSQLs[i])
 			s.newOrderStmts[newOrderInsertOrderLineSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderInsertOrderLineSQLs[i])
 		}
 
@@ -208,8 +209,8 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 			paymentSelectCustomerListByLast: prepareStmt(ctx, s.Conn, paymentSelectCustomerListByLast),
 			paymentSelectCustomerForUpdate:  prepareStmt(ctx, s.Conn, paymentSelectCustomerForUpdate),
 			paymentSelectCustomerData:       prepareStmt(ctx, s.Conn, paymentSelectCustomerData),
-			paymentUpdateCustomerWithData:   prepareStmt(ctx, s.Conn, paymentUpdateCustomerWithData),
 			paymentUpdateCustomer:           prepareStmt(ctx, s.Conn, paymentUpdateCustomer),
+			paymentUpdateCustomerData:       prepareStmt(ctx, s.Conn, paymentUpdateCustomerData),
 			paymentInsertHistory:            prepareStmt(ctx, s.Conn, paymentInsertHistory),
 		}
 

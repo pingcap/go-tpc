@@ -6,15 +6,17 @@ import (
 )
 
 const (
-	tableItem      = "item"
-	tableCustomer  = "customer"
-	tableDistrict  = "district"
-	tableOrders    = "orders"
-	tableNewOrder  = "new_order"
-	tableOrderLine = "order_line"
-	tableHistory   = "history"
-	tableWareHouse = "warehouse"
-	tableStock     = "stock"
+	tableItem         = "item"
+	tableCustomer     = "customer"
+	tableCustomerData = "customer_data"
+	tableDistrict     = "district"
+	tableOrders       = "orders"
+	tableNewOrder     = "new_order"
+	tableOrderLine    = "order_line"
+	tableHistory      = "history"
+	tableWareHouse    = "warehouse"
+	tableStock        = "stock"
+	tableStockData    = "stock_data"
 )
 
 type ddlManager struct {
@@ -95,6 +97,7 @@ CREATE TABLE IF NOT EXISTS customer (
 	c_id INT NOT NULL, 
 	c_d_id INT NOT NULL,
 	c_w_id INT NOT NULL, 
+	c_uid BIGINT NOT NULL,
 	c_first VARCHAR(16), 
 	c_middle CHAR(2), 
 	c_last VARCHAR(16), 
@@ -112,7 +115,6 @@ CREATE TABLE IF NOT EXISTS customer (
 	c_ytd_payment DECIMAL(12,2), 
 	c_payment_cnt INT, 
 	c_delivery_cnt INT, 
-	c_data VARCHAR(500),
 	PRIMARY KEY(c_w_id, c_d_id, c_id),
 	INDEX idx_customer (c_w_id, c_d_id, c_last, c_first)
 )`
@@ -120,6 +122,18 @@ CREATE TABLE IF NOT EXISTS customer (
 	query = w.appendPartition(query, "c_w_id")
 
 	if err := w.createTableDDL(ctx, query, tableCustomer); err != nil {
+		return err
+	}
+
+	// Customer Data
+	query = `
+CREATE TABLE IF NOT EXISTS customer_data (
+	c_uid BIGINT NOT NULL,
+	c_data VARCHAR(500),
+	PRIMARY KEY(c_uid)
+)`
+
+	if err := w.createTableDDL(ctx, query, tableCustomerData); err != nil {
 		return err
 	}
 
@@ -200,7 +214,22 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS stock (
 	s_i_id INT NOT NULL,
 	s_w_id INT NOT NULL,
+	s_uid BIGINT NOT NULL,
 	s_quantity INT,
+	s_ytd INT, 
+	s_order_cnt INT, 
+	s_remote_cnt INT,
+	PRIMARY KEY(s_w_id, s_i_id)
+)`
+
+	query = w.appendPartition(query, "s_w_id")
+	if err := w.createTableDDL(ctx, query, tableStock); err != nil {
+		return err
+	}
+
+	query = `
+CREATE TABLE IF NOT EXISTS stock_data (
+	s_uid BIGINT NOT NULL,
 	s_dist_01 CHAR(24), 
 	s_dist_02 CHAR(24),
 	s_dist_03 CHAR(24),
@@ -210,16 +239,12 @@ CREATE TABLE IF NOT EXISTS stock (
 	s_dist_07 CHAR(24), 
 	s_dist_08 CHAR(24), 
 	s_dist_09 CHAR(24), 
-	s_dist_10 CHAR(24), 
-	s_ytd INT, 
-	s_order_cnt INT, 
-	s_remote_cnt INT,
+	s_dist_10 CHAR(24),
 	s_data VARCHAR(50),
-	PRIMARY KEY(s_w_id, s_i_id)
+	PRIMARY KEY(s_uid)
 )`
 
-	query = w.appendPartition(query, "s_w_id")
-	if err := w.createTableDDL(ctx, query, tableStock); err != nil {
+	if err := w.createTableDDL(ctx, query, tableStockData); err != nil {
 		return err
 	}
 

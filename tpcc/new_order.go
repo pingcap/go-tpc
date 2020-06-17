@@ -20,6 +20,7 @@ const (
 var (
 	newOrderSelectItemSQLs      [16]string
 	newOrderSelectStockSQLs     [16]string
+	newOrderSelectStockDataSQLs [16]string
 	newOrderInsertOrderLineSQLs [16]string
 )
 
@@ -27,6 +28,7 @@ func init() {
 	for i := 5; i <= 15; i++ {
 		newOrderSelectItemSQLs[i] = genNewOrderSelectItemsSQL(i)
 		newOrderSelectStockSQLs[i] = genNewOrderSelectStockSQL(i)
+		newOrderSelectStockDataSQLs[i] = genNewOrderSelectStockDataSQL(i)
 		newOrderInsertOrderLineSQLs[i] = genNewOrderInsertOrderLineSQL(i)
 	}
 }
@@ -44,7 +46,7 @@ func genNewOrderSelectItemsSQL(cnt int) string {
 }
 
 func genNewOrderSelectStockSQL(cnt int) string {
-	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE (s_w_id, s_i_id) IN (")
+	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity FROM stock WHERE (s_w_id, s_i_id) IN (")
 	for i := 0; i < cnt; i++ {
 		if i != 0 {
 			buf.WriteByte(',')
@@ -52,6 +54,18 @@ func genNewOrderSelectStockSQL(cnt int) string {
 		buf.WriteString("(?,?)")
 	}
 	buf.WriteString(") FOR UPDATE")
+	return buf.String()
+}
+
+func genNewOrderSelectStockDataSQL(cnt int) string {
+	buf := bytes.NewBufferString("SELECT s_uid, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock_data WHERE s_uid IN (")
+	for i := 0; i < cnt; i++ {
+		if i != 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString("?")
+	}
+	buf.WriteString(")")
 	return buf.String()
 }
 
@@ -250,9 +264,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	for rows.Next() {
 		var iID int
 		var quantity int
-		var data string
-		var dists [10]string
-		err = rows.Scan(&iID, &quantity, &data, &dists[0], &dists[1], &dists[2], &dists[3], &dists[4], &dists[5], &dists[6], &dists[7], &dists[8], &dists[9])
+		err = rows.Scan(&iID, &quantity)
 		if err != nil {
 			return fmt.Errorf("exec %s failed %v", selectStockSQL, err)
 		}
@@ -263,8 +275,27 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		}
 		item.foundInStock = true
 		item.sQuantity = quantity
-		item.sDist = dists[d.dID-1]
 		item.olAmount = float64(item.olQuantity) * item.iPrice * (1 + d.wTax + d.dTax) * (1 - d.cDiscount)
+	}
+	selectStockDataSQL := newOrderSelectStockDataSQLs[len(items)]
+	selectStockDataArgs := make([]interface{}, len(items))
+	for i := range items {
+		selectStockArgs[i] = getStockUID(d.wID, items[i].olIID)
+	}
+	rows, err = s.newOrderStmts[selectStockDataSQL].QueryContext(ctx, selectStockDataArgs...)
+	if err != nil {
+		return fmt.Errorf("exec %s failed %v", selectStockDataSQL, err)
+	}
+	for rows.Next() {
+		var sUID int
+		var data string
+		var dists [10]string
+		err = rows.Scan(&sUID, &data, &dists[0], &dists[1], &dists[2], &dists[3], &dists[4], &dists[5], &dists[6], &dists[7], &dists[8], &dists[9])
+		if err != nil {
+			return fmt.Errorf("exec %s failed %v", selectStockDataSQL, err)
+		}
+		item := itemsMap[int(uint32(sUID))]
+		item.sDist = dists[d.dID-1]
 	}
 
 	// Process 8

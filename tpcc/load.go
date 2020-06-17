@@ -76,9 +76,7 @@ func (w *Workloader) loadStock(ctx context.Context, warehouse int) error {
 
 	s := getTPCCState(ctx)
 
-	hint := `INSERT INTO stock (s_i_id, s_w_id, s_quantity, 
-s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, 
-s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_data) VALUES `
+	hint := `INSERT INTO stock (s_i_id, s_w_id, s_uid, s_quantity, s_ytd, s_order_cnt, s_remote_cnt) VALUES `
 
 	l := load.NewSQLBatchLoader(s.Conn, hint)
 
@@ -88,6 +86,37 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 		sIID := i + 1
 		sWID := warehouse
 		sQuantity := randInt(s.R, 10, 100)
+		sYtd := 0
+		sOrderCnt := 0
+		sRemoteCnt := 0
+
+		var v []string
+		v = []string{fmt.Sprintf(`(%d, %d, %d, %d, %d, %d, %d)`,
+			sIID, sWID, getStockUID(warehouse, sIID), sQuantity, sYtd, sOrderCnt, sRemoteCnt)}
+
+		if err := l.InsertValue(ctx, v); err != nil {
+			return err
+		}
+	}
+	if err := l.Flush(ctx); err != nil {
+		return err
+	}
+	return w.loadStockData(ctx, warehouse)
+}
+
+func (w *Workloader) loadStockData(ctx context.Context, warehouse int) error {
+	fmt.Printf("load to stock in warehouse %d\n", warehouse)
+
+	s := getTPCCState(ctx)
+
+	hint := `INSERT INTO stock_data (s_uid, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, 
+s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_data) VALUES `
+
+	l := load.NewSQLBatchLoader(s.Conn, hint)
+
+	for i := 0; i < stockPerWarehouse; i++ {
+		s.Buf.Reset()
+
 		sDist01 := randLetters(s.R, s.Buf, 24, 24)
 		sDist02 := randLetters(s.R, s.Buf, 24, 24)
 		sDist03 := randLetters(s.R, s.Buf, 24, 24)
@@ -98,20 +127,21 @@ s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_
 		sDist08 := randLetters(s.R, s.Buf, 24, 24)
 		sDist09 := randLetters(s.R, s.Buf, 24, 24)
 		sDist10 := randLetters(s.R, s.Buf, 24, 24)
-		sYtd := 0
-		sOrderCnt := 0
-		sRemoteCnt := 0
 		sData := randOriginalString(s.R, s.Buf)
 
 		var v []string
-		v = []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, '%s')`,
-			sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData)}
+		v = []string{fmt.Sprintf(`(%d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')`,
+			getStockUID(warehouse, i+1), sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sData)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err
 		}
 	}
 	return l.Flush(ctx)
+}
+
+func getStockUID(warehouse, item int) int64 {
+	return int64(warehouse)<<32 + int64(item)
 }
 
 func (w *Workloader) loadDistrict(ctx context.Context, warehouse int) error {
@@ -154,9 +184,9 @@ func (w *Workloader) loadCustomer(ctx context.Context, warehouse int, district i
 
 	s := getTPCCState(ctx)
 
-	hint := `INSERT INTO customer (c_id, c_d_id, c_w_id, c_first, c_middle, c_last, 
+	hint := `INSERT INTO customer (c_id, c_d_id, c_w_id, c_uid, c_first, c_middle, c_last, 
 c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_credit_lim,
-c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VALUES `
+c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt) VALUES `
 
 	l := load.NewSQLBatchLoader(s.Conn, hint)
 
@@ -191,12 +221,40 @@ c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VAL
 		cYtdPayment := 10.00
 		cPaymentCnt := 1
 		cDeliveryCnt := 0
-		cData := randChars(s.R, s.Buf, 300, 500)
 
-		v := []string{fmt.Sprintf(`(%d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d, '%s')`,
-			cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
+		v := []string{fmt.Sprintf(`(%d, %d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, %f, %f, %d, %d)`,
+			cID, cDID, cWID, getCustomerUID(cWID, cDID, cID), cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
 			cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
-			cYtdPayment, cPaymentCnt, cDeliveryCnt, cData)}
+			cYtdPayment, cPaymentCnt, cDeliveryCnt)}
+
+		if err := l.InsertValue(ctx, v); err != nil {
+			return err
+		}
+	}
+	if err := l.Flush(ctx); err != nil {
+		return err
+	}
+	return w.loadCustomerData(ctx, warehouse, district)
+}
+
+func getCustomerUID(warehouse, district, cID int) int64 {
+	return int64(warehouse)<<40 + int64(district)<<32 + int64(cID)
+}
+
+func (w *Workloader) loadCustomerData(ctx context.Context, warehouse int, district int) error {
+	fmt.Printf("load to customer_data in warehouse %d district %d\n", warehouse, district)
+
+	s := getTPCCState(ctx)
+
+	hint := `INSERT INTO customer_data (c_uid, c_data) VALUES `
+
+	l := load.NewSQLBatchLoader(s.Conn, hint)
+
+	for i := 0; i < customerPerDistrict; i++ {
+		s.Buf.Reset()
+		cData := randChars(s.R, s.Buf, 300, 500)
+		v := []string{fmt.Sprintf(`(%d, '%s')`,
+			getCustomerUID(warehouse, district, i+1), cData)}
 
 		if err := l.InsertValue(ctx, v); err != nil {
 			return err

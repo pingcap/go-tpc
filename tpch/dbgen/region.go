@@ -37,7 +37,7 @@ func (r regionLoader) Flush() error {
 	return nil
 }
 
-func newRegionLoader(writer io.StringWriter) regionLoader {
+func NewRegionLoader(writer io.StringWriter) regionLoader {
 	return regionLoader{writer}
 }
 

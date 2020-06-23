@@ -46,6 +46,6 @@ func (p partSuppLoader) Flush() error {
 	return nil
 }
 
-func newPartSuppLoader(writer io.StringWriter) partSuppLoader {
+func NewPartSuppLoader(writer io.StringWriter) partSuppLoader {
 	return partSuppLoader{writer}
 }

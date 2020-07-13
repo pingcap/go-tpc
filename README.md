@@ -3,15 +3,18 @@
 A toolbox to benchmark workloads in [TPC](http://www.tpc.org/)
 
 ## Install
+You can use one of the three approaches
 
 ### Download binary
 
-You can download the pre-built binary [here](https://github.com/pingcap/go-tpc/releases)
+You can download the pre-built binary [here](https://github.com/pingcap/go-tpc/releases) and then gunzip it
 
 ### Install using script
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/pingcap/go-tpc/master/install.sh | sh
 ```
+
+And then open a new terminal to try `go-tpc` or directly try `$HOME/.go-tpc/bin/go-tpc`
 
 ### Build from source
 
@@ -23,6 +26,7 @@ make build
 Then you can find the `go-tpc` binary file in the `./bin` directory.
 
 ## Usage
+If you have `go-tpc` in your PATH, the command below you should replace `./bin/go-tpc` with `go-tpc`
 
 By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn address, you can override it by setting below flags:
 

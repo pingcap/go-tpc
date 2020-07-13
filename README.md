@@ -8,6 +8,11 @@ A toolbox to benchmark workloads in [TPC](http://www.tpc.org/)
 
 You can download the pre-built binary [here](https://github.com/pingcap/go-tpc/releases)
 
+### Install using script
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/pingcap/go-tpc/master/install.sh | sh
+```
+
 ### Build from source
 
 ```bash

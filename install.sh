@@ -13,7 +13,7 @@ if [ -z "$os" ]; then
     exit 1
 fi
 
-binary_url="https://github.com/pingcap/go-tpc/releases/download/v${version}/go-tpc_${version}_darwin_amd64.tar.gz"
+binary_url="https://github.com/pingcap/go-tpc/releases/download/v${version}/go-tpc_${version}_${os}_amd64.tar.gz"
 
 case $(uname -m) in
     amd64|x86_64) arch=amd64 ;;
@@ -28,9 +28,9 @@ bin_dir=$GO_TPC_HOME/bin
 mkdir -p "$bin_dir"
 
 install_binary() {
-    curl -L $binary_url -o "/tmp/go-tpc_${version}_darwin_amd64.tar.gz" || return 1
-    tar -zxf "/tmp/go-tpc_${version}_darwin_amd64.tar.gz" -C "$bin_dir" || return 1
-    rm "/tmp/go-tpc_${version}_darwin_amd64.tar.gz"
+    curl -L $binary_url -o "/tmp/go-tpc_${version}_${os}_amd64.tar.gz" || return 1
+    tar -zxf "/tmp/go-tpc_${version}_${os}_amd64.tar.gz" -C "$bin_dir" || return 1
+    rm "/tmp/go-tpc_${version}_${os}_amd64.tar.gz"
     return 0
 }
 

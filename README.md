@@ -83,6 +83,7 @@ For example:
 ```
 
 #### Other usages
+
 ```bash
 # Generate csv files (split to 100 files each table)
 ./bin/go-tpc tpcc --warehouses 4 prepare -T 100 --output-type csv --output-dir data
@@ -119,4 +120,25 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 ```bash
 # Cleanup
 ./bin/go-tpc tpch cleanup
+```
+
+### CH-benCHmark
+
+#### Prepare
+
+1. First please refer to the above instruction(`go-tpc tpcc --warehouses $warehouses prepare`) to prepare the TP part schema and populate data
+
+2. Then uses `go-tpc ch prepare` to prepare the AP part schema and data
+
+```bash
+# Prepare data
+./bin/go-tpc ch prepare
+# Prepare data, create tiflash replica, and analyze table after data loaded
+./bin/go-tpc ch --analyze --tiflash prepare
+```
+
+#### Run
+
+```bash
+./bin/go-tpc ch --warehouses $warehouses -T $tpWorkers -t $apWorkers --time $measurement-time run
 ```

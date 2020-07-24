@@ -77,7 +77,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 	return nil
 }
 
-func executeWorkload(ctx context.Context, w workload.Workloader, action string) {
+func executeWorkload(ctx context.Context, w workload.Workloader, threads int, action string) {
 	var wg sync.WaitGroup
 	wg.Add(threads)
 
@@ -117,7 +117,4 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	outputCancel()
 
 	<-ch
-
-	fmt.Println("Finished")
-	w.OutputStats(true)
 }

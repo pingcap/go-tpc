@@ -74,6 +74,8 @@ func (m *Measurement) Output(ifSummaryReport bool, outputFunc func(string, map[s
 	}
 	// Clear current measure data every time
 	var opCurMeasurement = m.takeCurMeasurement()
+	m.RLock()
+	defer m.RUnlock()
 	outputFunc("[Current] ", opCurMeasurement)
 }
 

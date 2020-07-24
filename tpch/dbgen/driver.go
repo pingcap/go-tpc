@@ -101,12 +101,12 @@ func InitDbGen(sc int64) {
 	initLineItem()
 }
 
-func DbGen(loaders map[Table]Loader) error {
+func DbGen(loaders map[Table]Loader, tables []Table) error {
 	for table, loader := range loaders {
 		tDefs[table].loader = loader
 	}
 
-	for _, i := range []Table{TNation, TRegion, TCust, TSupp, TPartPsupp, TOrderLine} {
+	for _, i := range tables {
 		fmt.Printf("generating %s\n", tDefs[i].comment)
 		rowCnt := tDefs[i].base
 		if i < TNation {

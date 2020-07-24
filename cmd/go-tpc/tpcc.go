@@ -29,6 +29,7 @@ func executeTpcc(action string) {
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
+
 	var (
 		w   workload.Workloader
 		err error
@@ -52,7 +53,10 @@ func executeTpcc(action string) {
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
 
-	executeWorkload(timeoutCtx, w, action)
+	executeWorkload(timeoutCtx, w, threads, action)
+
+	fmt.Println("Finished")
+	w.OutputStats(true)
 }
 
 func registerTpcc(root *cobra.Command) {

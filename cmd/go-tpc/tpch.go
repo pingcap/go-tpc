@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/pingcap/go-tpc/tpch"
@@ -10,7 +11,7 @@ import (
 
 var tpchConfig tpch.Config
 
-func executeTpch(action string, _ []string) {
+func executeTpch(action string) {
 	openDB()
 	defer closeDB()
 
@@ -21,7 +22,9 @@ func executeTpch(action string, _ []string) {
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
 
-	executeWorkload(timeoutCtx, w, action)
+	executeWorkload(timeoutCtx, w, threads, action)
+	fmt.Println("Finished")
+	w.OutputStats(true)
 }
 
 func registerTpch(root *cobra.Command) {
@@ -48,7 +51,7 @@ func registerTpch(root *cobra.Command) {
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
 		Run: func(cmd *cobra.Command, args []string) {
-			executeTpch("prepare", args)
+			executeTpch("prepare")
 		},
 	}
 
@@ -79,7 +82,7 @@ func registerTpch(root *cobra.Command) {
 		Use:   "run",
 		Short: "Run workload",
 		Run: func(cmd *cobra.Command, args []string) {
-			executeTpch("run", args)
+			executeTpch("run")
 		},
 	}
 
@@ -87,7 +90,7 @@ func registerTpch(root *cobra.Command) {
 		Use:   "cleanup",
 		Short: "Cleanup data for the workload",
 		Run: func(cmd *cobra.Command, args []string) {
-			executeTpch("cleanup", args)
+			executeTpch("cleanup")
 		},
 	}
 

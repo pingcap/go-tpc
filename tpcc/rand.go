@@ -25,43 +25,43 @@ const (
 	lenNumbers    = 10
 )
 
-func randBuffer(r *rand.Rand, b *util.BufAllocator, min, max int, num int) []byte {
+func randBuffer(r *rand.Rand, b *util.BufAllocator, source string, min, max int, num int) []byte {
 	buf := b.Alloc(randInt(r, min, max))
 	for i := range buf {
-		buf[i] = characters[r.Intn(num)]
+		buf[i] = source[r.Intn(num)]
 	}
 	return buf
 }
 
 // refer 4.3.2.2
 func randChars(r *rand.Rand, b *util.BufAllocator, min, max int) string {
-	return util.String(randBuffer(r, b, min, max, lenCharacters))
+	return util.String(randBuffer(r, b, characters, min, max, lenCharacters))
 }
 
 // refer 4.3.2.2
 func randLetters(r *rand.Rand, b *util.BufAllocator, min, max int) string {
-	return util.String(randBuffer(r, b, min, max, lenLetters))
+	return util.String(randBuffer(r, b, letters, min, max, lenLetters))
 }
 
 // refer 4.3.2.2
 func randNumbers(r *rand.Rand, b *util.BufAllocator, min, max int) string {
-	return util.String(randBuffer(r, b, min, max, lenNumbers))
+	return util.String(randBuffer(r, b, numbers, min, max, lenNumbers))
 }
 
 // refer 4.3.2.7
 func randZip(r *rand.Rand, b *util.BufAllocator) string {
-	buf := randBuffer(r, b, 9, 9, lenNumbers)
+	buf := randBuffer(r, b, numbers, 9, 9, lenNumbers)
 	copy(buf[4:], `11111`)
 	return util.String(buf)
 }
 
 func randState(r *rand.Rand, b *util.BufAllocator) string {
-	buf := randBuffer(r, b, 2, 2, lenLetters)
+	buf := randBuffer(r, b, letters, 2, 2, lenLetters)
 	return util.String(buf)
 }
 
 func randTax(r *rand.Rand) float64 {
-	return float64(randInt(r, 0, 2000)) / float64(10000.0)
+	return float64(randInt(r, 0, 2000)) / 10000.0
 }
 
 const originalString = "ORIGINAL"
@@ -71,7 +71,7 @@ const originalString = "ORIGINAL"
 // the string "ORIGINAL" must be held by 8 consecutive characters starting at a random position within buf
 func randOriginalString(r *rand.Rand, b *util.BufAllocator) string {
 	if r.Intn(10) == 0 {
-		buf := randBuffer(r, b, 26, 50, lenCharacters)
+		buf := randBuffer(r, b, characters, 26, 50, lenCharacters)
 		index := r.Intn(len(buf) - 8)
 		copy(buf[index:], originalString)
 		return util.String(buf)

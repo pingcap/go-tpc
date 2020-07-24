@@ -23,6 +23,7 @@ var (
 	user           string
 	password       string
 	threads        int
+	acThreads      int
 	driver         string
 	totalTime      time.Duration
 	totalCount     int
@@ -73,7 +74,7 @@ func openDB() {
 			globalDB = nil
 		}
 	} else {
-		globalDB.SetMaxIdleConns(threads + 1)
+		globalDB.SetMaxIdleConns(threads + acThreads + 1)
 	}
 }
 
@@ -90,6 +91,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "P", 4000, "Database port")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 1, "Thread concurrency")
+	rootCmd.PersistentFlags().IntVarP(&acThreads, "acThreads", "t", 1, "OLAP client concurrency, only for CH-benCHmark")
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", "", "Database driver: mysql")
 	rootCmd.PersistentFlags().DurationVar(&totalTime, "time", 1<<63-1, "Total execution time")
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 0, "Total execution count, 0 means infinite")
@@ -105,6 +107,7 @@ func main() {
 
 	registerTpcc(rootCmd)
 	registerTpch(rootCmd)
+	registerCHBenchmark(rootCmd)
 
 	var cancel context.CancelFunc
 	globalCtx, cancel = context.WithCancel(context.Background())

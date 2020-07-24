@@ -325,6 +325,13 @@ func (w *Workloader) OutputStats(ifSummaryReport bool) {
 	if w.cfg.Wait {
 		w.waitTimeMeasurement.Output(ifSummaryReport, outputWaitTimesMeasurement)
 	}
+	if ifSummaryReport {
+		hist, e := w.rtMeasurement.OpSumMeasurement["new_order"]
+		if e && !hist.Empty() {
+			result := hist.GetInfo()
+			fmt.Printf("tpmC: %.1f\n", result.Ops*60)
+		}
+	}
 }
 
 // DBName returns the name of test db.

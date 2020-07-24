@@ -1,6 +1,7 @@
-package tpch
+package ch
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -10,12 +11,13 @@ import (
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/workload"
+	"github.com/pingcap/go-tpc/tpch"
 	"github.com/pingcap/go-tpc/tpch/dbgen"
 )
 
 type contextKey string
 
-const stateKey = contextKey("tpch")
+const stateKey = contextKey("ch")
 
 // analyzeConfig is the configuration for analyze after data loaded
 type analyzeConfig struct {
@@ -25,23 +27,21 @@ type analyzeConfig struct {
 	IndexSerialScanConcurrency int
 }
 
-// Config is the configuration for tpch workload
+// Config is the configuration for ch workload
 type Config struct {
 	DBName               string
 	RawQueries           string
 	QueryNames           []string
-	ScaleFactor          int
-	EnableOutputCheck    bool
 	CreateTiFlashReplica bool
 	AnalyzeTable         analyzeConfig
 }
 
-type tpchState struct {
+type chState struct {
 	*workload.TpcState
 	queryIdx int
 }
 
-// Workloader is TPCH workload
+// Workloader is CH workload
 type Workloader struct {
 	db  *sql.DB
 	cfg *Config
@@ -59,8 +59,8 @@ func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	}
 }
 
-func (w *Workloader) getState(ctx context.Context) *tpchState {
-	s := ctx.Value(stateKey).(*tpchState)
+func (w *Workloader) getState(ctx context.Context) *chState {
+	s := ctx.Value(stateKey).(*chState)
 	return s
 }
 
@@ -71,12 +71,12 @@ func (w *Workloader) updateState(ctx context.Context) {
 
 // Name return workloader name
 func (w Workloader) Name() string {
-	return "tpch"
+	return "ch"
 }
 
 // InitThread inits thread
 func (w Workloader) InitThread(ctx context.Context, threadID int) context.Context {
-	s := &tpchState{
+	s := &chState{
 		queryIdx: threadID % len(w.cfg.QueryNames),
 		TpcState: workload.NewTpcState(ctx, w.db),
 	}
@@ -102,17 +102,16 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 		return err
 	}
 	sqlLoader := map[dbgen.Table]dbgen.Loader{
-		dbgen.TOrder:  NewOrderLoader(ctx, s.Conn),
-		dbgen.TLine:   NewLineItemLoader(ctx, s.Conn),
-		dbgen.TPart:   NewPartLoader(ctx, s.Conn),
-		dbgen.TPsupp:  NewPartSuppLoader(ctx, s.Conn),
-		dbgen.TSupp:   NewSuppLoader(ctx, s.Conn),
-		dbgen.TCust:   NewCustLoader(ctx, s.Conn),
-		dbgen.TNation: NewNationLoader(ctx, s.Conn),
-		dbgen.TRegion: NewRegionLoader(ctx, s.Conn),
+		dbgen.TSupp:   tpch.NewSuppLoader(ctx, s.Conn),
+		dbgen.TNation: tpch.NewNationLoader(ctx, s.Conn),
+		dbgen.TRegion: tpch.NewRegionLoader(ctx, s.Conn),
 	}
-	dbgen.InitDbGen(int64(w.cfg.ScaleFactor))
-	if err := dbgen.DbGen(sqlLoader, []dbgen.Table{dbgen.TNation, dbgen.TRegion, dbgen.TCust, dbgen.TSupp, dbgen.TPartPsupp, dbgen.TOrderLine}); err != nil {
+	dbgen.InitDbGen(1)
+	if err := dbgen.DbGen(sqlLoader, []dbgen.Table{dbgen.TNation, dbgen.TRegion, dbgen.TSupp}); err != nil {
+		return err
+	}
+
+	if err := w.prepareView(ctx); err != nil {
 		return err
 	}
 
@@ -121,6 +120,23 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 		if err := w.analyzeTables(ctx, w.cfg.AnalyzeTable); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (w Workloader) prepareView(ctx context.Context) error {
+	s := w.getState(ctx)
+	fmt.Println("creating view revenue1")
+	if _, err := s.Conn.ExecContext(ctx, `
+create view revenue1 (supplier_no, total_revenue) as (
+    select	mod((s_w_id * s_i_id),10000) as supplier_no,
+              sum(ol_amount) as total_revenue
+    from	order_line, stock
+    where ol_i_id = s_i_id and ol_supply_w_id = s_w_id
+      and ol_delivery_d >= '2007-01-02 00:00:00.000000'
+    group by mod((s_w_id * s_i_id),10000));
+`); err != nil {
+		return err
 	}
 	return nil
 }
@@ -162,21 +178,12 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 		return fmt.Errorf("execute %s failed %v", queryName, err)
 	}
 
-	// we only check scale = 1, it was much quick
-	if w.cfg.ScaleFactor == 1 && w.cfg.EnableOutputCheck {
-		if err := w.checkQueryResult(queryName, rows); err != nil {
-			return fmt.Errorf("check %s failed %v", queryName, err)
-		}
-	}
 	return nil
 }
 
 // Cleanup cleans up workloader
 func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
-	if threadID != 0 {
-		return nil
-	}
-	return w.dropTable(ctx)
+	return nil
 }
 
 // Check checks data
@@ -196,13 +203,38 @@ func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Hi
 	for _, op := range keys {
 		hist := opMeasurement[op]
 		if !hist.Empty() {
-			fmt.Printf("%s%s: %.2fs\n", prefix, strings.ToUpper(op), float64(hist.GetInfo().Avg)/1000)
+			fmt.Printf("%s%-6s - %s\n", prefix, strings.ToUpper(op), chSummary(hist))
 		}
 	}
 }
 
+func chSummary(h *measurement.Histogram) string {
+	res := h.GetInfo()
+
+	buf := new(bytes.Buffer)
+	buf.WriteString(fmt.Sprintf("Count: %d, ", res.Count))
+	buf.WriteString(fmt.Sprintf("Sum(ms): %d, ", res.Sum))
+	buf.WriteString(fmt.Sprintf("Avg(ms): %d", res.Avg))
+
+	return buf.String()
+}
+
 func (w Workloader) OutputStats(ifSummaryReport bool) {
 	w.measurement.Output(ifSummaryReport, outputRtMeasurement)
+	if ifSummaryReport {
+		var count int64
+		var elapsed float64
+		for _, m := range w.measurement.OpSumMeasurement {
+			if !m.Empty() {
+				r := m.GetInfo()
+				count += r.Count
+				elapsed = r.Elapsed
+			}
+		}
+		if elapsed != 0 {
+			fmt.Printf("QphH: %.1f\n", 3600/elapsed*float64(count))
+		}
+	}
 }
 
 // DBName returns the name of test db.

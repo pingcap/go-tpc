@@ -18,13 +18,6 @@ func (w *Workloader) createTableDDL(ctx context.Context, query string, tableName
 	if _, err := s.Conn.ExecContext(ctx, query); err != nil {
 		return err
 	}
-	if w.cfg.CreateTiFlashReplica {
-		fmt.Printf("creating tiflash replica for %s\n", tableName)
-		replicaSQL := fmt.Sprintf("ALTER TABLE %s SET TIFLASH REPLICA 1", tableName)
-		if _, err := s.Conn.ExecContext(ctx, replicaSQL); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

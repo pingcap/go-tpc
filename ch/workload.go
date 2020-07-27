@@ -115,6 +115,11 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 		return err
 	}
 
+	if w.cfg.CreateTiFlashReplica {
+		if err := w.createTiFlashReplica(ctx, s); err != nil {
+			return err
+		}
+	}
 	// After data loaded, analyze tables to speed up queries.
 	if w.cfg.AnalyzeTable.Enable {
 		if err := w.analyzeTables(ctx, w.cfg.AnalyzeTable); err != nil {
@@ -137,6 +142,17 @@ create view revenue1 (supplier_no, total_revenue) as (
     group by mod((s_w_id * s_i_id),10000));
 `); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (w Workloader) createTiFlashReplica(ctx context.Context, s *chState) error {
+	for _, tableName := range allTables {
+		fmt.Printf("creating tiflash replica for %s\n", tableName)
+		replicaSQL := fmt.Sprintf("ALTER TABLE %s SET TIFLASH REPLICA 1", tableName)
+		if _, err := s.Conn.ExecContext(ctx, replicaSQL); err != nil {
+			return err
+		}
 	}
 	return nil
 }

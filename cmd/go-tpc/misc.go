@@ -66,7 +66,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, threads,
 
 		if err != nil {
 			if !silence {
-				fmt.Printf("execute %s failed, err %v\n", action, err)
+				fmt.Printf("[%s] execute %s failed, err %v\n", time.Now().Format("2006-01-02 15:04:05"), action, err)
 			}
 			if !ignoreError {
 				return err

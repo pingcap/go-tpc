@@ -1,11 +1,13 @@
 # Go TPC
 
-A toolbox to benchmark workloads in [TPC](http://www.tpc.org/)
+A toolbox to benchmark workloads in [TPC](http://www.tpc.org/) for TiDB and almost MySQL compatible databases.
 
 ## Install
+
 You can use one of the three approaches
 
 ### Install using script(recommend)
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/pingcap/go-tpc/master/install.sh | sh
 ```
@@ -26,6 +28,7 @@ make build
 Then you can find the `go-tpc` binary file in the `./bin` directory.
 
 ## Usage
+
 If you have `go-tpc` in your PATH, the command below you should replace `./bin/go-tpc` with `go-tpc`
 
 By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn address, you can override it by setting below flags:
@@ -43,7 +46,7 @@ By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn add
 >
 > When exporting csv files to a directory, `go-tpc` will also create the necessary tables for further data input if 
 > the provided database address is accessible.
-    
+
 For example:
 
 ```bash
@@ -78,7 +81,7 @@ For example:
 #### Clean up
 
 ```bash
-# Cleanup 
+# Cleanup
 ./bin/go-tpc tpcc --warehouses 4 cleanup
 ```
 

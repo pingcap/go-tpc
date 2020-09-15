@@ -1,4 +1,6 @@
 # Go TPC
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fpingcap%2Fgo-tpc.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fpingcap%2Fgo-tpc?ref=badge_shield)
+
 
 A toolbox to benchmark workloads in [TPC](http://www.tpc.org/) for TiDB and almost MySQL compatible databases.
 
@@ -145,3 +147,7 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 ```bash
 ./bin/go-tpc ch --warehouses $warehouses -T $tpWorkers -t $apWorkers --time $measurement-time run
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fpingcap%2Fgo-tpc.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fpingcap%2Fgo-tpc?ref=badge_large)

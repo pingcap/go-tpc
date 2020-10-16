@@ -6,6 +6,9 @@ PACKAGE_LIST  := go list ./...| grep -vE "cmd"
 PACKAGES  := $$($(PACKAGE_LIST))
 FILES_TO_FMT  := $(shell find . -path -prune -o -name '*.go' -print)
 
+# Image URL to use all building/pushing image targets
+IMG ?= go-tpc:latest
+
 all: format test build
 
 format: vet fmt
@@ -28,3 +31,9 @@ mod:
 	@echo "go mod tidy"
 	GO111MODULE=on go mod tidy
 	@git diff --exit-code -- go.sum go.mod
+
+docker-build: test
+	docker build . -t ${IMG}
+
+docker-push: docker-build
+	docker push ${IMG}

@@ -25,4 +25,4 @@ RUN apk add --no-cache \
 COPY --from=builder /workspace/bin/go-tpc /go-tpc
 
 ENTRYPOINT [ "/usr/bin/dumb-init" ]
-ENTRYPOINT ["/go-tpc"]
+CMD ["/go-tpc"]

@@ -54,11 +54,13 @@ func closeDB() {
 
 func openDB() {
 	// TODO: support other drivers
-	var tmpDB *sql.DB
-	ds := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
-	dsn := ds + dbName
-	var err error
-	globalDB, err = sql.Open(mysqlDriver, dsn)
+	var (
+		tmpDB *sql.DB
+		err   error
+		ds    = fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
+	)
+	// allow multiple statements in one query to allow q15 on the TPC-H
+	globalDB, err = sql.Open(mysqlDriver, fmt.Sprintf("%s%s?multiStatements=true", ds, dbName))
 	if err != nil {
 		panic(err)
 	}

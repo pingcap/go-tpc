@@ -270,7 +270,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		if thinkTime > txn.thinkingTime*10 {
 			thinkTime = txn.thinkingTime * 10
 		}
-		time.Sleep(time.Duration(txn.keyingTime * float64(time.Second)))
+		time.Sleep(time.Duration(thinkTime * float64(time.Second)))
 		w.waitTimeMeasurement.Measure(fmt.Sprintf("thinkingTime-%s", txn.name), time.Now().Sub(start), nil)
 	}
 	// TODO: add check

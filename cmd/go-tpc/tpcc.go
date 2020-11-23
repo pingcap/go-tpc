@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
@@ -89,6 +90,7 @@ func registerTpcc(root *cobra.Command) {
 		},
 	}
 	cmdRun.PersistentFlags().BoolVar(&tpccConfig.Wait, "wait", false, "including keying & thinking time described on TPC-C Standard Specification")
+	cmdRun.PersistentFlags().DurationVar(&tpccConfig.MaxMeasureLatency, "max-measure-latency", measurement.DefaultMaxLatency, "max measure latency in millisecond")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

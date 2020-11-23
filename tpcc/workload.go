@@ -57,6 +57,8 @@ type Config struct {
 	// whether to involve wait times(keying time&thinking time)
 	Wait bool
 
+	MaxMeasureLatency time.Duration
+
 	// for prepare sub-command only
 	OutputType      string
 	OutputDir       string
@@ -91,13 +93,17 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		panic(fmt.Errorf("number warehouses %d must >= partition %d", cfg.Warehouses, cfg.Parts))
 	}
 
+	resetMaxLat := func(m *measurement.Measurement) {
+		m.MaxLatency = cfg.MaxMeasureLatency
+	}
+
 	w := &Workloader{
 		db:                  db,
 		cfg:                 cfg,
 		initLoadTime:        time.Now().Format(timeFormat),
 		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK),
-		rtMeasurement:       measurement.NewMeasurement(),
-		waitTimeMeasurement: measurement.NewMeasurement(),
+		rtMeasurement:       measurement.NewMeasurement(resetMaxLat),
+		waitTimeMeasurement: measurement.NewMeasurement(resetMaxLat),
 	}
 
 	w.txns = []txn{
@@ -329,7 +335,10 @@ func (w *Workloader) OutputStats(ifSummaryReport bool) {
 		hist, e := w.rtMeasurement.OpSumMeasurement["new_order"]
 		if e && !hist.Empty() {
 			result := hist.GetInfo()
-			fmt.Printf("tpmC: %.1f\n", result.Ops*60)
+			const specWarehouseFactor = 12.86
+			tpmC := result.Ops * 60
+			efc := 100 * tpmC / (specWarehouseFactor * float64(w.cfg.Warehouses))
+			fmt.Printf("tpmC: %.1f, efficiency: %.1f%%\n", tpmC, efc)
 		}
 	}
 }

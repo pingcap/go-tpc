@@ -53,9 +53,13 @@ type Workloader struct {
 // NewWorkloader new work loader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	return Workloader{
-		db:          db,
-		cfg:         cfg,
-		measurement: measurement.NewMeasurement(),
+		db:  db,
+		cfg: cfg,
+		measurement: measurement.NewMeasurement(func(m *measurement.Measurement) {
+			m.MinLatency = 100 * time.Microsecond
+			m.MaxLatency = 20 * time.Minute
+			m.SigFigs = 3
+		}),
 	}
 }
 
@@ -224,8 +228,8 @@ func chSummary(h *measurement.Histogram) string {
 
 	buf := new(bytes.Buffer)
 	buf.WriteString(fmt.Sprintf("Count: %d, ", res.Count))
-	buf.WriteString(fmt.Sprintf("Sum(ms): %d, ", res.Sum))
-	buf.WriteString(fmt.Sprintf("Avg(ms): %d", res.Avg))
+	buf.WriteString(fmt.Sprintf("Sum(ms): %.1f, ", res.Sum))
+	buf.WriteString(fmt.Sprintf("Avg(ms): %.1f", res.Avg))
 
 	return buf.String()
 }

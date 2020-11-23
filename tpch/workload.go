@@ -53,9 +53,13 @@ type Workloader struct {
 // NewWorkloader new work loader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
 	return Workloader{
-		db:          db,
-		cfg:         cfg,
-		measurement: measurement.NewMeasurement(),
+		db:  db,
+		cfg: cfg,
+		measurement: measurement.NewMeasurement(func(m *measurement.Measurement) {
+			m.MinLatency = 100 * time.Millisecond
+			m.MaxLatency = 20 * time.Minute
+			m.SigFigs = 3
+		}),
 	}
 }
 

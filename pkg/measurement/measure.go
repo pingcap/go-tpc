@@ -7,10 +7,19 @@ import (
 	"time"
 )
 
+const (
+	sigFigs           = 1
+	defaultMinLatency = 1 * time.Millisecond
+	DefaultMaxLatency = 16 * time.Second
+)
+
 type Measurement struct {
 	warmUp int32 // use as bool, 1 means in warmup progress, 0 means warmup finished.
 	sync.RWMutex
 
+	MinLatency       time.Duration
+	MaxLatency       time.Duration
+	SigFigs          int
 	OpCurMeasurement map[string]*Histogram
 	OpSumMeasurement map[string]*Histogram
 }
@@ -31,8 +40,8 @@ func (m *Measurement) getHist(op string, err error, current bool) *Histogram {
 	opM, ok := opMeasurement[op]
 	m.RUnlock()
 	if !ok {
-		opM = NewHistogram()
-		opPairedM := NewHistogram()
+		opM = NewHistogram(m.MinLatency, m.MaxLatency, m.SigFigs)
+		opPairedM := NewHistogram(m.MinLatency, m.MaxLatency, m.SigFigs)
 		m.Lock()
 		opMeasurement[op] = opM
 		opMeasurement[opPairedKey] = opPairedM
@@ -101,11 +110,20 @@ func (m *Measurement) Measure(op string, lan time.Duration, err error) {
 	m.measure(op, err, lan)
 }
 
-func NewMeasurement() *Measurement {
-	return &Measurement{
-		0,
-		sync.RWMutex{},
-		make(map[string]*Histogram, 16),
-		make(map[string]*Histogram, 16),
+func NewMeasurement(opts ...func(*Measurement)) *Measurement {
+	m := &Measurement{
+		warmUp:           0,
+		RWMutex:          sync.RWMutex{},
+		MinLatency:       defaultMinLatency,
+		MaxLatency:       DefaultMaxLatency,
+		SigFigs:          sigFigs,
+		OpCurMeasurement: make(map[string]*Histogram, 16),
+		OpSumMeasurement: make(map[string]*Histogram, 16),
 	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(m)
+		}
+	}
+	return m
 }

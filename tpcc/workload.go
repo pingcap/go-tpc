@@ -53,6 +53,7 @@ type Config struct {
 	UseFK      bool
 	Isolation  int
 	CheckAll   bool
+	NoCheck    bool
 
 	// whether to involve wait times(keying time&thinking time)
 	Wait bool

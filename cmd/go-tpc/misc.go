@@ -15,6 +15,9 @@ func checkPrepare(ctx context.Context, w workload.Workloader) {
 		fmt.Println("Skip preparing checking. Please load CSV data into database and check later.")
 		return
 	}
+	if w.Name() == "tpcc" && tpccConfig.NoCheck {
+		return
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(threads)

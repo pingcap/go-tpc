@@ -30,7 +30,6 @@ func executeTpcc(action string) {
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
-
 	var (
 		w   workload.Workloader
 		err error
@@ -68,7 +67,6 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.Parts, "parts", 1, "Number to partition warehouses")
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
-
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for TPCC",
@@ -76,6 +74,7 @@ func registerTpcc(root *cobra.Command) {
 			executeTpcc("prepare")
 		},
 	}
+	cmdPrepare.PersistentFlags().BoolVar(&tpccConfig.NoCheck, "no-check", false, "TPCC prepare check, default false")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputType, "output-type", "", "Output file type."+
 		" If empty, then load data to db. Current only support csv")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output-dir", "", "Output directory for generating file if specified")

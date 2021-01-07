@@ -295,18 +295,28 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 }
 
 func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
-	keys := make([]string, len(opMeasurement))
-	var i = 0
+	keys := make([]string, 0, len(opMeasurement))
 	for k := range opMeasurement {
-		keys[i] = k
-		i += 1
+		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
 	for _, op := range keys {
 		hist := opMeasurement[op]
 		if !hist.Empty() {
-			fmt.Printf("%s%-6s - %s\n", prefix, strings.ToUpper(op), hist.Summary())
+			info := hist.GetInfo()
+			op = strings.ToUpper(op)
+			elapsedVec.WithLabelValues(op).Set(info.Elapsed)
+			sumVec.WithLabelValues(op).Set(info.Sum)
+			countVec.WithLabelValues(op).Set(float64(info.Count))
+			opsVec.WithLabelValues(op).Set(info.Ops)
+			avgVec.WithLabelValues(op).Set(info.Avg)
+			p50Vec.WithLabelValues(op).Set(info.P50)
+			p90Vec.WithLabelValues(op).Set(info.P90)
+			p99Vec.WithLabelValues(op).Set(info.P99)
+			p999Vec.WithLabelValues(op).Set(info.P999)
+			maxVec.WithLabelValues(op).Set(info.Max)
+			fmt.Printf("%s%-6s - %s\n", prefix, op, hist.Summary())
 		}
 	}
 }

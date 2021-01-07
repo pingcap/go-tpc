@@ -4,7 +4,7 @@ var queries map[string]string
 
 const (
 	q1 = `
-select
+/*PLACEHOLDER*/ select
 	l_returnflag,
 	l_linestatus,
 	sum(l_quantity) as sum_qty,
@@ -27,7 +27,7 @@ order by
 	l_linestatus;
 `
 	q2 = `
-select
+/*PLACEHOLDER*/ select
 	s_acctbal,
 	s_name,
 	n_name,
@@ -73,7 +73,7 @@ order by
 limit 100;
 `
 	q3 = `
-select
+/*PLACEHOLDER*/ select
 	l_orderkey,
 	sum(l_extendedprice * (1 - l_discount)) as revenue,
 	o_orderdate,
@@ -98,7 +98,7 @@ order by
 limit 10;
 `
 	q4 = `
-select
+/*PLACEHOLDER*/ select
 	o_orderpriority,
 	count(*) as order_count
 from
@@ -121,7 +121,7 @@ order by
 	o_orderpriority;
 `
 	q5 = `
-select
+/*PLACEHOLDER*/ select
 	n_name,
 	sum(l_extendedprice * (1 - l_discount)) as revenue
 from
@@ -147,7 +147,7 @@ order by
 	revenue desc;
 `
 	q6 = `
-select
+/*PLACEHOLDER*/ select
 	sum(l_extendedprice * l_discount) as revenue
 from
 	lineitem
@@ -158,7 +158,7 @@ where
 	and l_quantity < 24;
 `
 	q7 = `
-select
+/*PLACEHOLDER*/ select
 	supp_nation,
 	cust_nation,
 	l_year,
@@ -199,7 +199,7 @@ order by
 	l_year;
 `
 	q8 = `
-select
+/*PLACEHOLDER*/ select
 	o_year,
 	sum(case
 		when nation = 'INDIA' then volume
@@ -238,7 +238,7 @@ order by
 	o_year;
 `
 	q9 = `
-select
+/*PLACEHOLDER*/ select
 	nation,
 	o_year,
 	sum(amount) as sum_profit
@@ -272,7 +272,7 @@ order by
 	o_year desc;
 `
 	q10 = `
-select
+/*PLACEHOLDER*/ select
 	c_custkey,
 	c_name,
 	sum(l_extendedprice * (1 - l_discount)) as revenue,
@@ -306,7 +306,7 @@ order by
 limit 20;
 `
 	q11 = `
-select
+/*PLACEHOLDER*/ select
 	ps_partkey,
 	sum(ps_supplycost * ps_availqty) as value
 from
@@ -335,7 +335,7 @@ order by
 	value desc;
 `
 	q12 = `
-select
+/*PLACEHOLDER*/ select
 	l_shipmode,
 	sum(case
 		when o_orderpriority = '1-URGENT'
@@ -365,7 +365,7 @@ order by
 	l_shipmode;
 `
 	q13 = `
-select
+/*PLACEHOLDER*/ select
 	c_count,
 	count(*) as custdist
 from
@@ -387,7 +387,7 @@ order by
 	c_count desc;
 `
 	q14 = `
-select
+/*PLACEHOLDER*/ select
 	100.00 * sum(case
 		when p_type like 'PROMO%'
 			then l_extendedprice * (1 - l_discount)
@@ -414,7 +414,7 @@ create view revenue0 (supplier_no, total_revenue) as
 	group by
 		l_suppkey;
 
-select
+/*PLACEHOLDER*/ select
 	s_suppkey,
 	s_name,
 	s_address,
@@ -437,7 +437,7 @@ order by
 drop view revenue0;
 `
 	q16 = `
-select
+/*PLACEHOLDER*/ select
 	p_brand,
 	p_type,
 	p_size,
@@ -469,7 +469,7 @@ order by
 	p_size;
 `
 	q17 = `
-select
+/*PLACEHOLDER*/ select
 	sum(l_extendedprice) / 7.0 as avg_yearly
 from
 	lineitem,
@@ -488,7 +488,7 @@ where
 	);
 `
 	q18 = `
-select
+/*PLACEHOLDER*/ select
 	c_name,
 	c_custkey,
 	o_orderkey,
@@ -523,7 +523,7 @@ order by
 limit 100;
 `
 	q19 = `
-select
+/*PLACEHOLDER*/ select
 	sum(l_extendedprice* (1 - l_discount)) as revenue
 from
 	lineitem,
@@ -560,7 +560,7 @@ where
 	);
 `
 	q20 = `
-select
+/*PLACEHOLDER*/ select
 	s_name,
 	s_address
 from
@@ -599,7 +599,7 @@ order by
 	s_name;
 `
 	q21 = `
-select
+/*PLACEHOLDER*/ select
 	s_name,
 	count(*) as numwait
 from
@@ -641,7 +641,7 @@ order by
 limit 100;
 `
 	q22 = `
-select
+/*PLACEHOLDER*/ select
 	cntrycode,
 	count(*) as numcust,
 	sum(c_acctbal) as totacctbal

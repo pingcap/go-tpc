@@ -51,13 +51,12 @@ var queryColPrecisions = map[string][]precision{
 	"q22": {num, cnt, sum},
 }
 
-func (w Workloader) checkQueryResult(queryName string, rows *sql.Rows) error {
-	defer rows.Close()
+func (w Workloader) scanQueryResult(queryName string, rows *sql.Rows) error {
 	var got [][]string
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for rows.Next() {
@@ -82,15 +81,21 @@ func (w Workloader) checkQueryResult(queryName string, rows *sql.Rows) error {
 		}
 		got = append(got, row)
 	}
-
-	return checkOutput(queryColPrecisions[queryName], ans[queryName], got)
+	if w.cfg.ScaleFactor == 1 && w.cfg.EnableOutputCheck {
+		return checkOutput(queryColPrecisions[queryName], ans[queryName], got)
+	}
+	return nil
 }
 
 func checkOutput(colPrecisions []precision, expect [][]string, got [][]string) (ret error) {
 	if len(expect) != len(got) {
 		return fmt.Errorf("expect %d rows, got %d rows", len(expect), len(got))
 	}
-
+	if len(expect) > 0 {
+		if len(expect[0]) != len(got[0]) {
+			return fmt.Errorf("expect %d columns, got %d columns", len(expect[0]), len(got[0]))
+		}
+	}
 	for i, row := range got {
 		for j, column := range row {
 			expectStr := expect[i][j]

@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpch/dbgen"
 )
@@ -34,6 +36,7 @@ type Config struct {
 	EnableOutputCheck    bool
 	CreateTiFlashReplica bool
 	AnalyzeTable         analyzeConfig
+	ExecExplainAnalyze   bool
 }
 
 type tpchState struct {
@@ -153,7 +156,9 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := queries[queryName]
-
+	if w.cfg.ExecExplainAnalyze {
+		query = strings.Replace(query, "/*PLACEHOLDER*/", "explain analyze", 1)
+	}
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
 	if err != nil {
@@ -166,11 +171,16 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 		return fmt.Errorf("execute %s failed %v", queryName, err)
 	}
 
-	// we only check scale = 1, it was much quick
-	if w.cfg.ScaleFactor == 1 && w.cfg.EnableOutputCheck {
-		if err := w.checkQueryResult(queryName, rows); err != nil {
-			return fmt.Errorf("check %s failed %v", queryName, err)
+	if w.cfg.ExecExplainAnalyze {
+		table, err := util.RenderExplainAnalyze(rows)
+		if err != nil {
+			return err
 		}
+		fmt.Fprintf(os.Stderr, "explain analyze result of query %s:\n%s\n", queryName, table)
+		return nil
+	}
+	if err := w.scanQueryResult(queryName, rows); err != nil {
+		return fmt.Errorf("check %s failed %v", queryName, err)
 	}
 	return nil
 }

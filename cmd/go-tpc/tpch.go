@@ -49,6 +49,11 @@ func registerTpch(root *cobra.Command) {
 		1,
 		"scale factor")
 
+	cmd.PersistentFlags().BoolVar(&tpchConfig.ExecExplainAnalyze,
+		"use-explain",
+		false,
+		"execute explain analyze")
+
 	cmd.PersistentFlags().BoolVar(&tpchConfig.EnableOutputCheck,
 		"check",
 		false,

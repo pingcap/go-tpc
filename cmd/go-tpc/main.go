@@ -33,6 +33,7 @@ var (
 	isolationLevel int
 	silence        bool
 	pprofAddr      string
+	metricsAddr    string
 	maxProcs       int
 
 	globalDB  *sql.DB
@@ -87,6 +88,7 @@ func main() {
 	}
 	rootCmd.PersistentFlags().IntVar(&maxProcs, "max-procs", 0, "runtime.GOMAXPROCS")
 	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Address of pprof endpoint")
+	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", "", "Address of metrics endpoint")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Database host")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "U", "root", "Database user")

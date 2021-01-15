@@ -11,6 +11,7 @@ import (
 	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpcc"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +21,15 @@ func executeTpcc(action string) {
 	if pprofAddr != "" {
 		go func() {
 			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
+		}()
+	}
+	if metricsAddr != "" {
+		go func() {
+			s := http.Server{
+				Addr:    metricsAddr,
+				Handler: promhttp.Handler(),
+			}
+			s.ListenAndServe()
 		}()
 	}
 	runtime.GOMAXPROCS(maxProcs)

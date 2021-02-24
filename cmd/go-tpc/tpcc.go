@@ -91,8 +91,8 @@ func registerTpcc(root *cobra.Command) {
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output-dir", "", "Output directory for generating file if specified")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.SpecifiedTables, "tables", "", "Specified tables for "+
 		"generating file, separated by ','. Valid only if output is set. If this flag is not set, generate all tables by default")
-	cmdPrepare.PersistentFlags().IntVar(&tpccConfig.PrepareCommitRetryCount, "prepare-retry-count", 0, "Retry count on the prepare stage, be caution since it may has side effects")
-	cmdPrepare.PersistentFlags().DurationVar(&tpccConfig.PrepareCommitRetryDuration, "prepare-retry-duration", time.Second, "The duration for each retry")
+	cmdPrepare.PersistentFlags().IntVar(&tpccConfig.PrepareReCommitCount, "retry-count", 50, "Retry count when errors occur")
+	cmdPrepare.PersistentFlags().DurationVar(&tpccConfig.PrepareReCommitDuration, "retry-duration", 10*time.Second, "The duration for each retry")
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/pingcap/go-tpc/pkg/load"
 	"github.com/pingcap/go-tpc/tpch/dbgen"
 )
@@ -173,43 +174,43 @@ func (r *regionLoader) Load(item interface{}) error {
 	return r.InsertValue(v)
 }
 
-func NewOrderLoader(ctx context.Context, conn *sql.Conn) *orderLoader {
-	return &orderLoader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO orders (O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) VALUES `),
+func NewOrderLoader(ctx context.Context, db *sql.DB) *orderLoader {
+	return &orderLoader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO orders (O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }
-func NewLineItemLoader(ctx context.Context, conn *sql.Conn) *lineItemloader {
-	return &lineItemloader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO lineitem (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) VALUES `),
+func NewLineItemLoader(ctx context.Context, db *sql.DB) *lineItemloader {
+	return &lineItemloader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO lineitem (L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }
-func NewCustLoader(ctx context.Context, conn *sql.Conn) *custLoader {
-	return &custLoader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO customer (C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT) VALUES `),
+func NewCustLoader(ctx context.Context, db *sql.DB) *custLoader {
+	return &custLoader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO customer (C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }
-func NewPartLoader(ctx context.Context, conn *sql.Conn) *partLoader {
-	return &partLoader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO part (P_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER, P_RETAILPRICE, P_COMMENT) VALUES `),
+func NewPartLoader(ctx context.Context, db *sql.DB) *partLoader {
+	return &partLoader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO part (P_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER, P_RETAILPRICE, P_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }
-func NewPartSuppLoader(ctx context.Context, conn *sql.Conn) *partSuppLoader {
-	return &partSuppLoader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO partsupp (PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, PS_COMMENT) VALUES `),
+func NewPartSuppLoader(ctx context.Context, db *sql.DB) *partSuppLoader {
+	return &partSuppLoader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO partsupp (PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, PS_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }
-func NewSuppLoader(ctx context.Context, conn *sql.Conn) *suppLoader {
-	return &suppLoader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO supplier (S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT) VALUES `),
+func NewSuppLoader(ctx context.Context, db *sql.DB) *suppLoader {
+	return &suppLoader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO supplier (S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }
-func NewNationLoader(ctx context.Context, conn *sql.Conn) *nationLoader {
-	return &nationLoader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO nation (N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT) VALUES `),
+func NewNationLoader(ctx context.Context, db *sql.DB) *nationLoader {
+	return &nationLoader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO nation (N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }
-func NewRegionLoader(ctx context.Context, conn *sql.Conn) *regionLoader {
-	return &regionLoader{sqlLoader{load.NewSQLBatchLoader(conn,
-		`INSERT INTO region (R_REGIONKEY, R_NAME, R_COMMENT) VALUES `),
+func NewRegionLoader(ctx context.Context, db *sql.DB) *regionLoader {
+	return &regionLoader{sqlLoader{load.NewSQLBatchLoader(db,
+		`INSERT INTO region (R_REGIONKEY, R_NAME, R_COMMENT) VALUES `, 0, 0),
 		ctx}}
 }

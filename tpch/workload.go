@@ -103,20 +103,18 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 	if threadID != 0 {
 		return nil
 	}
-	s := w.getState(ctx)
-
 	if err := w.createTables(ctx); err != nil {
 		return err
 	}
 	sqlLoader := map[dbgen.Table]dbgen.Loader{
-		dbgen.TOrder:  NewOrderLoader(ctx, s.Conn),
-		dbgen.TLine:   NewLineItemLoader(ctx, s.Conn),
-		dbgen.TPart:   NewPartLoader(ctx, s.Conn),
-		dbgen.TPsupp:  NewPartSuppLoader(ctx, s.Conn),
-		dbgen.TSupp:   NewSuppLoader(ctx, s.Conn),
-		dbgen.TCust:   NewCustLoader(ctx, s.Conn),
-		dbgen.TNation: NewNationLoader(ctx, s.Conn),
-		dbgen.TRegion: NewRegionLoader(ctx, s.Conn),
+		dbgen.TOrder:  NewOrderLoader(ctx, w.db),
+		dbgen.TLine:   NewLineItemLoader(ctx, w.db),
+		dbgen.TPart:   NewPartLoader(ctx, w.db),
+		dbgen.TPsupp:  NewPartSuppLoader(ctx, w.db),
+		dbgen.TSupp:   NewSuppLoader(ctx, w.db),
+		dbgen.TCust:   NewCustLoader(ctx, w.db),
+		dbgen.TNation: NewNationLoader(ctx, w.db),
+		dbgen.TRegion: NewRegionLoader(ctx, w.db),
 	}
 	dbgen.InitDbGen(int64(w.cfg.ScaleFactor))
 	if err := dbgen.DbGen(sqlLoader, []dbgen.Table{dbgen.TNation, dbgen.TRegion, dbgen.TCust, dbgen.TSupp, dbgen.TPartPsupp, dbgen.TOrderLine}); err != nil {

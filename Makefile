@@ -5,9 +5,9 @@ PACKAGE_LIST  := go list ./...| grep -vE "cmd"
 PACKAGES  := $$($(PACKAGE_LIST))
 FILES_TO_FMT  := $(shell find . -path -prune -o -name '*.go' -print)
 
-LDFLAGS += -X "github.com/pingcap/go-tpc/pkg/util.ReleaseVersion=$(shell git describe --tags --dirty --always)"
-LDFLAGS += -X "github.com/pingcap/go-tpc/pkg/util.BuildTS=$(shell date -u '+%Y-%m-%d %I:%M:%S')"
-LDFLAGS += -X "github.com/pingcap/go-tpc/pkg/util.BuildHash=$(shell git rev-parse HEAD)"
+LDFLAGS += -X "main.version=$(shell git describe --tags --dirty --always)"
+LDFLAGS += -X "main.commit=$(shell date -u '+%Y-%m-%d %I:%M:%S')"
+LDFLAGS += -X "main.date=$(shell git rev-parse HEAD)"
 
 GOBUILD=$(GO) build -ldflags '$(LDFLAGS)'
 

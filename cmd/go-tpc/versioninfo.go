@@ -4,14 +4,18 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+)
 
-	"github.com/pingcap/go-tpc/pkg/util"
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 func printVersion() {
-	fmt.Println("Git Commit Hash:", util.BuildHash)
-	fmt.Println("UTC Build Time:", util.BuildTS)
-	fmt.Println("Release version:", util.ReleaseVersion)
+	fmt.Println("Git Commit Hash:", commit)
+	fmt.Println("UTC Build Time:", date)
+	fmt.Println("Release version:", version)
 }
 
 func registerVersionInfo(root *cobra.Command) {

@@ -15,6 +15,9 @@ builds:
       - linux
       - darwin
 
+    gobinary: "go1.16"
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
 archives:
   - files:
     - none*

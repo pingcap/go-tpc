@@ -64,6 +64,10 @@ type Config struct {
 	OutputType      string
 	OutputDir       string
 	SpecifiedTables string
+
+	// connection, retry count when commiting statement fails, default 0
+	PrepareReCommitCount    int
+	PrepareReCommitDuration time.Duration
 }
 
 // Workloader is TPCC workload

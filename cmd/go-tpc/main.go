@@ -109,6 +109,7 @@ func main() {
 
 	cobra.EnablePrefixMatching = true
 
+	registerVersionInfo(rootCmd)
 	registerTpcc(rootCmd)
 	registerTpch(rootCmd)
 	registerCHBenchmark(rootCmd)

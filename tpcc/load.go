@@ -25,7 +25,7 @@ func (w *Workloader) loadItem(ctx context.Context) error {
 	s := getTPCCState(ctx)
 	hint := "INSERT INTO item (i_id, i_im_id, i_name, i_price, i_data) VALUES "
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	for i := 0; i < maxItems; i++ {
 		s.Buf.Reset()
@@ -50,7 +50,7 @@ func (w *Workloader) loadWarehouse(ctx context.Context, warehouse int) error {
 	s := getTPCCState(ctx)
 	hint := "INSERT INTO warehouse (w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) VALUES "
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	wName := randChars(s.R, s.Buf, 6, 10)
 	wStree1 := randChars(s.R, s.Buf, 10, 20)
@@ -80,7 +80,7 @@ func (w *Workloader) loadStock(ctx context.Context, warehouse int) error {
 s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, 
 s_dist_07, s_dist_08, s_dist_09, s_dist_10, s_ytd, s_order_cnt, s_remote_cnt, s_data) VALUES `
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	for i := 0; i < stockPerWarehouse; i++ {
 		s.Buf.Reset()
@@ -122,7 +122,7 @@ func (w *Workloader) loadDistrict(ctx context.Context, warehouse int) error {
 	hint := `INSERT INTO district (d_id, d_w_id, d_name, d_street_1, d_street_2, 
 d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) VALUES `
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	for i := 0; i < districtPerWarehouse; i++ {
 		s.Buf.Reset()
@@ -158,7 +158,7 @@ func (w *Workloader) loadCustomer(ctx context.Context, warehouse int, district i
 c_street_1, c_street_2, c_city, c_state, c_zip, c_phone, c_since, c_credit, c_credit_lim,
 c_discount, c_balance, c_ytd_payment, c_payment_cnt, c_delivery_cnt, c_data) VALUES `
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	for i := 0; i < customerPerDistrict; i++ {
 		s.Buf.Reset()
@@ -212,7 +212,7 @@ func (w *Workloader) loadHistory(ctx context.Context, warehouse int, district in
 	s := getTPCCState(ctx)
 
 	hint := `INSERT INTO history (h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES `
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	// 1 customer has 1 row
 	for i := 0; i < customerPerDistrict; i++ {
@@ -245,7 +245,7 @@ func (w *Workloader) loadOrder(ctx context.Context, warehouse int, district int)
 	hint := `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, 
 o_carrier_id, o_ol_cnt, o_all_local) VALUES `
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	cids := rand.Perm(orderPerDistrict)
 	s.R.Shuffle(len(cids), func(i, j int) {
@@ -285,7 +285,7 @@ func (w *Workloader) loadNewOrder(ctx context.Context, warehouse int, district i
 
 	hint := `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES `
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	for i := 0; i < newOrderPerDistrict; i++ {
 		s.Buf.Reset()
@@ -312,7 +312,7 @@ func (w *Workloader) loadOrderLine(ctx context.Context, warehouse int, district 
 	hint := `INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number,
 ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info) VALUES `
 
-	l := load.NewSQLBatchLoader(s.Conn, hint)
+	l := load.NewSQLBatchLoader(w.db, hint, w.cfg.PrepareReCommitCount, w.cfg.PrepareReCommitDuration)
 
 	for i := 0; i < orderPerDistrict; i++ {
 		for j := 0; j < olCnts[i]; j++ {

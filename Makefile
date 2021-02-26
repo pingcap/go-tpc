@@ -1,10 +1,15 @@
-GOOS := $(if $(GOOS),$(GOOS),linux)
 GOARCH := $(if $(GOARCH),$(GOARCH),amd64)
-GO=GO15VENDOREXPERIMENT="1" CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) GO111MODULE=on go
+GO=GO15VENDOREXPERIMENT="1" CGO_ENABLED=0 GOARCH=$(GOARCH) GO111MODULE=on go
 
 PACKAGE_LIST  := go list ./...| grep -vE "cmd"
 PACKAGES  := $$($(PACKAGE_LIST))
 FILES_TO_FMT  := $(shell find . -path -prune -o -name '*.go' -print)
+
+LDFLAGS += -X "github.com/pingcap/go-tpc/pkg/util.ReleaseVersion=$(shell git describe --tags --dirty --always)"
+LDFLAGS += -X "github.com/pingcap/go-tpc/pkg/util.BuildTS=$(shell date -u '+%Y-%m-%d %I:%M:%S')"
+LDFLAGS += -X "github.com/pingcap/go-tpc/pkg/util.BuildHash=$(shell git rev-parse HEAD)"
+
+GOBUILD=$(GO) build -ldflags '$(LDFLAGS)'
 
 # Image URL to use all building/pushing image targets
 IMG ?= go-tpc:latest
@@ -22,7 +27,7 @@ test:
 	go test ./... -cover $(PACKAGES)
 
 build: mod
-	go build -o ./bin/go-tpc cmd/go-tpc/*
+	$(GOBUILD) -o ./bin/go-tpc cmd/go-tpc/*
 
 vet:
 	go vet ./...

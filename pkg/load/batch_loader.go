@@ -5,7 +5,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/csv"
+	"fmt"
 	"os"
+	"strings"
+	"time"
 )
 
 const (
@@ -20,17 +23,23 @@ type BatchLoader interface {
 // SQLBatchLoader helps us insert in batch
 type SQLBatchLoader struct {
 	insertHint string
-	conn       *sql.Conn
+	db         *sql.DB
 	buf        bytes.Buffer
 	count      int
+
+	// loader retry
+	retryCount    int
+	retryDuration time.Duration
 }
 
 // NewSQLBatchLoader creates a batch loader for database connection
-func NewSQLBatchLoader(conn *sql.Conn, hint string) *SQLBatchLoader {
+func NewSQLBatchLoader(db *sql.DB, hint string, retryCount int, retryDuration time.Duration) *SQLBatchLoader {
 	return &SQLBatchLoader{
-		count:      0,
-		insertHint: hint,
-		conn:       conn,
+		count:         0,
+		insertHint:    hint,
+		db:            db,
+		retryCount:    retryCount,
+		retryDuration: retryDuration,
 	}
 }
 
@@ -59,7 +68,21 @@ func (b *SQLBatchLoader) Flush(ctx context.Context) error {
 		return nil
 	}
 
-	_, err := b.conn.ExecContext(ctx, b.buf.String())
+	var err error
+	for i := 0; i < 1+b.retryCount; i++ {
+		_, err = b.db.ExecContext(ctx, b.buf.String())
+		if err == nil || (strings.Contains(err.Error(), "Error 1062: Duplicate entry") && i == 0) {
+			break
+		}
+		if i < b.retryCount {
+			fmt.Printf("exec statement error: %v, may try again later...\n", err)
+			time.Sleep(b.retryDuration)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("exec statement error: %v", err)
+	}
+
 	b.count = 0
 	b.buf.Reset()
 

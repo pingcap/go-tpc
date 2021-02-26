@@ -105,6 +105,9 @@ func executeWorkload(ctx context.Context, w workload.Workloader, threads int, ac
 		go func(index int) {
 			defer wg.Done()
 			if err := execute(ctx, w, action, threads, index); err != nil {
+				if action == "prepare" {
+					panic(fmt.Sprintf("a fatal occurred when preparing data: %v", err))
+				}
 				fmt.Printf("execute %s failed, err %v\n", action, err)
 				return
 			}

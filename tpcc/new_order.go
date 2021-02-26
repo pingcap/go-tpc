@@ -174,7 +174,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 
 	// Process 1
 	if err := s.newOrderStmts[newOrderSelectCustomer].QueryRowContext(ctx, d.wID, d.dID, d.cID).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
-		return fmt.Errorf("exec %s failed %v", newOrderSelectCustomer, err)
+		return fmt.Errorf("exec %s(wID=%d,dID=%d,cID=%d) failed %v", newOrderSelectCustomer, d.wID, d.dID, d.cID, err)
 	}
 
 	// Process 2

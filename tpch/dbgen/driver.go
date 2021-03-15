@@ -2,6 +2,7 @@ package dbgen
 
 import (
 	"fmt"
+	"sync"
 )
 
 type Table int
@@ -106,16 +107,23 @@ func DbGen(loaders map[Table]Loader, tables []Table) error {
 		tDefs[table].loader = loader
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(len(tables))
 	for _, i := range tables {
-		fmt.Printf("generating %s\n", tDefs[i].comment)
-		rowCnt := tDefs[i].base
-		if i < TNation {
-			rowCnt *= scale
-		}
-		if err := genTbl(i, 1, rowCnt); err != nil {
-			return fmt.Errorf("fail to generate %s, err: %v", tDefs[i].name, err)
-		}
-		fmt.Printf("generate %s done\n", tDefs[i].comment)
+		go func(i Table) {
+			fmt.Printf("generating %s\n", tDefs[i].comment)
+			defer wg.Done()
+			rowCnt := tDefs[i].base
+			if i < TNation {
+				rowCnt *= scale
+			}
+			if err := genTbl(i, 1, rowCnt); err != nil {
+				fmt.Errorf("fail to generate %s, err: %v", tDefs[i].name, err)
+				return
+			}
+			fmt.Printf("generate %s done\n", tDefs[i].comment)
+		}(i)
 	}
+	wg.Wait()
 	return nil
 }

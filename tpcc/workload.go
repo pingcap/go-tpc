@@ -194,7 +194,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := getTPCCState(ctx)
 	refreshConn := false
 	if err := s.Conn.PingContext(ctx); err != nil {
-		if err := s.RereshConn(ctx); err != nil {
+		if err := s.RefreshConn(ctx); err != nil {
 			return err
 		}
 		refreshConn = true

@@ -19,7 +19,7 @@ type TpcState struct {
 	Buf *util.BufAllocator
 }
 
-func (t *TpcState) RereshConn(ctx context.Context) error {
+func (t *TpcState) RefreshConn(ctx context.Context) error {
 	conn, err := t.DB.Conn(ctx)
 	if err != nil {
 		return err

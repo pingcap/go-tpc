@@ -192,8 +192,14 @@ func getTPCCState(ctx context.Context) *tpccState {
 // Run implements Workloader interface
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := getTPCCState(ctx)
-
-	if s.newOrderStmts == nil {
+	refreshConn := false
+	if err := s.Conn.PingContext(ctx); err != nil {
+		if err := s.RefreshConn(ctx); err != nil {
+			return err
+		}
+		refreshConn = true
+	}
+	if s.newOrderStmts == nil || refreshConn {
 		s.newOrderStmts = map[string]*sql.Stmt{
 			newOrderSelectCustomer: prepareStmt(ctx, s.Conn, newOrderSelectCustomer),
 			newOrderSelectDistrict: prepareStmt(ctx, s.Conn, newOrderSelectDistrict),

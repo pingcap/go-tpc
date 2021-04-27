@@ -6,8 +6,8 @@ PACKAGES  := $$($(PACKAGE_LIST))
 FILES_TO_FMT  := $(shell find . -path -prune -o -name '*.go' -print)
 
 LDFLAGS += -X "main.version=$(shell git describe --tags --dirty --always)"
-LDFLAGS += -X "main.commit=$(shell date -u '+%Y-%m-%d %I:%M:%S')"
-LDFLAGS += -X "main.date=$(shell git rev-parse HEAD)"
+LDFLAGS += -X "main.commit=$(shell git rev-parse HEAD)"
+LDFLAGS += -X "main.date=$(shell date -u '+%Y-%m-%d %I:%M:%S')"
 
 GOBUILD=$(GO) build -ldflags '$(LDFLAGS)'
 

@@ -58,17 +58,17 @@ For example:
 #### Prepare
 
 ```bash
-# Create 4 warehouses and use 4 partitions by HASH 
-./bin/go-tpc tpcc --warehouses 4 --parts 4 prepare
+# Create 4 warehouses with 4 threads
+./bin/go-tpc tpcc --warehouses 4 prepare -T 4
 ```
 
 #### Run
 
 ```bash
 # Run TPCC workloads, you can just run or add --wait option to including wait times
-./bin/go-tpc tpcc --warehouses 4 run
+./bin/go-tpc tpcc --warehouses 4 run -T 4
 # Run TPCC including wait times(keying & thinking time) on every transactions
-./bin/go-tpc tpcc --warehouses 4 run --wait
+./bin/go-tpc tpcc --warehouses 4 run -T 4 --wait
 ```
 
 #### Check

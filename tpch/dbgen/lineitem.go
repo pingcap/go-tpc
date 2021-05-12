@@ -80,7 +80,7 @@ func (l lineItemLoader) Flush() error {
 	return nil
 }
 
-func newLineItemLoader(writer io.StringWriter) lineItemLoader {
+func NewLineItemLoader(writer io.StringWriter) lineItemLoader {
 	return lineItemLoader{writer}
 }
 

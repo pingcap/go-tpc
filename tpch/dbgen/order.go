@@ -81,7 +81,7 @@ func (o orderLoader) Flush() error {
 	return nil
 }
 
-func newOrderLoader(writer io.StringWriter) orderLoader {
+func NewOrderLoader(writer io.StringWriter) orderLoader {
 	return orderLoader{writer}
 }
 

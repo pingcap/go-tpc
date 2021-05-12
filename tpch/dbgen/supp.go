@@ -62,7 +62,7 @@ func (s suppLoader) Flush() error {
 	return nil
 }
 
-func newSuppLoader(writer io.StringWriter) suppLoader {
+func NewSuppLoader(writer io.StringWriter) suppLoader {
 	return suppLoader{writer}
 }
 

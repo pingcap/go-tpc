@@ -84,7 +84,7 @@ func (p partLoader) Flush() error {
 	return nil
 }
 
-func newPartLoader(writer io.StringWriter) partLoader {
+func NewPartLoader(writer io.StringWriter) partLoader {
 	return partLoader{writer}
 }
 

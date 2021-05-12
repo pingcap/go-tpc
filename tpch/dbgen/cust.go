@@ -54,7 +54,7 @@ func (c custLoader) Flush() error {
 	return nil
 }
 
-func newCustLoader(writer io.StringWriter) custLoader {
+func NewCustLoader(writer io.StringWriter) custLoader {
 	return custLoader{writer}
 }
 

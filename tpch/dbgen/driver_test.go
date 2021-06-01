@@ -182,14 +182,14 @@ func TestMain(m *testing.M) {
 	InitDbGen(1)
 
 	// mock writer
-	tDefs[TOrder].loader = newOrderLoader(&gotOrdersBuf)
-	tDefs[TLine].loader = newLineItemLoader(&gotLinesBuf)
-	tDefs[TSupp].loader = newSuppLoader(&gotSuppsBuf)
-	tDefs[TCust].loader = newCustLoader(&gotCustsBuf)
-	tDefs[TPart].loader = newPartLoader(&gotPartsBuf)
-	tDefs[TPsupp].loader = newPartSuppLoader(&gotPartSuppsBuf)
-	tDefs[TNation].loader = newNationLoader(&gotNationsBuf)
-	tDefs[TRegion].loader = newRegionLoader(&gotRegionsBuf)
+	tDefs[TOrder].loader = NewOrderLoader(&gotOrdersBuf)
+	tDefs[TLine].loader = NewLineItemLoader(&gotLinesBuf)
+	tDefs[TSupp].loader = NewSuppLoader(&gotSuppsBuf)
+	tDefs[TCust].loader = NewCustLoader(&gotCustsBuf)
+	tDefs[TPart].loader = NewPartLoader(&gotPartsBuf)
+	tDefs[TPsupp].loader = NewPartSuppLoader(&gotPartSuppsBuf)
+	tDefs[TNation].loader = NewNationLoader(&gotNationsBuf)
+	tDefs[TRegion].loader = NewRegionLoader(&gotRegionsBuf)
 	tDefs[TOrderLine].loader = newOrderLineLoader()
 	tDefs[TPartPsupp].loader = newPartPsuppLoader()
 

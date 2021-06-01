@@ -35,8 +35,7 @@ var (
 	pprofAddr      string
 	metricsAddr    string
 	maxProcs       int
-	connParams      string
-
+	connParams     string
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -113,7 +112,6 @@ func main() {
 2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 
 5: Snapshot, 6: Serializable, 7: Linerizable`)
 	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables")
-
 
 	cobra.EnablePrefixMatching = true
 

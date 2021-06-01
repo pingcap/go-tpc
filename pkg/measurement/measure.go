@@ -2,6 +2,7 @@ package measurement
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -85,7 +86,12 @@ func (m *Measurement) Output(ifSummaryReport bool, outputFunc func(string, map[s
 	var opCurMeasurement = m.takeCurMeasurement()
 	m.RLock()
 	defer m.RUnlock()
-	outputFunc("[Current] ", opCurMeasurement)
+	currentTime := time.Now()
+	var sb strings.Builder
+	sb.WriteString("[")
+	sb.WriteString(currentTime.Format("2006-01-02 15:04:05"))
+	sb.WriteString("]")
+	outputFunc(sb.String(), opCurMeasurement)
 }
 
 // EnableWarmUp sets whether to enable warm-up.

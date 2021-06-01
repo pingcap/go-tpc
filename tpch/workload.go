@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -37,6 +38,10 @@ type Config struct {
 	CreateTiFlashReplica bool
 	AnalyzeTable         analyzeConfig
 	ExecExplainAnalyze   bool
+
+	// for prepare command only
+	OutputType string
+	OutputDir  string
 }
 
 type tpchState struct {
@@ -106,16 +111,40 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 	if err := w.createTables(ctx); err != nil {
 		return err
 	}
-	sqlLoader := map[dbgen.Table]dbgen.Loader{
-		dbgen.TOrder:  NewOrderLoader(ctx, w.db),
-		dbgen.TLine:   NewLineItemLoader(ctx, w.db),
-		dbgen.TPart:   NewPartLoader(ctx, w.db),
-		dbgen.TPsupp:  NewPartSuppLoader(ctx, w.db),
-		dbgen.TSupp:   NewSuppLoader(ctx, w.db),
-		dbgen.TCust:   NewCustLoader(ctx, w.db),
-		dbgen.TNation: NewNationLoader(ctx, w.db),
-		dbgen.TRegion: NewRegionLoader(ctx, w.db),
+	var sqlLoader map[dbgen.Table]dbgen.Loader
+	if w.cfg.OutputType == "csv" {
+		if _, err := os.Stat(w.cfg.OutputDir); err != nil {
+			if os.IsNotExist(err) {
+				if err := os.Mkdir(w.cfg.OutputDir, os.ModePerm); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+		sqlLoader = map[dbgen.Table]dbgen.Loader{
+			dbgen.TOrder:  dbgen.NewOrderLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.orders.csv", w.DBName())))),
+			dbgen.TLine:   dbgen.NewLineItemLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.lineitem.csv", w.DBName())))),
+			dbgen.TPart:   dbgen.NewPartLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.part.csv", w.DBName())))),
+			dbgen.TPsupp:  dbgen.NewPartSuppLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.partsupp.csv", w.DBName())))),
+			dbgen.TSupp:   dbgen.NewSuppLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.supplier.csv", w.DBName())))),
+			dbgen.TCust:   dbgen.NewCustLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.customer.csv", w.DBName())))),
+			dbgen.TNation: dbgen.NewNationLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.nation.csv", w.DBName())))),
+			dbgen.TRegion: dbgen.NewRegionLoader(util.CreateFile(path.Join(w.cfg.OutputDir, fmt.Sprintf("%s.region.csv", w.DBName())))),
+		}
+	} else {
+		sqlLoader = map[dbgen.Table]dbgen.Loader{
+			dbgen.TOrder:  NewOrderLoader(ctx, w.db),
+			dbgen.TLine:   NewLineItemLoader(ctx, w.db),
+			dbgen.TPart:   NewPartLoader(ctx, w.db),
+			dbgen.TPsupp:  NewPartSuppLoader(ctx, w.db),
+			dbgen.TSupp:   NewSuppLoader(ctx, w.db),
+			dbgen.TCust:   NewCustLoader(ctx, w.db),
+			dbgen.TNation: NewNationLoader(ctx, w.db),
+			dbgen.TRegion: NewRegionLoader(ctx, w.db),
+		}
 	}
+
 	dbgen.InitDbGen(int64(w.cfg.ScaleFactor))
 	if err := dbgen.DbGen(sqlLoader, []dbgen.Table{dbgen.TNation, dbgen.TRegion, dbgen.TCust, dbgen.TSupp, dbgen.TPartPsupp, dbgen.TOrderLine}); err != nil {
 		return err

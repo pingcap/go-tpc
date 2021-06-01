@@ -49,6 +49,6 @@ func (n nationLoader) Flush() error {
 	return nil
 }
 
-func newNationLoader(writer io.StringWriter) nationLoader {
+func NewNationLoader(writer io.StringWriter) nationLoader {
 	return nationLoader{writer}
 }

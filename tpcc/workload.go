@@ -44,16 +44,24 @@ type tpccState struct {
 	paymentStmts     map[string]*sql.Stmt
 }
 
+const (
+	PartitionTypeHash = iota + 1
+	PartitionTypeRange
+	PartitionTypeListAsHash
+	PartitionTypeListAsRange
+)
+
 // Config is the configuration for tpcc workload
 type Config struct {
-	DBName     string
-	Threads    int
-	Parts      int
-	Warehouses int
-	UseFK      bool
-	Isolation  int
-	CheckAll   bool
-	NoCheck    bool
+	DBName        string
+	Threads       int
+	Parts         int
+	PartitionType int
+	Warehouses    int
+	UseFK         bool
+	Isolation     int
+	CheckAll      bool
+	NoCheck       bool
 
 	// whether to involve wait times(keying time&thinking time)
 	Wait bool
@@ -98,6 +106,10 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		panic(fmt.Errorf("number warehouses %d must >= partition %d", cfg.Warehouses, cfg.Parts))
 	}
 
+	if cfg.PartitionType < PartitionTypeHash || cfg.PartitionType > PartitionTypeListAsRange {
+		panic(fmt.Errorf("Unknown partition type %d", cfg.PartitionType))
+	}
+
 	resetMaxLat := func(m *measurement.Measurement) {
 		m.MaxLatency = cfg.MaxMeasureLatency
 	}
@@ -106,7 +118,7 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		db:                  db,
 		cfg:                 cfg,
 		initLoadTime:        time.Now().Format(timeFormat),
-		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK),
+		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK, cfg.Warehouses, cfg.PartitionType),
 		rtMeasurement:       measurement.NewMeasurement(resetMaxLat),
 		waitTimeMeasurement: measurement.NewMeasurement(resetMaxLat),
 	}

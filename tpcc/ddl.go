@@ -18,12 +18,14 @@ const (
 )
 
 type ddlManager struct {
-	parts int
-	useFK bool
+	parts         int
+	warehouses    int
+	partitionType int
+	useFK         bool
 }
 
-func newDDLManager(parts int, useFK bool) *ddlManager {
-	return &ddlManager{parts: parts, useFK: useFK}
+func newDDLManager(parts int, useFK bool, warehouses, partitionType int) *ddlManager {
+	return &ddlManager{parts: parts, useFK: useFK, warehouses: warehouses, partitionType: partitionType}
 }
 
 func (w *ddlManager) createTableDDL(ctx context.Context, query string, tableName string) error {
@@ -39,8 +41,61 @@ func (w *ddlManager) appendPartition(query string, partKeys string) string {
 	if w.parts <= 1 {
 		return query
 	}
+	if w.partitionType == PartitionTypeListAsHash {
+		// Generate LIST partitions equivalent with HASH partitions
+		s := fmt.Sprintf("%s\nPARTITION BY LIST (%s)\n(", query, partKeys)
+		for i := 0; i < w.parts; i++ {
+			if i > 0 {
+				s = s + ",\n "
+			}
+			var part string
+			for j := i; j < w.warehouses; j = j + w.parts {
+				if j > i {
+					part = part + ","
+				}
+				part = part + fmt.Sprintf("%d", j+1)
+			}
+			s = fmt.Sprintf("%sPARTITION p%d VALUES IN (%s)", s, i, part)
+		}
+		return s + ")"
+	} else if w.partitionType == PartitionTypeListAsRange {
+		// Generate LIST partitions equivalent with RANGE partitions
+		s := fmt.Sprintf("%s\nPARTITION BY LIST (%s)\n(", query, partKeys)
+		for i := 0; i < w.parts; i++ {
+			if i > 0 {
+				s = s + ",\n "
+			}
+			var part string
+			warehousesPerPartition := w.warehouses / w.parts
+			if (w.warehouses % w.parts) != 0 {
+				warehousesPerPartition++
+			}
+			for j := i * warehousesPerPartition; j < ((i+1)*warehousesPerPartition) && j < w.warehouses; j++ {
+				if j > i*warehousesPerPartition {
+					part = part + ","
+				}
+				part = part + fmt.Sprintf("%d", j+1)
+			}
+			s = fmt.Sprintf("%sPARTITION p%d VALUES IN (%s)", s, i, part)
+		}
+		return s + ")"
+	} else if w.partitionType == PartitionTypeRange {
+		// Generate RANGE partitions
+		s := fmt.Sprintf("%s\nPARTITION BY RANGE (%s)\n(", query, partKeys)
+		for i := 0; i < w.parts; i++ {
+			if i > 0 {
+				s = s + ",\n "
+			}
+			warehousesPerPartition := w.warehouses / w.parts
+			if (w.warehouses % w.parts) != 0 {
+				warehousesPerPartition++
+			}
+			s = fmt.Sprintf("%sPARTITION p%d VALUES LESS THAN (%d)", s, i, 1+(i+1)*warehousesPerPartition)
+		}
+		return s + ")"
+	}
 
-	return fmt.Sprintf("%s\n PARTITION BY HASH(%s)\n PARTITIONS %d", query, partKeys, w.parts)
+	return fmt.Sprintf("%s\nPARTITION BY HASH(%s)\nPARTITIONS %d", query, partKeys, w.parts)
 }
 
 // createTables creates tables schema.

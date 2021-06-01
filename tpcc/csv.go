@@ -42,7 +42,7 @@ func NewCSVWorkloader(db *sql.DB, cfg *Config) (*CSVWorkLoader, error) {
 		cfg:          cfg,
 		initLoadTime: time.Now().Format(timeFormat),
 		tables:       make(map[string]bool),
-		ddlManager:   newDDLManager(cfg.Parts, cfg.UseFK),
+		ddlManager:   newDDLManager(cfg.Parts, cfg.UseFK, cfg.Warehouses, cfg.PartitionType),
 	}
 
 	var val bool

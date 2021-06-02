@@ -3,7 +3,7 @@ package tpcc
 import "testing"
 
 func TestAppendPartition(t *testing.T) {
-	ddl := newDDLManager(4, false, 4, 1)
+	ddl := newDDLManager(4, false, 4, PartitionTypeHash)
 	s := ddl.appendPartition("<table definition>", "Id")
 	expected := `<table definition>
 PARTITION BY HASH(Id)
@@ -12,7 +12,7 @@ PARTITIONS 4`
 		t.Errorf("got '%s' expected '%s'", s, expected)
 	}
 
-	ddl = newDDLManager(4, false, 4, 2)
+	ddl = newDDLManager(4, false, 4, PartitionTypeRange)
 	s = ddl.appendPartition("<table definition>", "Id")
 	expected = `<table definition>
 PARTITION BY RANGE (Id)
@@ -24,7 +24,7 @@ PARTITION BY RANGE (Id)
 		t.Errorf("got '%s' expected '%s'", s, expected)
 	}
 
-	ddl = newDDLManager(4, false, 23, 2)
+	ddl = newDDLManager(4, false, 23, PartitionTypeRange)
 	s = ddl.appendPartition("<table definition>", "Id")
 	expected = `<table definition>
 PARTITION BY RANGE (Id)
@@ -36,7 +36,7 @@ PARTITION BY RANGE (Id)
 		t.Errorf("got '%s' expected '%s'", s, expected)
 	}
 
-	ddl = newDDLManager(4, false, 12, 3)
+	ddl = newDDLManager(4, false, 12, PartitionTypeListAsHash)
 	s = ddl.appendPartition("<table definition>", "Id")
 	expected = `<table definition>
 PARTITION BY LIST (Id)
@@ -48,7 +48,18 @@ PARTITION BY LIST (Id)
 		t.Errorf("got '%s' expected '%s'", s, expected)
 	}
 
-	ddl = newDDLManager(4, false, 23, 3)
+	ddl = newDDLManager(3, false, 4, PartitionTypeListAsHash)
+	s = ddl.appendPartition("<table definition>", "Id")
+	expected = `<table definition>
+PARTITION BY LIST (Id)
+(PARTITION p0 VALUES IN (1,4),
+ PARTITION p1 VALUES IN (2),
+ PARTITION p2 VALUES IN (3))`
+	if s != expected {
+		t.Errorf("got '%s' expected '%s'", s, expected)
+	}
+
+	ddl = newDDLManager(4, false, 23, PartitionTypeListAsHash)
 	s = ddl.appendPartition("<table definition>", "Id")
 	expected = `<table definition>
 PARTITION BY LIST (Id)
@@ -60,7 +71,7 @@ PARTITION BY LIST (Id)
 		t.Errorf("got '%s' expected '%s'", s, expected)
 	}
 
-	ddl = newDDLManager(4, false, 12, 4)
+	ddl = newDDLManager(4, false, 12, PartitionTypeListAsRange)
 	s = ddl.appendPartition("<table definition>", "Id")
 	expected = `<table definition>
 PARTITION BY LIST (Id)
@@ -72,7 +83,18 @@ PARTITION BY LIST (Id)
 		t.Errorf("got '%s' expected '%s'", s, expected)
 	}
 
-	ddl = newDDLManager(4, false, 23, 4)
+	ddl = newDDLManager(3, false, 4, PartitionTypeListAsRange)
+	s = ddl.appendPartition("<table definition>", "Id")
+	expected = `<table definition>
+PARTITION BY LIST (Id)
+(PARTITION p0 VALUES IN (1,2),
+ PARTITION p1 VALUES IN (3),
+ PARTITION p2 VALUES IN (4))`
+	if s != expected {
+		t.Errorf("got '%s' expected '%s'", s, expected)
+	}
+
+	ddl = newDDLManager(4, false, 23, PartitionTypeListAsRange)
 	s = ddl.appendPartition("<table definition>", "Id")
 	expected = `<table definition>
 PARTITION BY LIST (Id)

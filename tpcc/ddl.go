@@ -61,20 +61,24 @@ func (w *ddlManager) appendPartition(query string, partKeys string) string {
 	} else if w.partitionType == PartitionTypeListAsRange {
 		// Generate LIST partitions equivalent with RANGE partitions
 		s := fmt.Sprintf("%s\nPARTITION BY LIST (%s)\n(", query, partKeys)
+		addedWarehouses := 0
 		for i := 0; i < w.parts; i++ {
 			if i > 0 {
 				s = s + ",\n "
 			}
-			var part string
-			warehousesPerPartition := w.warehouses / w.parts
-			if (w.warehouses % w.parts) != 0 {
+			warehousesToAdd := w.warehouses - addedWarehouses
+			partsLeft := w.parts - i
+			warehousesPerPartition := warehousesToAdd / partsLeft
+			if (warehousesToAdd % partsLeft) != 0 {
 				warehousesPerPartition++
 			}
-			for j := i * warehousesPerPartition; j < ((i+1)*warehousesPerPartition) && j < w.warehouses; j++ {
-				if j > i*warehousesPerPartition {
+			var part string
+			for j := 0; j < warehousesPerPartition; j++ {
+				if j > 0 {
 					part = part + ","
 				}
-				part = part + fmt.Sprintf("%d", j+1)
+				addedWarehouses++
+				part = part + fmt.Sprintf("%d", addedWarehouses)
 			}
 			s = fmt.Sprintf("%sPARTITION p%d VALUES IN (%s)", s, i, part)
 		}

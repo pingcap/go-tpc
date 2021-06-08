@@ -117,8 +117,8 @@ func NewMeasurement(opts ...func(*Measurement)) *Measurement {
 		MinLatency:       defaultMinLatency,
 		MaxLatency:       DefaultMaxLatency,
 		SigFigs:          sigFigs,
-		OpCurMeasurement: make(map[string]*Histogram, 16),
-		OpSumMeasurement: make(map[string]*Histogram, 16),
+		OpCurMeasurement: make(map[string]*Histogram, 1),
+		OpSumMeasurement: make(map[string]*Histogram, 1),
 	}
 	for _, opt := range opts {
 		if opt != nil {

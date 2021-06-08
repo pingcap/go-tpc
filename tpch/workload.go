@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"sort"
 	"strings"
 	"time"
 
@@ -232,7 +231,7 @@ func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Hi
 		keys[i] = k
 		i += 1
 	}
-	sort.Strings(keys)
+	//sort.Strings(keys)
 
 	for _, op := range keys {
 		hist := opMeasurement[op]

@@ -62,6 +62,9 @@ type Config struct {
 	Isolation     int
 	CheckAll      bool
 	NoCheck       bool
+	// Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel.
+	// Should be int between [0, 100) and sums to 100.
+	Weight []int
 
 	// whether to involve wait times(keying time&thinking time)
 	Wait bool
@@ -109,6 +112,20 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	if cfg.PartitionType < PartitionTypeHash || cfg.PartitionType > PartitionTypeListAsRange {
 		panic(fmt.Errorf("Unknown partition type %d", cfg.PartitionType))
 	}
+	switch l := len(cfg.Weight); l {
+	case 0:
+		cfg.Weight = []int{45, 43, 4, 4, 4}
+	case 5:
+		totalWeight := 0
+		for _, w := range cfg.Weight {
+			totalWeight += w
+		}
+		if totalWeight != 100 {
+			panic(fmt.Errorf("The sum of weight should be 100: %v", cfg.Weight))
+		}
+	default:
+		panic(fmt.Errorf("Should specify exact 5 weights: %v", cfg.Weight))
+	}
 
 	resetMaxLat := func(m *measurement.Measurement) {
 		m.MaxLatency = cfg.MaxMeasureLatency
@@ -124,11 +141,11 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	}
 
 	w.txns = []txn{
-		{name: "new_order", action: w.runNewOrder, weight: 45, keyingTime: 18, thinkingTime: 12},
-		{name: "payment", action: w.runPayment, weight: 43, keyingTime: 3, thinkingTime: 12},
-		{name: "order_status", action: w.runOrderStatus, weight: 4, keyingTime: 2, thinkingTime: 10},
-		{name: "delivery", action: w.runDelivery, weight: 4, keyingTime: 2, thinkingTime: 5},
-		{name: "stock_level", action: w.runStockLevel, weight: 4, keyingTime: 2, thinkingTime: 5},
+		{name: "new_order", action: w.runNewOrder, weight: cfg.Weight[0], keyingTime: 18, thinkingTime: 12},
+		{name: "payment", action: w.runPayment, weight: cfg.Weight[1], keyingTime: 3, thinkingTime: 12},
+		{name: "order_status", action: w.runOrderStatus, weight: cfg.Weight[2], keyingTime: 2, thinkingTime: 10},
+		{name: "delivery", action: w.runDelivery, weight: cfg.Weight[3], keyingTime: 2, thinkingTime: 5},
+		{name: "stock_level", action: w.runStockLevel, weight: cfg.Weight[4], keyingTime: 2, thinkingTime: 5},
 	}
 
 	if w.db != nil {

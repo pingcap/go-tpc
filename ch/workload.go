@@ -243,7 +243,7 @@ func (w Workloader) OutputStats(ifSummaryReport bool) {
 			if !m.Empty() {
 				r := m.GetInfo()
 				count += r.Count
-				elapsed = r.Elapsed
+				elapsed += r.Elapsed
 			}
 		}
 		if elapsed != 0 {

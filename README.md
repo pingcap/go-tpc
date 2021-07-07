@@ -22,6 +22,7 @@ You can download the pre-built binary [here](https://github.com/pingcap/go-tpc/r
 
 ```bash
 git clone https://github.com/pingcap/go-tpc.git
+cd go-tpc
 make build
 ```
 

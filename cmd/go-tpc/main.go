@@ -108,8 +108,8 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
 	rootCmd.PersistentFlags().BoolVar(&silence, "silence", false, "Don't print error when running workload")
 	rootCmd.PersistentFlags().DurationVar(&outputInterval, "interval", 10*time.Second, "Output interval time")
-	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted, 
-2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 
+	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted,
+2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
 5: Snapshot, 6: Serializable, 7: Linerizable`)
 	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables")
 
@@ -119,6 +119,7 @@ func main() {
 	registerTpcc(rootCmd)
 	registerTpch(rootCmd)
 	registerCHBenchmark(rootCmd)
+	registerRawsql(rootCmd)
 
 	var cancel context.CancelFunc
 	globalCtx, cancel = context.WithCancel(context.Background())

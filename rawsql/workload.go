@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
@@ -84,6 +86,9 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := w.cfg.Queries[queryName]
+	if w.cfg.ExecExplainAnalyze {
+		query = "explain analyze\n" + query
+	}
 
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
@@ -91,6 +96,15 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	if err != nil {
 		return fmt.Errorf("execute query %s failed %v", queryName, err)
 	}
+	if w.cfg.ExecExplainAnalyze {
+		table, err := util.RenderExplainAnalyze(rows)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "explain analyze result of query %s:\n%s\n", queryName, table)
+		return nil
+	}
+
 	defer rows.Close()
 	return nil
 }

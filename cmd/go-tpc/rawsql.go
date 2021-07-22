@@ -60,7 +60,7 @@ func execRawsql(action string) {
 	rawsqlConfig.QueryNames = strings.Split(queryFiles, ",")
 	rawsqlConfig.Queries = make(map[string]string, len(rawsqlConfig.QueryNames))
 
-	for _, filename := range rawsqlConfig.QueryNames {
+	for i, filename := range rawsqlConfig.QueryNames {
 		queryData, err := ioutil.ReadFile(filename)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "read file: %s, err: %v\n", filename, err)
@@ -69,6 +69,7 @@ func execRawsql(action string) {
 
 		baseName := path.Base(filename)
 		queryName := strings.TrimSuffix(baseName, path.Ext(baseName))
+		rawsqlConfig.QueryNames[i] = queryName
 		rawsqlConfig.Queries[queryName] = string(queryData)
 	}
 

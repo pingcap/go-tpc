@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/pingcap/go-tpc/rawsql"
@@ -66,7 +67,9 @@ func execRawsql(action string) {
 			os.Exit(1)
 		}
 
-		rawsqlConfig.Queries[filename] = string(queryData)
+		baseName := path.Base(filename)
+		queryName := strings.TrimSuffix(baseName, path.Ext(baseName))
+		rawsqlConfig.Queries[queryName] = string(queryData)
 	}
 
 	w := rawsql.NewWorkloader(globalDB, &rawsqlConfig)

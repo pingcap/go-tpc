@@ -7,13 +7,17 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/pingcap/go-tpc/rawsql"
 	"github.com/spf13/cobra"
 )
 
-var rawsqlConfig rawsql.Config
-var queryFiles string
+var (
+	rawsqlConfig    rawsql.Config
+	queryFiles      string
+	refreshConnWait time.Duration
+)
 
 func registerRawsql(root *cobra.Command) {
 	cmd := &cobra.Command{
@@ -42,6 +46,8 @@ func registerRawsql(root *cobra.Command) {
 		false,
 		"execute explain analyze")
 
+	cmdRun.PersistentFlags().DurationVar(&refreshConnWait, "refresh-conn-wait", 5*time.Second, "duration to wait before refreshing sql connection")
+
 	cmd.AddCommand(cmdRun)
 	root.AddCommand(cmd)
 }
@@ -59,6 +65,7 @@ func execRawsql(action string) {
 	rawsqlConfig.DBName = dbName
 	rawsqlConfig.QueryNames = strings.Split(queryFiles, ",")
 	rawsqlConfig.Queries = make(map[string]string, len(rawsqlConfig.QueryNames))
+	rawsqlConfig.RefreshWait = refreshConnWait
 
 	for i, filename := range rawsqlConfig.QueryNames {
 		queryData, err := ioutil.ReadFile(filename)

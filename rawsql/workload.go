@@ -23,6 +23,7 @@ type Config struct {
 	Queries            map[string]string // query name: query SQL
 	QueryNames         []string
 	ExecExplainAnalyze bool
+	RefreshWait        time.Duration
 }
 
 type rawsqlState struct {
@@ -83,6 +84,13 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 	defer w.updateState(ctx)
+
+	if err := s.Conn.PingContext(ctx); err != nil {
+		time.Sleep(w.cfg.RefreshWait) // I feel it silly to sleep, but don't come up with better idea
+		if err := s.RefreshConn(ctx); err != nil {
+			return err
+		}
+	}
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := w.cfg.Queries[queryName]

@@ -102,7 +102,7 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 	// Process 2
 	if err := s.paymentStmts[paymentSelectDistrict].QueryRowContext(ctx, d.wID, d.dID).Scan(&d.dStreet1, &d.dStreet2,
 		&d.dCity, &d.dState, &d.dZip, &d.dName); err != nil {
-		return fmt.Errorf("exec %s failed %v", paymentSelectDistrict, err)
+		return fmt.Errorf("exec [%d, %d] %s failed %v", d.wID, d.dID, paymentSelectDistrict, err)
 	}
 
 	// Process 3
@@ -113,7 +113,7 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 	// Process 4
 	if err := s.paymentStmts[paymentSelectWarehouse].QueryRowContext(ctx, d.wID).Scan(&d.wStreet1, &d.wStreet2,
 		&d.wCity, &d.wState, &d.wZip, &d.wName); err != nil {
-		return fmt.Errorf("exec %s failed %v", paymentSelectDistrict, err)
+		return fmt.Errorf("exec %s failed %v, [%d, %d]", paymentSelectWarehouse, err, d.wID, d.dID)
 	}
 
 	if d.cID == 0 {

@@ -19,33 +19,28 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 func (w *Workloader) check(ctx context.Context, threadID int, checkAll bool) error {
 	// refer 3.3.2
 	checks := map[string]func(ctx context.Context, warehouse int) error{
-		"3.3.2.1":  w.checkCondition1,
-		"3.3.2.2":  w.checkCondition2,
-		"3.3.2.3":  w.checkCondition3,
-		"3.3.2.4":  w.checkCondition4,
-		"3.3.2.5":  w.checkCondition5,
-		"3.3.2.6":  w.checkCondition6,
-		"3.3.2.7":  w.checkCondition7,
-		"3.3.2.8":  w.checkCondition8,
-		"3.3.2.9":  w.checkCondition9,
-		"3.3.2.10": w.checkCondition10,
-		"3.3.2.12": w.checkCondition12,
+		"3.3.2.1": w.checkCondition1,
+		"3.3.2.2": w.checkCondition2,
+		"3.3.2.3": w.checkCondition3,
+		"3.3.2.4": w.checkCondition4,
+		"3.3.2.5": w.checkCondition5,
+		"3.3.2.6": w.checkCondition6,
+		"3.3.2.7": w.checkCondition7,
+		"3.3.2.8": w.checkCondition8,
+		"3.3.2.9": w.checkCondition9,
 	}
 
 	if checkAll {
 		checks = map[string]func(ctx context.Context, warehouse int) error{
-			"3.3.2.1":  w.checkCondition1,
-			"3.3.2.2":  w.checkCondition2,
-			"3.3.2.3":  w.checkCondition3,
-			"3.3.2.4":  w.checkCondition4,
-			"3.3.2.5":  w.checkCondition5,
-			"3.3.2.6":  w.checkCondition6,
-			"3.3.2.7":  w.checkCondition7,
-			"3.3.2.8":  w.checkCondition8,
-			"3.3.2.9":  w.checkCondition9,
-			"3.3.2.10": w.checkCondition10,
-			"3.3.2.11": w.checkCondition11,
-			"3.3.2.12": w.checkCondition12,
+			"3.3.2.1": w.checkCondition1,
+			"3.3.2.2": w.checkCondition2,
+			"3.3.2.3": w.checkCondition3,
+			"3.3.2.4": w.checkCondition4,
+			"3.3.2.5": w.checkCondition5,
+			"3.3.2.6": w.checkCondition6,
+			"3.3.2.7": w.checkCondition7,
+			"3.3.2.8": w.checkCondition8,
+			"3.3.2.9": w.checkCondition9,
 		}
 	}
 
@@ -323,125 +318,6 @@ func (w *Workloader) checkCondition9(ctx context.Context, warehouse int) error {
 
 	query := "SELECT COUNT(*) FROM (select d_id,d_w_id,sum(d_ytd) s1 from district group by d_id,d_w_id) d,(select h_d_id,h_w_id,sum(h_amount) s2 from history WHERE  h_w_id = ? group by h_d_id, h_w_id) h WHERE h_d_id=d_id AND d_w_id=h_w_id and d_w_id= ? and s1<>s2"
 
-	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
-	if err != nil {
-		return fmt.Errorf("exec %s failed %v", query, err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		if err := rows.Scan(&diff); err != nil {
-			return err
-		}
-
-		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (w *Workloader) checkCondition10(ctx context.Context, warehouse int) error {
-	s := getTPCCState(ctx)
-
-	var diff float64
-
-	query := `SELECT count(*) 
-	FROM (  SELECT  c.c_id, c.c_d_id, c.c_w_id, c.c_balance c1, 
-				   (SELECT sum(ol_amount) FROM orders STRAIGHT_JOIN order_line 
-					 WHERE OL_W_ID=O_W_ID 
-					   AND OL_D_ID = O_D_ID 
-					   AND OL_O_ID = O_ID 
-					   AND OL_DELIVERY_D IS NOT NULL 
-					   AND O_W_ID=? 
-					   AND O_D_ID=c.C_D_ID 
-					   AND O_C_ID=c.C_ID) sm, (SELECT  sum(h_amount)  from  history 
-												WHERE H_C_W_ID=? 
-												  AND H_C_D_ID=c.C_D_ID 
-												  AND H_C_ID=c.C_ID) smh 
-			 FROM customer c 
-			WHERE  c.c_w_id = ? ) t
-   WHERE c1<>sm-smh`
-
-	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse, warehouse)
-	if err != nil {
-		return fmt.Errorf("exec %s failed %v", query, err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		if err := rows.Scan(&diff); err != nil {
-			return err
-		}
-
-		if diff != 0 {
-			return fmt.Errorf("count(*) in warehouse %d, but got %f", warehouse, diff)
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (w *Workloader) checkCondition11(ctx context.Context, warehouse int) error {
-	s := getTPCCState(ctx)
-
-	// Entries in the CUSTOMER, ORDER and NEW-ORDER tables must satisfy the relationship:
-	// (count(*) from ORDER) - (count(*) from NEW-ORDER) = 2100
-	// for each district defined by (O_W_ID, O_D_ID) = (NO_W_ID, NO_D_ID) = (C_W_ID, C_D_ID).
-	var count float64
-	query := `
-SELECT count(*) FROM
-	(SELECT * FROM
-		(SELECT o_w_id, o_d_id, count(*) order_count FROM orders GROUP BY o_w_id, o_d_id) orders
-        JOIN (SELECT no_w_id, no_d_id, count(*) new_order_count FROM new_order GROUP BY no_w_id, no_d_id) new_order
-        ON orders.o_w_id = new_order.no_w_id AND orders.o_d_id = new_order.no_d_id
-	) order_new_order
-JOIN (SELECT c_w_id, c_d_id, count(*) customer_count FROM customer GROUP BY c_w_id, c_d_id) customer
-ON order_new_order.no_w_id = customer.c_w_id AND order_new_order.no_d_id = customer.c_d_id
-WHERE c_w_id = ? AND order_count - 2100 != new_order_count`
-
-	rows, err := s.Conn.QueryContext(ctx, query, warehouse)
-	if err != nil {
-		return fmt.Errorf("exec %s failed %v", query, err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		if err := rows.Scan(&count); err != nil {
-			return err
-		}
-
-		if count != 0 {
-			return fmt.Errorf("all of (count(*) from ORDER) - (count(*) from NEW-ORDER) for each district defined by (O_W_ID, O_D_ID) = (NO_W_ID, NO_D_ID) = (C_W_ID, C_D_ID) should be 2100 in warehouse %d", warehouse)
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (w *Workloader) checkCondition12(ctx context.Context, warehouse int) error {
-	s := getTPCCState(ctx)
-
-	var diff float64
-
-	query := `SELECT count(*) FROM (SELECT  c.c_id, c.c_d_id, c.c_balance c1, c_ytd_payment, 
-		(SELECT sum(ol_amount) FROM orders STRAIGHT_JOIN order_line 
-		WHERE OL_W_ID=O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D IS NOT NULL AND 
-		O_W_ID=? AND O_D_ID=c.C_D_ID AND O_C_ID=c.C_ID) sm FROM customer c WHERE  c.c_w_id = ?) t1 
-		WHERE c1+c_ytd_payment <> sm`
 	rows, err := s.Conn.QueryContext(ctx, query, warehouse, warehouse)
 	if err != nil {
 		return fmt.Errorf("exec %s failed %v", query, err)

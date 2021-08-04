@@ -22,10 +22,12 @@ type ddlManager struct {
 	warehouses    int
 	partitionType int
 	useFK         bool
+
+	globalPartition bool
 }
 
-func newDDLManager(parts int, useFK bool, warehouses, partitionType int) *ddlManager {
-	return &ddlManager{parts: parts, useFK: useFK, warehouses: warehouses, partitionType: partitionType}
+func newDDLManager(parts int, useFK bool, warehouses, partitionType int, useGlobalPartition bool) *ddlManager {
+	return &ddlManager{parts: parts, useFK: useFK, warehouses: warehouses, partitionType: partitionType, globalPartition: useGlobalPartition}
 }
 
 func (w *ddlManager) createTableDDL(ctx context.Context, query string, tableName string) error {
@@ -38,6 +40,9 @@ func (w *ddlManager) createTableDDL(ctx context.Context, query string, tableName
 }
 
 func (w *ddlManager) appendPartition(query string, partKeys string) string {
+	if w.globalPartition {
+		return fmt.Sprintf("%s\nGLOBAL PARTITION BY gp (%s)", query, partKeys)
+	}
 	if w.parts <= 1 {
 		return query
 	}
@@ -104,6 +109,15 @@ func (w *ddlManager) appendPartition(query string, partKeys string) string {
 
 // createTables creates tables schema.
 func (w *ddlManager) createTables(ctx context.Context) error {
+	// Global partition rule
+	if w.globalPartition {
+		query := fmt.Sprintf(`CREATE GLOBAL PARTITION RULE IF NOT EXISTS gp HASH PARTITIONS %d`, w.warehouses)
+		s := getTPCCState(ctx)
+		fmt.Printf("creating global partition rule %s\n", "gp")
+		if _, err := s.Conn.ExecContext(ctx, query); err != nil {
+			return err
+		}
+	}
 	// Warehouse
 	query := `
 CREATE TABLE IF NOT EXISTS warehouse (
@@ -116,7 +130,7 @@ CREATE TABLE IF NOT EXISTS warehouse (
 	w_zip CHAR(9),
 	w_tax DECIMAL(4, 4),
 	w_ytd DECIMAL(12, 2),
-	PRIMARY KEY (w_id)
+	PRIMARY KEY (w_id) /*T![clustered_index] CLUSTERED */
 )`
 
 	query = w.appendPartition(query, "w_id")
@@ -139,7 +153,7 @@ CREATE TABLE IF NOT EXISTS district (
 	d_tax DECIMAL(4, 4),
 	d_ytd DECIMAL(12, 2),
 	d_next_o_id INT,
-	PRIMARY KEY (d_w_id, d_id)
+	PRIMARY KEY (d_w_id, d_id) /*T![clustered_index] CLUSTERED */
 )`
 
 	query = w.appendPartition(query, "d_w_id")
@@ -172,7 +186,7 @@ CREATE TABLE IF NOT EXISTS customer (
 	c_payment_cnt INT, 
 	c_delivery_cnt INT, 
 	c_data VARCHAR(500),
-	PRIMARY KEY(c_w_id, c_d_id, c_id),
+	PRIMARY KEY(c_w_id, c_d_id, c_id) /*T![clustered_index] CLUSTERED */,
 	INDEX idx_customer (c_w_id, c_d_id, c_last, c_first)
 )`
 
@@ -184,6 +198,7 @@ CREATE TABLE IF NOT EXISTS customer (
 
 	query = `
 CREATE TABLE IF NOT EXISTS history (
+	h_id INT NOT NULL AUTO_INCREMENT,
 	h_c_id INT NOT NULL,
 	h_c_d_id INT NOT NULL,
 	h_c_w_id INT NOT NULL,
@@ -192,8 +207,7 @@ CREATE TABLE IF NOT EXISTS history (
 	h_date DATETIME,
 	h_amount DECIMAL(6, 2),
 	h_data VARCHAR(24),
-	INDEX idx_h_w_id (h_w_id),
-	INDEX idx_h_c_w_id (h_c_w_id)
+	PRIMARY KEY (h_w_id, h_id) /*T![clustered_index] CLUSTERED */
 )`
 
 	query = w.appendPartition(query, "h_w_id")
@@ -207,7 +221,7 @@ CREATE TABLE IF NOT EXISTS new_order (
 	no_o_id INT NOT NULL,
 	no_d_id INT NOT NULL,
 	no_w_id INT NOT NULL,
-	PRIMARY KEY(no_w_id, no_d_id, no_o_id)
+	PRIMARY KEY(no_w_id, no_d_id, no_o_id) /*T![clustered_index] CLUSTERED */
 )`
 
 	query = w.appendPartition(query, "no_w_id")
@@ -226,7 +240,7 @@ CREATE TABLE IF NOT EXISTS orders (
 	o_carrier_id INT,
 	o_ol_cnt INT,
 	o_all_local INT,
-	PRIMARY KEY(o_w_id, o_d_id, o_id),
+	PRIMARY KEY(o_w_id, o_d_id, o_id) /*T![clustered_index] CLUSTERED */,
 	INDEX idx_order (o_w_id, o_d_id, o_c_id, o_id)
 )`
 
@@ -247,7 +261,7 @@ CREATE TABLE IF NOT EXISTS orders (
 		ol_quantity INT,
 		ol_amount DECIMAL(6, 2),
 		ol_dist_info CHAR(24),
-		PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number)
+		PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number) /*T![clustered_index] CLUSTERED */
 )`
 
 	query = w.appendPartition(query, "ol_w_id")
@@ -274,7 +288,7 @@ CREATE TABLE IF NOT EXISTS stock (
 	s_order_cnt INT, 
 	s_remote_cnt INT,
 	s_data VARCHAR(50),
-	PRIMARY KEY(s_w_id, s_i_id)
+	PRIMARY KEY(s_w_id, s_i_id) /*T![clustered_index] CLUSTERED */
 )`
 
 	query = w.appendPartition(query, "s_w_id")
@@ -289,7 +303,7 @@ CREATE TABLE IF NOT EXISTS item (
 	i_name VARCHAR(24),
 	i_price DECIMAL(5, 2),
 	i_data VARCHAR(50),
-	PRIMARY KEY(i_id)
+	PRIMARY KEY(i_id) /*T![clustered_index] CLUSTERED */
 )`
 
 	if err := w.createTableDDL(ctx, query, tableItem); err != nil {

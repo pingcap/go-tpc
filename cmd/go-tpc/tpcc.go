@@ -79,7 +79,7 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.PartitionType, "partition-type", 1, "Partition type (1 - HASH, 2 - RANGE, 3 - LIST (like HASH), 4 - LIST (like RANGE)")
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
-	cmd.PersistentFlags().BoolVar(&tpccConfig.GlobalPartition, "global-partition", false, "use global partition to create table")
+	cmd.PersistentFlags().BoolVar(&tpccConfig.UseShardingRule, "sharding", false, "use sharding rule to create table")
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for TPCC",

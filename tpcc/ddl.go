@@ -23,11 +23,11 @@ type ddlManager struct {
 	partitionType int
 	useFK         bool
 
-	globalPartition bool
+	sharding bool
 }
 
-func newDDLManager(parts int, useFK bool, warehouses, partitionType int, useGlobalPartition bool) *ddlManager {
-	return &ddlManager{parts: parts, useFK: useFK, warehouses: warehouses, partitionType: partitionType, globalPartition: useGlobalPartition}
+func newDDLManager(parts int, useFK bool, warehouses, partitionType int, useShardingRule bool) *ddlManager {
+	return &ddlManager{parts: parts, useFK: useFK, warehouses: warehouses, partitionType: partitionType, sharding: useShardingRule}
 }
 
 func (w *ddlManager) createTableDDL(ctx context.Context, query string, tableName string) error {
@@ -40,8 +40,8 @@ func (w *ddlManager) createTableDDL(ctx context.Context, query string, tableName
 }
 
 func (w *ddlManager) appendPartition(query string, partKeys string) string {
-	if w.globalPartition {
-		return fmt.Sprintf("%s\nGLOBAL PARTITION BY gp (%s)", query, partKeys)
+	if w.sharding {
+		return fmt.Sprintf("%s\nSHARDING BY s (%s)", query, partKeys)
 	}
 	if w.parts <= 1 {
 		return query
@@ -109,9 +109,9 @@ func (w *ddlManager) appendPartition(query string, partKeys string) string {
 
 // createTables creates tables schema.
 func (w *ddlManager) createTables(ctx context.Context) error {
-	// Global partition rule
-	if w.globalPartition {
-		query := fmt.Sprintf(`CREATE GLOBAL PARTITION RULE IF NOT EXISTS gp HASH PARTITIONS %d`, w.warehouses)
+	// Sharding rule
+	if w.sharding {
+		query := fmt.Sprintf(`CREATE SHARDING RULE IF NOT EXISTS s HASH PARTITIONS %d`, w.warehouses)
 		s := getTPCCState(ctx)
 		fmt.Printf("creating global partition rule %s\n", "gp")
 		if _, err := s.Conn.ExecContext(ctx, query); err != nil {

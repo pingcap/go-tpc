@@ -66,7 +66,7 @@ type Config struct {
 	// Should be int between [0, 100) and sums to 100.
 	Weight []int
 
-	GlobalPartition bool
+	UseShardingRule bool
 
 	// whether to involve wait times(keying time&thinking time)
 	Wait bool
@@ -137,7 +137,7 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		db:                  db,
 		cfg:                 cfg,
 		initLoadTime:        time.Now().Format(timeFormat),
-		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK, cfg.Warehouses, cfg.PartitionType, cfg.GlobalPartition),
+		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK, cfg.Warehouses, cfg.PartitionType, cfg.UseShardingRule),
 		rtMeasurement:       measurement.NewMeasurement(resetMaxLat),
 		waitTimeMeasurement: measurement.NewMeasurement(resetMaxLat),
 	}

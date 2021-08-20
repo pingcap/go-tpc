@@ -306,6 +306,7 @@ CREATE TABLE IF NOT EXISTS item (
 	PRIMARY KEY(i_id) /*T![clustered_index] CLUSTERED */
 )`
 
+	query = w.appendPartition(query, "i_id")
 	if err := w.createTableDDL(ctx, query, tableItem); err != nil {
 		return err
 	}

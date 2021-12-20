@@ -44,7 +44,7 @@ By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn add
 
 > **Note:**
 >
-> When exporting csv files to a directory, `go-tpc` will also create the necessary tables for further data input if 
+> When exporting csv files to a directory, `go-tpc` will also create the necessary tables for further data input if
 > the provided database address is accessible.
 
 For example:
@@ -144,4 +144,12 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 
 ```bash
 ./bin/go-tpc ch --warehouses $warehouses -T $tpWorkers -t $apWorkers --time $measurement-time run
+```
+
+### Raw SQL
+`rawsql` command is used to execute sql from given sql files.
+
+#### Run
+```bash
+./bin/go-tpc rawsql run --query-files $path-to-query-files
 ```

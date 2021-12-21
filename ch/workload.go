@@ -34,6 +34,7 @@ type Config struct {
 	QueryNames           []string
 	CreateTiFlashReplica bool
 	AnalyzeTable         analyzeConfig
+	RefreshConnWait      time.Duration
 }
 
 type chState struct {
@@ -182,6 +183,13 @@ func (w Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 func (w Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 	defer w.updateState(ctx)
+
+	if err := s.Conn.PingContext(ctx); err != nil {
+		time.Sleep(w.cfg.RefreshConnWait) // I feel it silly to sleep, but don't come up with better idea
+		if err := s.RefreshConn(ctx); err != nil {
+			return err
+		}
+	}
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := queries[queryName]

@@ -1,8 +1,10 @@
 package dbgen
 
 import (
-	"fmt"
+	"context"
 	"io"
+
+	"github.com/pingcap/go-tpc/pkg/sink"
 )
 
 const (
@@ -18,27 +20,26 @@ type Region struct {
 }
 
 type regionLoader struct {
-	io.StringWriter
+	*sink.CSVSink
 }
 
 func (r regionLoader) Load(item interface{}) error {
 	region := item.(*Region)
-	if _, err := r.WriteString(
-		fmt.Sprintf("%d|%s|%s|\n",
-			region.Code,
-			region.Text,
-			region.Comment)); err != nil {
+	if err := r.WriteRow(context.TODO(),
+		region.Code,
+		region.Text,
+		region.Comment); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (r regionLoader) Flush() error {
-	return nil
+	return r.CSVSink.Flush(context.TODO())
 }
 
-func NewRegionLoader(writer io.StringWriter) regionLoader {
-	return regionLoader{writer}
+func NewRegionLoader(w io.Writer) regionLoader {
+	return regionLoader{sink.NewCSVSinkWithDelimiter(w, '|')}
 }
 
 func makeRegion(idx dssHuge) *Region {

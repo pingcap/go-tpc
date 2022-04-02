@@ -107,9 +107,9 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 		return err
 	}
 	sqlLoader := map[dbgen.Table]dbgen.Loader{
-		dbgen.TSupp:   tpch.NewSuppLoader(ctx, w.db),
-		dbgen.TNation: tpch.NewNationLoader(ctx, w.db),
-		dbgen.TRegion: tpch.NewRegionLoader(ctx, w.db),
+		dbgen.TSupp:   tpch.NewSuppLoader(ctx, w.db, 1),
+		dbgen.TNation: tpch.NewNationLoader(ctx, w.db, 1),
+		dbgen.TRegion: tpch.NewRegionLoader(ctx, w.db, 1),
 	}
 	dbgen.InitDbGen(1)
 	if err := dbgen.DbGen(sqlLoader, []dbgen.Table{dbgen.TNation, dbgen.TRegion, dbgen.TSupp}); err != nil {

@@ -57,7 +57,7 @@ func (c *ConcurrentSink) runConsumerLoop(downStreamIdx int) {
 				// Channel close
 				return
 			}
-			err := sink.WriteRow(op.ctx, op.values)
+			err := sink.WriteRow(op.ctx, op.values...)
 			c.writeWg.Add(-1)
 			if err != nil {
 				select {

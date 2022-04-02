@@ -98,7 +98,7 @@ func (suite *ConcurrentSinkSuite) prepareSimulatingCalls() []callDesc {
 func (suite *ConcurrentSinkSuite) sendCallsToSink(sink Sink, calls []callDesc) {
 	for _, call := range calls {
 		if call.write != 0 {
-			_ = sink.WriteRow(context.WithValue(context.Background(), dummySinkCtxKey, call.write), nil)
+			_ = sink.WriteRow(context.WithValue(context.Background(), dummySinkCtxKey, call.write))
 		} else {
 			if call.flush == -1 {
 				_ = sink.Close(context.WithValue(context.Background(), dummySinkCtxKey, call.flush))

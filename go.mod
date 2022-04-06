@@ -10,4 +10,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.7 // indirect
 	github.com/prometheus/client_golang v0.9.3
 	github.com/spf13/cobra v1.0.0
+	github.com/stretchr/testify v1.6.1
+	go.uber.org/atomic v1.9.0
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )

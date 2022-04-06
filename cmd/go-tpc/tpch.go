@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pingcap/go-tpc/tpch"
 	"github.com/spf13/cobra"
+
+	"github.com/pingcap/go-tpc/tpch"
 )
 
 var tpchConfig tpch.Config
@@ -16,13 +17,13 @@ func executeTpch(action string) {
 	openDB()
 	defer closeDB()
 
-	// if globalDB == nil
 	if globalDB == nil {
 		fmt.Fprintln(os.Stderr, "cannot connect to the database")
 		os.Exit(1)
 	}
 
 	tpchConfig.DBName = dbName
+	tpchConfig.PrepareThreads = threads
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
 	w := tpch.NewWorkloader(globalDB, &tpchConfig)
 

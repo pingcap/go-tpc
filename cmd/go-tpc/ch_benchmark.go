@@ -68,6 +68,7 @@ func registerCHBenchmark(root *cobra.Command) {
 			executeCH("run")
 		},
 	}
+	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
 	cmd.AddCommand(cmdRun, cmdPrepare)
 	root.AddCommand(cmd)
 }

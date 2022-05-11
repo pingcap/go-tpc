@@ -81,7 +81,7 @@ func openDB() {
 			}
 		} else {
 			globalDB = nil
-			panic(fmt.Errorf("failed to connect database, err %v\n", err))
+			panic(fmt.Errorf("failed to connect to database, err %v\n", err))
 		}
 	} else {
 		globalDB.SetMaxIdleConns(threads + acThreads + 1)

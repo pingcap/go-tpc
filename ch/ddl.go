@@ -62,5 +62,48 @@ CREATE TABLE IF NOT EXISTS supplier (
 		return err
 	}
 
+	query = `
+CREATE TABLE IF NOT EXISTS order_line (
+    ol_o_id int not null, 
+    ol_d_id tinyint not null,
+    ol_w_id smallint not null,
+    ol_number tinyint not null,
+    ol_i_id int, 
+    ol_supply_w_id smallint,
+    ol_delivery_d datetime, 
+    ol_quantity tinyint, 
+    ol_amount decimal(6,2), 
+    ol_dist_info char(24),
+    PRIMARY KEY (ol_w_id, ol_d_id, ol_o_id, ol_number)
+)`
+	if err := w.createTableDDL(ctx, query, "order_line", "creating"); err != nil {
+		return err
+	}
+
+	query = `
+CREATE TABLE IF NOT EXISTS stock (
+    s_i_id int not null, 
+    s_w_id smallint not null, 
+    s_quantity smallint, 
+    s_dist_01 char(24), 
+    s_dist_02 char(24),
+    s_dist_03 char(24),
+    s_dist_04 char(24), 
+    s_dist_05 char(24), 
+    s_dist_06 char(24), 
+    s_dist_07 char(24), 
+    s_dist_08 char(24), 
+    s_dist_09 char(24), 
+    s_dist_10 char(24), 
+    s_ytd decimal(8,0), 
+    s_order_cnt smallint, 
+    s_remote_cnt smallint,
+    s_data varchar(50),
+    PRIMARY KEY(s_w_id, s_i_id)
+)`
+	if err := w.createTableDDL(ctx, query, "stock", "creating"); err != nil {
+		return err
+	}
+
 	return nil
 }

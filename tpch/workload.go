@@ -38,6 +38,7 @@ type Config struct {
 	CreateTiFlashReplica bool
 	AnalyzeTable         analyzeConfig
 	ExecExplainAnalyze   bool
+	PrepareThreads       int
 
 	// for prepare command only
 	OutputType string
@@ -134,14 +135,14 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 		}
 	} else {
 		sqlLoader = map[dbgen.Table]dbgen.Loader{
-			dbgen.TOrder:  NewOrderLoader(ctx, w.db),
-			dbgen.TLine:   NewLineItemLoader(ctx, w.db),
-			dbgen.TPart:   NewPartLoader(ctx, w.db),
-			dbgen.TPsupp:  NewPartSuppLoader(ctx, w.db),
-			dbgen.TSupp:   NewSuppLoader(ctx, w.db),
-			dbgen.TCust:   NewCustLoader(ctx, w.db),
-			dbgen.TNation: NewNationLoader(ctx, w.db),
-			dbgen.TRegion: NewRegionLoader(ctx, w.db),
+			dbgen.TOrder:  NewOrderLoader(ctx, w.db, w.cfg.PrepareThreads),
+			dbgen.TLine:   NewLineItemLoader(ctx, w.db, w.cfg.PrepareThreads),
+			dbgen.TPart:   NewPartLoader(ctx, w.db, w.cfg.PrepareThreads),
+			dbgen.TPsupp:  NewPartSuppLoader(ctx, w.db, w.cfg.PrepareThreads),
+			dbgen.TSupp:   NewSuppLoader(ctx, w.db, w.cfg.PrepareThreads),
+			dbgen.TCust:   NewCustLoader(ctx, w.db, w.cfg.PrepareThreads),
+			dbgen.TNation: NewNationLoader(ctx, w.db, w.cfg.PrepareThreads),
+			dbgen.TRegion: NewRegionLoader(ctx, w.db, w.cfg.PrepareThreads),
 		}
 	}
 

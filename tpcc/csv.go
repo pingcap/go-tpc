@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pingcap/go-tpc/pkg/load"
+	"github.com/pingcap/go-tpc/pkg/sink"
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
@@ -92,12 +92,12 @@ func (c *CSVWorkLoader) InitThread(ctx context.Context, threadID int) context.Co
 		TpcState: workload.NewTpcState(ctx, c.db),
 	}
 
-	s.loaders = make(map[string]*load.CSVBatchLoader)
+	s.loaders = make(map[string]*sink.CSVSink)
 	for k, v := range c.tables {
 		// table item only created at thread 0
 		if v && !(k == "item" && threadID != 0) {
 			file := util.CreateFile(path.Join(c.cfg.OutputDir, fmt.Sprintf("%s.%s.%d.csv", c.DBName(), k, threadID)))
-			s.loaders[k] = load.NewCSVBatchLoader(file)
+			s.loaders[k] = sink.NewCSVSink(file)
 		}
 	}
 
@@ -156,6 +156,7 @@ func (c *CSVWorkLoader) DBName() string {
 	return c.cfg.DBName
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadItem(ctx context.Context) error {
 	if !c.tables[tableItem] {
 		return nil
@@ -172,8 +173,9 @@ func (c *CSVWorkLoader) loadItem(ctx context.Context) error {
 		iName := randChars(s.R, s.Buf, 14, 24)
 		iData := randOriginalString(s.R, s.Buf)
 
-		v := []string{strconv.Itoa(i + 1), strconv.Itoa(iImID), iName, fmt.Sprintf("%f", iPrice), iData}
-		if err := l.InsertValue(ctx, v); err != nil {
+		if err := l.WriteRow(ctx,
+			i+1, iImID, iName, iPrice, iData,
+		); err != nil {
 			return err
 		}
 	}
@@ -181,6 +183,7 @@ func (c *CSVWorkLoader) loadItem(ctx context.Context) error {
 	return l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadWarehouse(ctx context.Context, warehouse int) error {
 	if !c.tables[tableWareHouse] {
 		return nil
@@ -198,16 +201,16 @@ func (c *CSVWorkLoader) loadWarehouse(ctx context.Context, warehouse int) error 
 	wTax := randTax(s.R)
 	wYtd := 300000.00
 
-	v := []string{strconv.Itoa(warehouse), wName, wStree1, wStree2, wCity, wState,
-		wZip, fmt.Sprintf("%f", wTax), fmt.Sprintf("%f", wYtd)}
-
-	if err := l.InsertValue(ctx, v); err != nil {
+	if err := l.WriteRow(ctx,
+		warehouse, wName, wStree1, wStree2, wCity, wState, wZip, wTax, wYtd,
+	); err != nil {
 		return err
 	}
 
 	return l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadStock(ctx context.Context, warehouse int) error {
 	if !c.tables[tableStock] {
 		return nil
@@ -238,16 +241,16 @@ func (c *CSVWorkLoader) loadStock(ctx context.Context, warehouse int) error {
 		sRemoteCnt := 0
 		sData := randOriginalString(s.R, s.Buf)
 
-		v := []string{strconv.Itoa(sIID), strconv.Itoa(sWID), strconv.Itoa(sQuantity), sDist01, sDist02, sDist03, sDist04, sDist05, sDist06,
-			sDist07, sDist08, sDist09, sDist10, strconv.Itoa(sYtd), strconv.Itoa(sOrderCnt), strconv.Itoa(sRemoteCnt), sData}
-
-		if err := l.InsertValue(ctx, v); err != nil {
+		if err := l.WriteRow(ctx,
+			sIID, sWID, sQuantity, sDist01, sDist02, sDist03, sDist04, sDist05, sDist06, sDist07, sDist08, sDist09, sDist10, sYtd, sOrderCnt, sRemoteCnt, sData,
+		); err != nil {
 			return err
 		}
 	}
 	return l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadDistrict(ctx context.Context, warehouse int) error {
 	if !c.tables[tableDistrict] {
 		return nil
@@ -272,16 +275,17 @@ func (c *CSVWorkLoader) loadDistrict(ctx context.Context, warehouse int) error {
 		dYtd := 30000.00
 		dNextOID := 3001
 
-		v := []string{strconv.Itoa(dID), strconv.Itoa(dWID), dName, dStreet1, dStreet2, dCity, dState, dZip,
-			fmt.Sprintf("%f", dTax), fmt.Sprintf("%f", dYtd), strconv.Itoa(dNextOID)}
-
-		if err := l.InsertValue(ctx, v); err != nil {
+		if err := l.WriteRow(ctx,
+			dID, dWID,
+			dName, dStreet1, dStreet2, dCity, dState, dZip, dTax, dYtd, dNextOID,
+		); err != nil {
 			return err
 		}
 	}
 	return l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadCustomer(ctx context.Context, warehouse int, district int) error {
 	if !c.tables[tableCustomer] {
 		return nil
@@ -324,11 +328,11 @@ func (c *CSVWorkLoader) loadCustomer(ctx context.Context, warehouse int, distric
 		cDeliveryCnt := 0
 		cData := randChars(s.R, s.Buf, 300, 500)
 
-		v := []string{strconv.Itoa(cID), strconv.Itoa(cDID), strconv.Itoa(cWID), cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
-			cZip, cPhone, cSince, cCredit, fmt.Sprintf("%f", cCreditLim), fmt.Sprintf("%f", cDisCount),
-			fmt.Sprintf("%f", cBalance), fmt.Sprintf("%f", cYtdPayment), strconv.Itoa(cPaymentCnt), strconv.Itoa(cDeliveryCnt), cData}
-
-		if err := l.InsertValue(ctx, v); err != nil {
+		if err := l.WriteRow(ctx,
+			cID, cDID, cWID, cFirst, cMiddle, cLast, cStreet1, cStreet2, cCity, cState,
+			cZip, cPhone, cSince, cCredit, cCreditLim, cDisCount, cBalance,
+			cYtdPayment, cPaymentCnt, cDeliveryCnt, cData,
+		); err != nil {
 			return err
 		}
 	}
@@ -336,6 +340,7 @@ func (c *CSVWorkLoader) loadCustomer(ctx context.Context, warehouse int, distric
 	return l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadHistory(ctx context.Context, warehouse int, district int) error {
 	if !c.tables[tableHistory] {
 		return nil
@@ -358,16 +363,16 @@ func (c *CSVWorkLoader) loadHistory(ctx context.Context, warehouse int, district
 		hAmount := 10.00
 		hData := randChars(s.R, s.Buf, 12, 24)
 
-		v := []string{strconv.Itoa(hCID), strconv.Itoa(hCDID), strconv.Itoa(hCWID), strconv.Itoa(hDID),
-			strconv.Itoa(hWID), hDate, fmt.Sprintf("%f", hAmount), hData}
-
-		if err := l.InsertValue(ctx, v); err != nil {
+		if err := l.WriteRow(ctx,
+			hCID, hCDID, hCWID, hDID, hWID, hDate, hAmount, hData,
+		); err != nil {
 			return err
 		}
 	}
 	return l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadOrder(ctx context.Context, warehouse int, district int) ([]int, error) {
 	if !c.tables[tableOrders] {
 		return nil, nil
@@ -398,9 +403,9 @@ func (c *CSVWorkLoader) loadOrder(ctx context.Context, warehouse int, district i
 		olCnts[i] = oOLCnt
 		oAllLocal := 1
 
-		v := []string{strconv.Itoa(oID), strconv.Itoa(oDID), strconv.Itoa(oWID), strconv.Itoa(oCID), oEntryD,
-			oCarrierID, strconv.Itoa(oOLCnt), strconv.Itoa(oAllLocal)}
-		if err := l.InsertValue(ctx, v); err != nil {
+		if err := l.WriteRow(ctx,
+			oID, oDID, oWID, oCID, oEntryD, oCarrierID, oOLCnt, oAllLocal,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -408,6 +413,7 @@ func (c *CSVWorkLoader) loadOrder(ctx context.Context, warehouse int, district i
 	return olCnts, l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadNewOrder(ctx context.Context, warehouse int, district int) error {
 	if !c.tables[tableNewOrder] {
 		return nil
@@ -425,9 +431,9 @@ func (c *CSVWorkLoader) loadNewOrder(ctx context.Context, warehouse int, distric
 		noDID := district
 		noWID := warehouse
 
-		v := []string{strconv.Itoa(noOID), strconv.Itoa(noDID), strconv.Itoa(noWID)}
-
-		if err := l.InsertValue(ctx, v); err != nil {
+		if err := l.WriteRow(ctx,
+			noOID, noDID, noWID,
+		); err != nil {
 			return err
 		}
 	}
@@ -435,6 +441,7 @@ func (c *CSVWorkLoader) loadNewOrder(ctx context.Context, warehouse int, distric
 	return l.Flush(ctx)
 }
 
+// TODO: Deduplicate with load.go
 func (c *CSVWorkLoader) loadOrderLine(ctx context.Context, warehouse int,
 	district int, olCnts []int) error {
 	if !c.tables[tableOrderLine] {
@@ -469,10 +476,10 @@ func (c *CSVWorkLoader) loadOrderLine(ctx context.Context, warehouse int,
 			}
 			olDistInfo := randChars(s.R, s.Buf, 24, 24)
 
-			v := []string{strconv.Itoa(olOID), strconv.Itoa(olDID), strconv.Itoa(olWID), strconv.Itoa(olNumber), strconv.Itoa(olIID),
-				strconv.Itoa(olSupplyWID), olDeliveryD, strconv.Itoa(olQuantity), fmt.Sprintf("%f", olAmount), olDistInfo}
-
-			if err := l.InsertValue(ctx, v); err != nil {
+			if err := l.WriteRow(ctx,
+				olOID, olDID, olWID, olNumber, olIID, olSupplyWID,
+				olDeliveryD, olQuantity, olAmount, olDistInfo,
+			); err != nil {
 				return err
 			}
 		}

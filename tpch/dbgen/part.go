@@ -1,8 +1,11 @@
 package dbgen
 
 import (
+	"context"
 	"fmt"
 	"io"
+
+	"github.com/pingcap/go-tpc/pkg/sink"
 )
 
 const (
@@ -59,33 +62,32 @@ func partSuppBridge(p, s dssHuge) dssHuge {
 }
 
 type partLoader struct {
-	io.StringWriter
+	*sink.CSVSink
 }
 
 func (p partLoader) Load(item interface{}) error {
 	part := item.(*Part)
-	if _, err := p.WriteString(
-		fmt.Sprintf("%d|%s|%s|%s|%s|%d|%s|%s|%s|\n",
-			part.PartKey,
-			part.Name,
-			part.Mfgr,
-			part.Brand,
-			part.Type,
-			part.Size,
-			part.Container,
-			FmtMoney(part.RetailPrice),
-			part.Comment)); err != nil {
+	if err := p.WriteRow(context.TODO(),
+		part.PartKey,
+		part.Name,
+		part.Mfgr,
+		part.Brand,
+		part.Type,
+		part.Size,
+		part.Container,
+		FmtMoney(part.RetailPrice),
+		part.Comment); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (p partLoader) Flush() error {
-	return nil
+	return p.CSVSink.Flush(context.TODO())
 }
 
-func NewPartLoader(writer io.StringWriter) partLoader {
-	return partLoader{writer}
+func NewPartLoader(w io.Writer) partLoader {
+	return partLoader{sink.NewCSVSinkWithDelimiter(w, '|')}
 }
 
 func makePart(idx dssHuge) *Part {

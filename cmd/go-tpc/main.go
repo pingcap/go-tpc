@@ -73,7 +73,8 @@ func openDB() {
 	if err := globalDB.Ping(); err != nil {
 		errString := err.Error()
 		if strings.Contains(errString, unknownDB) {
-			tmpDB, _ = sql.Open(mysqlDriver, ds)
+			tmpDs := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
+			tmpDB, _ = sql.Open(mysqlDriver, tmpDs)
 			defer tmpDB.Close()
 			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
 				panic(fmt.Errorf("failed to create database, err %v\n", err))

@@ -1,8 +1,11 @@
 package dbgen
 
 import (
+	"context"
 	"fmt"
 	"io"
+
+	"github.com/pingcap/go-tpc/pkg/sink"
 )
 
 const (
@@ -39,31 +42,30 @@ type Supp struct {
 }
 
 type suppLoader struct {
-	io.StringWriter
+	*sink.CSVSink
 }
 
 func (s suppLoader) Load(item interface{}) error {
 	supp := item.(*Supp)
-	if _, err := s.WriteString(
-		fmt.Sprintf("%d|%s|%s|%d|%s|%s|%s|\n",
-			supp.SuppKey,
-			supp.Name,
-			supp.Address,
-			supp.NationCode,
-			supp.Phone,
-			FmtMoney(supp.Acctbal),
-			supp.Comment)); err != nil {
+	if err := s.WriteRow(context.TODO(),
+		supp.SuppKey,
+		supp.Name,
+		supp.Address,
+		supp.NationCode,
+		supp.Phone,
+		FmtMoney(supp.Acctbal),
+		supp.Comment); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s suppLoader) Flush() error {
-	return nil
+	return s.CSVSink.Flush(context.TODO())
 }
 
-func NewSuppLoader(writer io.StringWriter) suppLoader {
-	return suppLoader{writer}
+func NewSuppLoader(w io.Writer) suppLoader {
+	return suppLoader{sink.NewCSVSinkWithDelimiter(w, '|')}
 }
 
 func makeSupp(idx dssHuge) *Supp {

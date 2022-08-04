@@ -1,8 +1,10 @@
 package dbgen
 
 import (
-	"fmt"
+	"context"
 	"io"
+
+	"github.com/pingcap/go-tpc/pkg/sink"
 )
 
 type PartSupp struct {
@@ -22,20 +24,19 @@ func sdPsupp(child Table, skipCount dssHuge) {
 }
 
 type partSuppLoader struct {
-	io.StringWriter
+	*sink.CSVSink
 }
 
 func (p partSuppLoader) Load(item interface{}) error {
 	pSupp := item.(*Part)
 	for i := 0; i < suppPerPart; i++ {
 		supp := pSupp.S[i]
-		if _, err := p.WriteString(
-			fmt.Sprintf("%d|%d|%d|%s|%s|\n",
-				supp.PartKey,
-				supp.SuppKey,
-				supp.Qty,
-				FmtMoney(supp.SCost),
-				supp.Comment)); err != nil {
+		if err := p.WriteRow(context.TODO(),
+			supp.PartKey,
+			supp.SuppKey,
+			supp.Qty,
+			FmtMoney(supp.SCost),
+			supp.Comment); err != nil {
 			return err
 		}
 	}
@@ -43,9 +44,9 @@ func (p partSuppLoader) Load(item interface{}) error {
 }
 
 func (p partSuppLoader) Flush() error {
-	return nil
+	return p.CSVSink.Flush(context.TODO())
 }
 
-func NewPartSuppLoader(writer io.StringWriter) partSuppLoader {
-	return partSuppLoader{writer}
+func NewPartSuppLoader(w io.Writer) partSuppLoader {
+	return partSuppLoader{sink.NewCSVSinkWithDelimiter(w, '|')}
 }

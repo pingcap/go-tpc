@@ -1,8 +1,10 @@
 package dbgen
 
 import (
-	"fmt"
+	"context"
 	"io"
+
+	"github.com/pingcap/go-tpc/pkg/sink"
 )
 
 const (
@@ -34,8 +36,8 @@ type LineItem struct {
 	EPrice       dssHuge
 	Discount     dssHuge
 	Tax          dssHuge
-	RFlag        byte
-	LStatus      byte
+	RFlag        string
+	LStatus      string
 	CDate        string
 	SDate        string
 	RDate        string
@@ -45,31 +47,30 @@ type LineItem struct {
 }
 
 type lineItemLoader struct {
-	io.StringWriter
+	*sink.CSVSink
 }
 
 func (l lineItemLoader) Load(item interface{}) error {
 	o := item.(*Order)
 	for _, line := range o.Lines {
-		if _, err := l.WriteString(
-			fmt.Sprintf("%d|%d|%d|%d|%d|%s|%s|%s|%c|%c|%s|%s|%s|%s|%s|%s|\n",
-				line.OKey,
-				line.PartKey,
-				line.SuppKey,
-				line.LCnt,
-				line.Quantity,
-				FmtMoney(line.EPrice),
-				FmtMoney(line.Discount),
-				FmtMoney(line.Tax),
-				line.RFlag,
-				line.LStatus,
-				line.SDate,
-				line.CDate,
-				line.RDate,
-				line.ShipInstruct,
-				line.ShipMode,
-				line.Comment,
-			)); err != nil {
+		if err := l.WriteRow(context.TODO(),
+			line.OKey,
+			line.PartKey,
+			line.SuppKey,
+			line.LCnt,
+			line.Quantity,
+			FmtMoney(line.EPrice),
+			FmtMoney(line.Discount),
+			FmtMoney(line.Tax),
+			line.RFlag,
+			line.LStatus,
+			line.SDate,
+			line.CDate,
+			line.RDate,
+			line.ShipInstruct,
+			line.ShipMode,
+			line.Comment,
+		); err != nil {
 			return err
 		}
 	}
@@ -77,11 +78,11 @@ func (l lineItemLoader) Load(item interface{}) error {
 }
 
 func (l lineItemLoader) Flush() error {
-	return nil
+	return l.CSVSink.Flush(context.TODO())
 }
 
-func NewLineItemLoader(writer io.StringWriter) lineItemLoader {
-	return lineItemLoader{writer}
+func NewLineItemLoader(w io.Writer) lineItemLoader {
+	return lineItemLoader{sink.NewCSVSinkWithDelimiter(w, '|')}
 }
 
 func sdLineItem(child Table, skipCount dssHuge) {

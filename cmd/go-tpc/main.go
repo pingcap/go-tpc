@@ -73,7 +73,8 @@ func openDB() {
 	if err := globalDB.Ping(); err != nil {
 		errString := err.Error()
 		if strings.Contains(errString, unknownDB) {
-			tmpDB, _ = sql.Open(mysqlDriver, ds)
+			tmpDs := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
+			tmpDB, _ = sql.Open(mysqlDriver, tmpDs)
 			defer tmpDB.Close()
 			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
 				panic(fmt.Errorf("failed to create database, err %v\n", err))
@@ -108,8 +109,8 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
 	rootCmd.PersistentFlags().BoolVar(&silence, "silence", false, "Don't print error when running workload")
 	rootCmd.PersistentFlags().DurationVar(&outputInterval, "interval", 10*time.Second, "Output interval time")
-	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted, 
-2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 
+	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted,
+2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
 5: Snapshot, 6: Serializable, 7: Linerizable`)
 	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables")
 
@@ -119,6 +120,7 @@ func main() {
 	registerTpcc(rootCmd)
 	registerTpch(rootCmd)
 	registerCHBenchmark(rootCmd)
+	registerRawsql(rootCmd)
 
 	var cancel context.CancelFunc
 	globalCtx, cancel = context.WithCancel(context.Background())

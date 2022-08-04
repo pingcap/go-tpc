@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -28,6 +29,7 @@ func registerCHBenchmark(root *cobra.Command) {
 		"queries",
 		"q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22",
 		"All queries")
+	cmd.PersistentFlags().DurationVar(&chConfig.RefreshConnWait, "refresh-conn-wait", 5*time.Second, "duration to wait before refreshing sql connection")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
@@ -66,6 +68,7 @@ func registerCHBenchmark(root *cobra.Command) {
 			executeCH("run")
 		},
 	}
+	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
 	cmd.AddCommand(cmdRun, cmdPrepare)
 	root.AddCommand(cmd)
 }

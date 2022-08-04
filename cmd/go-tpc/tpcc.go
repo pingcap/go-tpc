@@ -21,7 +21,10 @@ var tpccConfig tpcc.Config
 func executeTpcc(action string) {
 	if pprofAddr != "" {
 		go func() {
-			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
+			if err := http.ListenAndServe(pprofAddr, http.DefaultServeMux); err != nil {
+				fmt.Printf("Failed to listen pprofAddr: %v\n", err)
+				os.Exit(1)
+			}
 		}()
 	}
 	if metricsAddr != "" {
@@ -30,7 +33,10 @@ func executeTpcc(action string) {
 				Addr:    metricsAddr,
 				Handler: promhttp.Handler(),
 			}
-			s.ListenAndServe()
+			if err := s.ListenAndServe(); err != nil {
+				fmt.Printf("Failed to listen metricsAddr: %v\n", err)
+				os.Exit(1)
+			}
 		}()
 	}
 	runtime.GOMAXPROCS(maxProcs)

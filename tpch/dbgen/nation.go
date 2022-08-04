@@ -1,8 +1,10 @@
 package dbgen
 
 import (
-	"fmt"
+	"context"
 	"io"
+
+	"github.com/pingcap/go-tpc/pkg/sink"
 )
 
 const (
@@ -29,26 +31,25 @@ func makeNation(idx dssHuge) *Nation {
 }
 
 type nationLoader struct {
-	io.StringWriter
+	*sink.CSVSink
 }
 
 func (n nationLoader) Load(item interface{}) error {
 	nation := item.(*Nation)
-	if _, err := n.WriteString(
-		fmt.Sprintf("%d|%s|%d|%s|\n",
-			nation.Code,
-			nation.Text,
-			nation.Join,
-			nation.Comment)); err != nil {
+	if err := n.WriteRow(context.TODO(),
+		nation.Code,
+		nation.Text,
+		nation.Join,
+		nation.Comment); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (n nationLoader) Flush() error {
-	return nil
+	return n.CSVSink.Flush(context.TODO())
 }
 
-func NewNationLoader(writer io.StringWriter) nationLoader {
-	return nationLoader{writer}
+func NewNationLoader(w io.Writer) nationLoader {
+	return nationLoader{sink.NewCSVSinkWithDelimiter(w, '|')}
 }

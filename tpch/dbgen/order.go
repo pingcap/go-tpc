@@ -1,8 +1,10 @@
 package dbgen
 
 import (
-	"fmt"
+	"context"
 	"io"
+
+	"github.com/pingcap/go-tpc/pkg/sink"
 )
 
 const (
@@ -46,7 +48,7 @@ var (
 type Order struct {
 	OKey          dssHuge
 	CustKey       dssHuge
-	Status        byte
+	Status        string
 	TotalPrice    dssHuge
 	Date          string
 	OrderPriority string
@@ -57,32 +59,32 @@ type Order struct {
 }
 
 type orderLoader struct {
-	io.StringWriter
+	*sink.CSVSink
 }
 
 func (o orderLoader) Load(item interface{}) error {
 	order := item.(*Order)
-	if _, err := o.WriteString(
-		fmt.Sprintf("%d|%d|%c|%s|%s|%s|%s|%d|%s|\n",
-			order.OKey,
-			order.CustKey,
-			order.Status,
-			FmtMoney(order.TotalPrice),
-			order.Date,
-			order.OrderPriority,
-			order.Clerk,
-			order.ShipPriority,
-			order.Comment)); err != nil {
+	if err := o.WriteRow(context.TODO(),
+		order.OKey,
+		order.CustKey,
+		order.Status,
+		FmtMoney(order.TotalPrice),
+		order.Date,
+		order.OrderPriority,
+		order.Clerk,
+		order.ShipPriority,
+		order.Comment); err != nil {
 		return err
 	}
 	return nil
 }
+
 func (o orderLoader) Flush() error {
-	return nil
+	return o.CSVSink.Flush(context.TODO())
 }
 
-func NewOrderLoader(writer io.StringWriter) orderLoader {
-	return orderLoader{writer}
+func NewOrderLoader(w io.Writer) orderLoader {
+	return orderLoader{sink.NewCSVSinkWithDelimiter(w, '|')}
 }
 
 func sdOrder(child Table, skipCount dssHuge) {
@@ -120,7 +122,7 @@ func makeOrder(idx dssHuge) *Order {
 	order.Comment = makeText(oCmntLen, oCmntSd)
 	order.ShipPriority = 0
 	order.TotalPrice = 0
-	order.Status = 'O'
+	order.Status = "O"
 	oCnt := 0
 	lineCount := random(oLcntMin, oLcntMax, oLcntSd)
 
@@ -165,25 +167,25 @@ func makeOrder(idx dssHuge) *Order {
 		if julian(int(rDate)) <= currentDate {
 			var tmpStr string
 			pickStr(&lRflagSet, lRflgSd, &tmpStr)
-			line.RFlag = tmpStr[0]
+			line.RFlag = tmpStr[0:1]
 		} else {
-			line.RFlag = "N"[0]
+			line.RFlag = "N"
 		}
 
 		if julian(int(sDate)) <= currentDate {
 			oCnt++
-			line.LStatus = "F"[0]
+			line.LStatus = "F"
 		} else {
-			line.LStatus = "O"[0]
+			line.LStatus = "O"
 		}
 
 		order.Lines = append(order.Lines, line)
 	}
 	if oCnt > 0 {
-		order.Status = 'P'
+		order.Status = "P"
 	}
 	if oCnt == len(order.Lines) {
-		order.Status = 'F'
+		order.Status = "F"
 	}
 
 	return order

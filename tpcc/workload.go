@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pingcap/go-tpc/pkg/load"
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	"github.com/pingcap/go-tpc/pkg/sink"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
@@ -35,7 +35,7 @@ type tpccState struct {
 	*workload.TpcState
 	index   int
 	decks   []int
-	loaders map[string]*load.CSVBatchLoader
+	loaders map[string]*sink.CSVSink
 
 	newOrderStmts    map[string]*sql.Stmt
 	orderStatusStmts map[string]*sql.Stmt

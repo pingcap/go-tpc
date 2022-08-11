@@ -44,6 +44,7 @@ func executeTpcc(action string) {
 	openDB()
 	defer closeDB()
 
+	tpccConfig.OutputStyle = outputStyle
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel

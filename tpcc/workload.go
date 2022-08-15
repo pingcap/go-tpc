@@ -434,3 +434,15 @@ func closeStmts(stmts map[string]*sql.Stmt) {
 		stmt.Close()
 	}
 }
+
+func (w *Workloader) IsPlanReplayerDumpEnabled() bool {
+	return false
+}
+
+func (w *Workloader) PreparePlanReplayerDump() error {
+	return nil
+}
+
+func (w *Workloader) FinishPlanReplayerDump() error {
+	return nil
+}

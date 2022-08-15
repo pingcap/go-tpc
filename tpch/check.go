@@ -51,7 +51,7 @@ var queryColPrecisions = map[string][]precision{
 	"q22": {num, cnt, sum},
 }
 
-func (w Workloader) scanQueryResult(queryName string, rows *sql.Rows) error {
+func (w *Workloader) scanQueryResult(queryName string, rows *sql.Rows) error {
 	var got [][]string
 
 	cols, err := rows.Columns()

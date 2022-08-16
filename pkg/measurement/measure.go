@@ -74,18 +74,18 @@ func (m *Measurement) getOpName() []string {
 }
 
 // Output prints the measurement summary.
-func (m *Measurement) Output(ifSummaryReport bool, outputFunc func(string, map[string]*Histogram)) {
+func (m *Measurement) Output(ifSummaryReport bool, outputStyle string, outputFunc func(string, string, map[string]*Histogram)) {
 	if ifSummaryReport {
 		m.RLock()
 		defer m.RUnlock()
-		outputFunc("[Summary] ", m.OpSumMeasurement)
+		outputFunc(outputStyle, "[Summary] ", m.OpSumMeasurement)
 		return
 	}
 	// Clear current measure data every time
 	var opCurMeasurement = m.takeCurMeasurement()
 	m.RLock()
 	defer m.RUnlock()
-	outputFunc("[Current] ", opCurMeasurement)
+	outputFunc(outputStyle, "[Current] ", opCurMeasurement)
 }
 
 // EnableWarmUp sets whether to enable warm-up.

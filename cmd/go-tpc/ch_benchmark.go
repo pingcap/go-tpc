@@ -79,9 +79,11 @@ func executeCH(action string) {
 	openDB()
 	defer closeDB()
 
+	tpccConfig.OutputStyle = outputStyle
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
+	chConfig.OutputStyle = outputStyle
 	chConfig.DBName = dbName
 	chConfig.QueryNames = strings.Split(chConfig.RawQueries, ",")
 

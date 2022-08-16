@@ -62,6 +62,7 @@ func execRawsql(action string) {
 		os.Exit(1)
 	}
 
+	rawsqlConfig.OutputStyle = outputStyle
 	rawsqlConfig.DBName = dbName
 	rawsqlConfig.QueryNames = strings.Split(queryFiles, ",")
 	rawsqlConfig.Queries = make(map[string]string, len(rawsqlConfig.QueryNames))

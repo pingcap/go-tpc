@@ -6,6 +6,7 @@ require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
+	github.com/lib/pq v1.10.6
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_golang v0.9.3
 	github.com/spf13/cobra v1.0.0

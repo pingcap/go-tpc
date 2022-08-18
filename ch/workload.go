@@ -278,3 +278,15 @@ func (w Workloader) OutputStats(ifSummaryReport bool) {
 func (w Workloader) DBName() string {
 	return w.cfg.DBName
 }
+
+func (w Workloader) IsPlanReplayerDumpEnabled() bool {
+	return false
+}
+
+func (w Workloader) PreparePlanReplayerDump() error {
+	return nil
+}
+
+func (w Workloader) FinishPlanReplayerDump() error {
+	return nil
+}

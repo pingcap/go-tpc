@@ -23,6 +23,7 @@ func executeTpch(action string) {
 	}
 
 	tpchConfig.OutputStyle = outputStyle
+	tpchConfig.Driver = driver
 	tpchConfig.DBName = dbName
 	tpchConfig.PrepareThreads = threads
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")

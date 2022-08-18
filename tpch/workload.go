@@ -30,6 +30,7 @@ type analyzeConfig struct {
 
 // Config is the configuration for tpch workload
 type Config struct {
+	Driver               string
 	DBName               string
 	RawQueries           string
 	QueryNames           []string
@@ -186,7 +187,7 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 	defer w.updateState(ctx)
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
-	query := queries[queryName]
+	query := query(w.cfg.Driver, queryName)
 	if w.cfg.ExecExplainAnalyze {
 		query = strings.Replace(query, "/*PLACEHOLDER*/", "explain analyze", 1)
 	}

@@ -23,6 +23,8 @@ func executeTpch(action string) {
 
 	tpchConfig.Host = host
 	tpchConfig.StatusPort = statusPort
+
+	tpchConfig.OutputStyle = outputStyle
 	tpchConfig.DBName = dbName
 	tpchConfig.PrepareThreads = threads
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")

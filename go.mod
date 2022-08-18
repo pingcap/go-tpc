@@ -6,6 +6,7 @@ require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/prometheus/client_golang v0.9.3
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
@@ -22,7 +23,7 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/mattn/go-runewidth v0.0.7 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

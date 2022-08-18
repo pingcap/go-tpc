@@ -56,6 +56,9 @@ type Config struct {
 	// for prepare command only
 	OutputType string
 	OutputDir  string
+
+	// output style
+	OutputStyle string
 }
 
 type tpchState struct {
@@ -252,7 +255,7 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 	return nil
 }
 
-func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+func outputRtMeasurement(outputStyle string, prefix string, opMeasurement map[string]*measurement.Histogram) {
 	keys := make([]string, len(opMeasurement))
 	var i = 0
 	for k := range opMeasurement {
@@ -261,16 +264,25 @@ func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Hi
 	}
 	sort.Strings(keys)
 
+	lines := [][]string{}
 	for _, op := range keys {
 		hist := opMeasurement[op]
 		if !hist.Empty() {
-			fmt.Printf("%s%s: %.2fs\n", prefix, strings.ToUpper(op), float64(hist.GetInfo().Avg)/1000)
+			lines = append(lines, []string{prefix, strings.ToUpper(op), util.FloatToTwoString(float64(hist.GetInfo().Avg)/1000) + "s"})
 		}
+	}
+	switch outputStyle {
+	case util.OutputStylePlain:
+		util.RenderString("%s%s: %s\n", nil, lines)
+	case util.OutputStyleTable:
+		util.RenderTable([]string{"Prefix", "Operation", "Avg(s)"}, lines)
+	case util.OutputStyleJson:
+		util.RenderJson([]string{"Prefix", "Operation", "Avg(s)"}, lines)
 	}
 }
 
-func (w *Workloader) OutputStats(ifSummaryReport bool) {
-	w.measurement.Output(ifSummaryReport, outputRtMeasurement)
+func (w Workloader) OutputStats(ifSummaryReport bool) {
+	w.measurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputRtMeasurement)
 }
 
 // DBName returns the name of test db.

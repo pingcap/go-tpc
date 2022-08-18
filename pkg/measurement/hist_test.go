@@ -14,5 +14,5 @@ func TestHist(t *testing.T) {
 	}
 	h.Measure(time.Minute * 9)
 	h.Measure(time.Minute * 8)
-	t.Logf(h.Summary())
+	t.Logf("%+v", h.Summary())
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/sink"
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
@@ -79,6 +80,9 @@ type Config struct {
 	// connection, retry count when commiting statement fails, default 0
 	PrepareRetryCount    int
 	PrepareRetryInterval time.Duration
+
+	// output style
+	OutputStyle string
 }
 
 // Workloader is TPCC workload
@@ -193,7 +197,7 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	if s.Conn != nil {
 		s.Conn.Close()
 	}
-	for k, _ := range s.loaders {
+	for k := range s.loaders {
 		s.loaders[k].Close(ctx)
 	}
 }
@@ -333,13 +337,14 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 	return nil
 }
 
-func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+func outputRtMeasurement(outputStyle string, prefix string, opMeasurement map[string]*measurement.Histogram) {
 	keys := make([]string, 0, len(opMeasurement))
 	for k := range opMeasurement {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
+	lines := [][]string{}
 	for _, op := range keys {
 		hist := opMeasurement[op]
 		if !hist.Empty() {
@@ -355,12 +360,22 @@ func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Hi
 			p99Vec.WithLabelValues(op).Set(info.P99)
 			p999Vec.WithLabelValues(op).Set(info.P999)
 			maxVec.WithLabelValues(op).Set(info.Max)
-			fmt.Printf("%s%-6s - %s\n", prefix, op, hist.Summary())
+			line := []string{prefix, op}
+			line = append(line, hist.Summary()...)
+			lines = append(lines, line)
 		}
+	}
+	switch outputStyle {
+	case util.OutputStylePlain:
+		util.RenderString("%s%-6s - %s\n", []string{"Prefix", "Operation", "Takes(s)", "Count", "TPM", "Sum(ms)", "Avg(ms)", "50th(ms)", "90th(ms)", "95th(ms)", "99th(ms)", "99.9th(ms)", "Max(ms)"}, lines)
+	case util.OutputStyleTable:
+		util.RenderTable([]string{"Prefix", "Operation", "Takes(s)", "Count", "TPM", "Sum(ms)", "Avg(ms)", "50th(ms)", "90th(ms)", "95th(ms)", "99th(ms)", "99.9th(ms)", "Max(ms)"}, lines)
+	case util.OutputStyleJson:
+		util.RenderJson([]string{"Prefix", "Operation", "Takes(s)", "Count", "TPM", "Sum(ms)", "Avg(ms)", "50th(ms)", "90th(ms)", "95th(ms)", "99th(ms)", "99.9th(ms)", "Max(ms)"}, lines)
 	}
 }
 
-func outputWaitTimesMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+func outputWaitTimesMeasurement(outputStyle string, prefix string, opMeasurement map[string]*measurement.Histogram) {
 	keys := make([]string, len(opMeasurement))
 	var i = 0
 	for k := range opMeasurement {
@@ -369,17 +384,27 @@ func outputWaitTimesMeasurement(prefix string, opMeasurement map[string]*measure
 	}
 	sort.Strings(keys)
 
+	lines := [][]string{}
 	for _, op := range keys {
 		hist := opMeasurement[op]
 		if !hist.Empty() {
-			fmt.Printf("%s%-6s - %.1fs\n", prefix, strings.ToUpper(op), float64(hist.GetInfo().Avg)/1000)
+			lines = append(lines, []string{prefix, strings.ToUpper(op), util.FloatToOneString(float64(hist.GetInfo().Avg)/1000) + "s"})
 		}
 	}
+	switch outputStyle {
+	case util.OutputStylePlain:
+		util.RenderString("%s%-6s - %s\n", nil, lines)
+	case util.OutputStyleTable:
+		util.RenderTable([]string{"Prefix", "Operation", "Avg(s)"}, lines)
+	case util.OutputStyleJson:
+		util.RenderJson([]string{"Prefix", "Operation", "Avg(s)"}, lines)
+	}
 }
+
 func (w *Workloader) OutputStats(ifSummaryReport bool) {
-	w.rtMeasurement.Output(ifSummaryReport, outputRtMeasurement)
+	w.rtMeasurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputRtMeasurement)
 	if w.cfg.Wait {
-		w.waitTimeMeasurement.Output(ifSummaryReport, outputWaitTimesMeasurement)
+		w.waitTimeMeasurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputWaitTimesMeasurement)
 	}
 	if ifSummaryReport {
 		hist, e := w.rtMeasurement.OpSumMeasurement["new_order"]
@@ -388,7 +413,20 @@ func (w *Workloader) OutputStats(ifSummaryReport bool) {
 			const specWarehouseFactor = 12.86
 			tpmC := result.Ops * 60
 			efc := 100 * tpmC / (specWarehouseFactor * float64(w.cfg.Warehouses))
-			fmt.Printf("tpmC: %.1f, efficiency: %.1f%%\n", tpmC, efc)
+			lines := [][]string{
+				{
+					util.FloatToOneString(tpmC),
+					util.FloatToOneString(efc) + "%",
+				},
+			}
+			switch w.cfg.OutputStyle {
+			case util.OutputStylePlain:
+				util.RenderString("tpmC: %s, efficiency: %s\n", nil, lines)
+			case util.OutputStyleTable:
+				util.RenderTable([]string{"tpmC", "efficiency"}, lines)
+			case util.OutputStyleJson:
+				util.RenderJson([]string{"tpmC", "efficiency"}, lines)
+			}
 		}
 	}
 }

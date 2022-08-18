@@ -1,7 +1,6 @@
 package ch
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpch"
 	"github.com/pingcap/go-tpc/tpch/dbgen"
@@ -35,6 +35,9 @@ type Config struct {
 	CreateTiFlashReplica bool
 	AnalyzeTable         analyzeConfig
 	RefreshConnWait      time.Duration
+
+	// output style
+	OutputStyle string
 }
 
 type chState struct {
@@ -214,7 +217,7 @@ func (w Workloader) Check(ctx context.Context, threadID int) error {
 	return nil
 }
 
-func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+func outputRtMeasurement(outputStyle string, prefix string, opMeasurement map[string]*measurement.Histogram) {
 	keys := make([]string, len(opMeasurement))
 	var i = 0
 	for k := range opMeasurement {
@@ -223,27 +226,38 @@ func outputRtMeasurement(prefix string, opMeasurement map[string]*measurement.Hi
 	}
 	sort.Strings(keys)
 
+	lines := [][]string{}
 	for _, op := range keys {
 		hist := opMeasurement[op]
 		if !hist.Empty() {
-			fmt.Printf("%s%-6s - %s\n", prefix, strings.ToUpper(op), chSummary(hist))
+			line := []string{prefix, strings.ToUpper(op)}
+			line = append(line, chSummary(hist)...)
+			lines = append(lines, line)
 		}
+	}
+	switch outputStyle {
+	case util.OutputStylePlain:
+		util.RenderString("%s%-6s - %s\n", []string{"Prefix", "Operation", "Count", "Sum(ms)", "Avg(ms)"}, lines)
+	case util.OutputStyleTable:
+		util.RenderTable([]string{"Prefix", "Operation", "Count", "Sum(ms)", "Avg(ms)"}, lines)
+	case util.OutputStyleJson:
+		util.RenderJson([]string{"Prefix", "Operation", "Count", "Sum(ms)", "Avg(ms)"}, lines)
+
 	}
 }
 
-func chSummary(h *measurement.Histogram) string {
+func chSummary(h *measurement.Histogram) []string {
 	res := h.GetInfo()
 
-	buf := new(bytes.Buffer)
-	buf.WriteString(fmt.Sprintf("Count: %d, ", res.Count))
-	buf.WriteString(fmt.Sprintf("Sum(ms): %.1f, ", res.Sum))
-	buf.WriteString(fmt.Sprintf("Avg(ms): %.1f", res.Avg))
-
-	return buf.String()
+	return []string{
+		util.IntToString(res.Count),
+		util.FloatToOneString(res.Sum),
+		util.FloatToOneString(res.Avg),
+	}
 }
 
 func (w Workloader) OutputStats(ifSummaryReport bool) {
-	w.measurement.Output(ifSummaryReport, outputRtMeasurement)
+	w.measurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputRtMeasurement)
 	if ifSummaryReport {
 		var count int64
 		var elapsed float64

@@ -1,12 +1,12 @@
 package measurement
 
 import (
-	"bytes"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
+	"github.com/pingcap/go-tpc/pkg/util"
 )
 
 type Histogram struct {
@@ -56,22 +56,22 @@ func (h *Histogram) Empty() bool {
 	return h.TotalCount() == 0
 }
 
-func (h *Histogram) Summary() string {
+func (h *Histogram) Summary() []string {
 	res := h.GetInfo()
-	buf := new(bytes.Buffer)
-	buf.WriteString(fmt.Sprintf("Takes(s): %.1f, ", res.Elapsed))
-	buf.WriteString(fmt.Sprintf("Count: %d, ", res.Count))
-	buf.WriteString(fmt.Sprintf("TPM: %.1f, ", res.Ops*60))
-	buf.WriteString(fmt.Sprintf("Sum(ms): %.1f, ", res.Sum))
-	buf.WriteString(fmt.Sprintf("Avg(ms): %.1f, ", res.Avg))
-	buf.WriteString(fmt.Sprintf("50th(ms): %.1f, ", res.P50))
-	buf.WriteString(fmt.Sprintf("90th(ms): %.1f, ", res.P90))
-	buf.WriteString(fmt.Sprintf("95th(ms): %.1f, ", res.P95))
-	buf.WriteString(fmt.Sprintf("99th(ms): %.1f, ", res.P99))
-	buf.WriteString(fmt.Sprintf("99.9th(ms): %.1f, ", res.P999))
-	buf.WriteString(fmt.Sprintf("Max(ms): %.1f", res.Max))
 
-	return buf.String()
+	return []string{
+		util.FloatToOneString(res.Elapsed),
+		util.IntToString(res.Count),
+		util.FloatToOneString(res.Ops * 60),
+		util.FloatToOneString(res.Sum),
+		util.FloatToOneString(res.Avg),
+		util.FloatToOneString(res.P50),
+		util.FloatToOneString(res.P90),
+		util.FloatToOneString(res.P95),
+		util.FloatToOneString(res.P99),
+		util.FloatToOneString(res.P999),
+		util.FloatToOneString(res.Max),
+	}
 }
 
 func (h *Histogram) GetInfo() HistInfo {

@@ -24,6 +24,9 @@ type Config struct {
 	QueryNames         []string
 	ExecExplainAnalyze bool
 	RefreshWait        time.Duration
+
+	// output style
+	OutputStyle string
 }
 
 type rawsqlState struct {
@@ -117,7 +120,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	return nil
 }
 
-func outputMeasurement(prefix string, opMeasurement map[string]*measurement.Histogram) {
+func outputMeasurement(outputStyle string, prefix string, opMeasurement map[string]*measurement.Histogram) {
 	keys := make([]string, len(opMeasurement))
 	var i = 0
 	for k := range opMeasurement {
@@ -126,16 +129,26 @@ func outputMeasurement(prefix string, opMeasurement map[string]*measurement.Hist
 	}
 	sort.Strings(keys)
 
+	lines := [][]string{}
 	for _, op := range keys {
 		hist := opMeasurement[op]
 		if !hist.Empty() {
-			fmt.Printf("%s%s: %.2fs\n", prefix, strings.ToUpper(op), float64(hist.GetInfo().Avg)/1000)
+			lines = append(lines, []string{prefix, strings.ToUpper(op), util.FloatToTwoString(float64(hist.GetInfo().Avg)/1000) + "s"})
 		}
+	}
+
+	switch outputStyle {
+	case util.OutputStylePlain:
+		util.RenderString("%s%s: %s\n", nil, lines)
+	case util.OutputStyleTable:
+		util.RenderTable([]string{"Prefix", "Operation", "Avg(s)"}, lines)
+	case util.OutputStyleJson:
+		util.RenderJson([]string{"Prefix", "Operation", "Avg(s)"}, lines)
 	}
 }
 
 func (w *Workloader) OutputStats(ifSummaryReport bool) {
-	w.measurement.Output(ifSummaryReport, outputMeasurement)
+	w.measurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputMeasurement)
 }
 
 func (w *Workloader) DBName() string {

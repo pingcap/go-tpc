@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/spf13/cobra"
 
 	// mysql package
@@ -37,6 +38,7 @@ var (
 	metricsAddr    string
 	maxProcs       int
 	connParams     string
+	outputStyle    string
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -115,6 +117,7 @@ func main() {
 2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
 5: Snapshot, 6: Serializable, 7: Linerizable`)
 	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables")
+	rootCmd.PersistentFlags().StringVar(&outputStyle, "output", util.OutputStylePlain, "output style, valid values can be { plain | table | json }")
 
 	cobra.EnablePrefixMatching = true
 

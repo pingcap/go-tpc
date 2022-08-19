@@ -54,6 +54,7 @@ const (
 
 // Config is the configuration for tpcc workload
 type Config struct {
+	Driver        string
 	DBName        string
 	Threads       int
 	Parts         int
@@ -206,7 +207,7 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	if w.db != nil {
 		if threadID == 0 {
-			if err := w.ddlManager.createTables(ctx); err != nil {
+			if err := w.ddlManager.createTables(ctx, w.cfg.Driver); err != nil {
 				return err
 			}
 		}

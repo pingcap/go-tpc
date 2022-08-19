@@ -118,7 +118,7 @@ func (c *CSVWorkLoader) CleanupThread(ctx context.Context, _ int) {
 func (c *CSVWorkLoader) Prepare(ctx context.Context, threadID int) error {
 	if c.db != nil {
 		if threadID == 0 {
-			if err := c.ddlManager.createTables(ctx); err != nil {
+			if err := c.ddlManager.createTables(ctx, c.cfg.Driver); err != nil {
 				return err
 			}
 		}

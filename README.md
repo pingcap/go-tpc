@@ -1,6 +1,6 @@
 # Go TPC
 
-A toolbox to benchmark workloads in [TPC](http://www.tpc.org/) for TiDB and almost MySQL compatible databases.
+A toolbox to benchmark workloads in [TPC](http://www.tpc.org/) for TiDB and almost MySQL compatible databases, and PostgreSQL compatible database.
 
 ## Install
 
@@ -58,18 +58,33 @@ For example:
 
 #### Prepare
 
+##### TiDB && MySQL
+
 ```bash
 # Create 4 warehouses with 4 threads
 ./bin/go-tpc tpcc --warehouses 4 prepare -T 4
 ```
 
+##### PostgreSQL
+
+```
+./bin/go-tpc tpcc prepare -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
+```
+
 #### Run
+
+##### TiDB && MySQL
 
 ```bash
 # Run TPCC workloads, you can just run or add --wait option to including wait times
 ./bin/go-tpc tpcc --warehouses 4 run -T 4
 # Run TPCC including wait times(keying & thinking time) on every transactions
 ./bin/go-tpc tpcc --warehouses 4 run -T 4 --wait
+```
+
+##### PostgreSQL
+```
+./bin/go-tpc tpcc prepare -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 ```
 
 #### Check

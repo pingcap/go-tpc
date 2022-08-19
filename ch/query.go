@@ -142,7 +142,6 @@ where	 i_id = s_i_id
   and r_name = 'ASIA'
   and s_nationkey = n2.n_nationkey
   and o_entry_d between '2007-01-02 00:00:00.000000' and '2032-01-02 00:00:00.000000'
-#   and i_data like '%a'
   and i_id = ol_i_id
 group by extract(year from o_entry_d)
 order by l_year;

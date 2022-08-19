@@ -80,6 +80,7 @@ func executeCH(action string) {
 	defer closeDB()
 
 	tpccConfig.OutputStyle = outputStyle
+	tpccConfig.Driver = driver
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel

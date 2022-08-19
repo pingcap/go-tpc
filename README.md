@@ -163,13 +163,16 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 
 ##### TiDB && MySQL
 ```bash
-# Prepare data
-./bin/go-tpc ch prepare
-# Prepare data, create tiflash replica, and analyze table after data loaded
+# Prepare TP data
+./bin/go-tpc tpcc --warehouses 10 run -T 4
+# Prepare AP data, create tiflash replica, and analyze table after data loaded
 ./bin/go-tpc ch --analyze --tiflash prepare
 ```
 ##### PostgreSQL
-```
+``` bash
+# Prepare TP data
+./bin/go-tpc tpcc prepare -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable -T 4
+# Prepare AP data
 ./bin/go-tpc ch prepare -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 ```
 

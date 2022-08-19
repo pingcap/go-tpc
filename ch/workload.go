@@ -29,6 +29,7 @@ type analyzeConfig struct {
 
 // Config is the configuration for ch workload
 type Config struct {
+	Driver               string
 	DBName               string
 	RawQueries           string
 	QueryNames           []string
@@ -167,13 +168,24 @@ func (w Workloader) createTiFlashReplica(ctx context.Context, s *chState) error 
 
 func (w Workloader) analyzeTables(ctx context.Context, acfg analyzeConfig) error {
 	s := w.getState(ctx)
-	for _, tbl := range allTables {
-		fmt.Printf("analyzing table %s\n", tbl)
-		if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("SET @@session.tidb_build_stats_concurrency=%d; SET @@session.tidb_distsql_scan_concurrency=%d; SET @@session.tidb_index_serial_scan_concurrency=%d; ANALYZE TABLE %s", acfg.BuildStatsConcurrency, acfg.DistsqlScanConcurrency, acfg.IndexSerialScanConcurrency, tbl)); err != nil {
-			return err
+	if w.cfg.Driver == "mysql" {
+		for _, tbl := range allTables {
+			fmt.Printf("analyzing table %s\n", tbl)
+			if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("SET @@session.tidb_build_stats_concurrency=%d; SET @@session.tidb_distsql_scan_concurrency=%d; SET @@session.tidb_index_serial_scan_concurrency=%d; ANALYZE TABLE %s", acfg.BuildStatsConcurrency, acfg.DistsqlScanConcurrency, acfg.IndexSerialScanConcurrency, tbl)); err != nil {
+				return err
+			}
+			fmt.Printf("analyze table %s done\n", tbl)
 		}
-		fmt.Printf("analyze table %s done\n", tbl)
+	} else if w.cfg.Driver == "postgres" {
+		for _, tbl := range allTables {
+			fmt.Printf("analyzing %s\n", tbl)
+			if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("ANALYZE %s", tbl)); err != nil {
+				return err
+			}
+			fmt.Printf("analyze %s done\n", tbl)
+		}
 	}
+
 	return nil
 }
 

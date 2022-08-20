@@ -58,6 +58,21 @@ func execute(ctx context.Context, w workload.Workloader, action string, threads,
 		return w.Check(ctx, index)
 	}
 
+	enabledDumpPlanReplayer := w.IsPlanReplayerDumpEnabled()
+	if enabledDumpPlanReplayer {
+		err := w.PreparePlanReplayerDump()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := w.FinishPlanReplayerDump()
+			if err != nil {
+				fmt.Printf("[%s] dump plan replayer failed, err%v\n",
+					time.Now().Format("2006-01-02 15:04:05"), err)
+			}
+		}()
+	}
+
 	for i := 0; i < count || count <= 0; i++ {
 		err := w.Run(ctx, index)
 

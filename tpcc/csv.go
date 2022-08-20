@@ -487,3 +487,15 @@ func (c *CSVWorkLoader) loadOrderLine(ctx context.Context, warehouse int,
 
 	return l.Flush(ctx)
 }
+
+func (c *CSVWorkLoader) IsPlanReplayerDumpEnabled() bool {
+	return false
+}
+
+func (c *CSVWorkLoader) PreparePlanReplayerDump() error {
+	return nil
+}
+
+func (c *CSVWorkLoader) FinishPlanReplayerDump() error {
+	return nil
+}

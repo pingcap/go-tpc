@@ -23,6 +23,7 @@ var (
 	dbName         string
 	host           string
 	port           int
+	statusPort     int
 	user           string
 	password       string
 	threads        int
@@ -135,6 +136,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "U", "root", "Database user")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "P", 4000, "Database port")
+	rootCmd.PersistentFlags().IntVarP(&statusPort, "statusPort", "S", 10080, "Database status port")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 1, "Thread concurrency")
 	rootCmd.PersistentFlags().IntVarP(&acThreads, "acThreads", "t", 1, "OLAP client concurrency, only for CH-benCHmark")
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", mysqlDriver, "Database driver: mysql, postgres")

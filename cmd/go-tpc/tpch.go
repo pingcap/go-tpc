@@ -6,9 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	"github.com/pingcap/go-tpc/tpch"
+	"github.com/spf13/cobra"
 )
 
 var tpchConfig tpch.Config
@@ -22,13 +21,15 @@ func executeTpch(action string) {
 		os.Exit(1)
 	}
 
+	tpchConfig.Host = host
+	tpchConfig.StatusPort = statusPort
+
 	tpchConfig.OutputStyle = outputStyle
 	tpchConfig.Driver = driver
 	tpchConfig.DBName = dbName
 	tpchConfig.PrepareThreads = threads
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
 	w := tpch.NewWorkloader(globalDB, &tpchConfig)
-
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
 
@@ -61,6 +62,21 @@ func registerTpch(root *cobra.Command) {
 		"check",
 		false,
 		"Check output data, only when the scale factor equals 1")
+
+	cmd.PersistentFlags().BoolVar(&tpchConfig.EnablePlanReplayer,
+		"use-plan-replayer",
+		false,
+		"Use Plan Replayer to dump stats and variables before running queries")
+
+	cmd.PersistentFlags().StringVar(&tpchConfig.PlanReplayerDir,
+		"plan-replayer-dir",
+		"",
+		"Dir of Plan Replayer file dumps")
+
+	cmd.PersistentFlags().StringVar(&tpchConfig.PlanReplayerFileName,
+		"plan-replayer-file",
+		"",
+		"Name of plan Replayer file dumps")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",

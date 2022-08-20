@@ -16,4 +16,8 @@ type Workloader interface {
 	Check(ctx context.Context, threadID int) error
 	OutputStats(ifSummaryReport bool)
 	DBName() string
+
+	IsPlanReplayerDumpEnabled() bool
+	PreparePlanReplayerDump() error
+	FinishPlanReplayerDump() error
 }

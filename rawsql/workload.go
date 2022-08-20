@@ -171,3 +171,15 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 func (w *Workloader) Check(ctx context.Context, threadID int) error {
 	panic("not implemented") // TODO: Implement
 }
+
+func (w Workloader) IsPlanReplayerDumpEnabled() bool {
+	return false
+}
+
+func (w Workloader) PreparePlanReplayerDump() error {
+	return nil
+}
+
+func (w Workloader) FinishPlanReplayerDump() error {
+	return nil
+}

@@ -1,6 +1,6 @@
 # Go TPC
 
-A toolbox to benchmark workloads in [TPC](http://www.tpc.org/) for TiDB and almost MySQL compatible databases, and PostgreSQL compatible database.
+A toolbox to benchmark workloads in [TPC](http://www.tpc.org/) for TiDB and almost MySQL compatible databases, and PostgreSQL compatible database, such as PostgreSQL / CockroachDB / AlloyDB / Yugabyte.
 
 ## Install
 
@@ -58,14 +58,15 @@ For example:
 
 #### Prepare
 
-##### TiDB && MySQL
+##### TiDB & MySQL
 
 ```bash
 # Create 4 warehouses with 4 threads
 ./bin/go-tpc tpcc --warehouses 4 prepare -T 4
 ```
 
-##### PostgreSQL
+##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
+
 
 ```
 ./bin/go-tpc tpcc prepare -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
@@ -73,7 +74,7 @@ For example:
 
 #### Run
 
-##### TiDB && MySQL
+##### TiDB & MySQL
 
 ```bash
 # Run TPCC workloads, you can just run or add --wait option to including wait times
@@ -82,7 +83,8 @@ For example:
 ./bin/go-tpc tpcc --warehouses 4 run -T 4 --wait
 ```
 
-##### PostgreSQL
+##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
+
 ```
 ./bin/go-tpc tpcc run -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 ```
@@ -118,7 +120,7 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 
 #### Prepare
 
-##### TiDB && MySQL
+##### TiDB & MySQL
 
 ```bash
 # Prepare data with scale factor 1
@@ -127,13 +129,14 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 ./bin/go-tpc tpch --sf 1 --analyze --tiflash prepare
 ```
 
-##### PostgreSQL
+##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
+
 ```
 ./bin/go-tpc tpch prepare -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 ```
 
 #### Run
-##### TiDB && MySQL
+##### TiDB & MySQL
 
 ```bash
 # Run TPCH workloads with result checking
@@ -142,7 +145,8 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 ./bin/go-tpc tpch --sf=1 run
 ```
 
-##### PostgreSQL
+##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
+
 ```
 ./bin/go-tpc tpch run -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 ```
@@ -161,14 +165,15 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 
 2. Then uses `go-tpc ch prepare` to prepare the AP part schema and data
 
-##### TiDB && MySQL
+##### TiDB & MySQL
 ```bash
 # Prepare TP data
 ./bin/go-tpc tpcc --warehouses 10 run -T 4
 # Prepare AP data, create tiflash replica, and analyze table after data loaded
 ./bin/go-tpc ch --analyze --tiflash prepare
 ```
-##### PostgreSQL
+##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
+
 ``` bash
 # Prepare TP data
 ./bin/go-tpc tpcc prepare -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable -T 4
@@ -178,11 +183,12 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 
 #### Run
 
-##### TiDB && MySQL
+##### TiDB & MySQL
 ```bash
 ./bin/go-tpc ch --warehouses $warehouses -T $tpWorkers -t $apWorkers --time $measurement-time run
 ```
-##### PostgreSQL
+##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
+
 ```
 ./bin/go-tpc ch run -d postgres -U myuser -p '12345678' -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 ```

@@ -37,6 +37,7 @@ type analyzeConfig struct {
 
 // Config is the configuration for tpch workload
 type Config struct {
+	Driver               string
 	DBName               string
 	RawQueries           string
 	QueryNames           []string
@@ -184,12 +185,22 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 
 func (w *Workloader) analyzeTables(ctx context.Context, acfg analyzeConfig) error {
 	s := w.getState(ctx)
-	for _, tbl := range allTables {
-		fmt.Printf("analyzing table %s\n", tbl)
-		if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("SET @@session.tidb_build_stats_concurrency=%d; SET @@session.tidb_distsql_scan_concurrency=%d; SET @@session.tidb_index_serial_scan_concurrency=%d; ANALYZE TABLE %s", acfg.BuildStatsConcurrency, acfg.DistsqlScanConcurrency, acfg.IndexSerialScanConcurrency, tbl)); err != nil {
-			return err
+	if w.cfg.Driver == "mysql" {
+		for _, tbl := range allTables {
+			fmt.Printf("analyzing table %s\n", tbl)
+			if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("SET @@session.tidb_build_stats_concurrency=%d; SET @@session.tidb_distsql_scan_concurrency=%d; SET @@session.tidb_index_serial_scan_concurrency=%d; ANALYZE TABLE %s", acfg.BuildStatsConcurrency, acfg.DistsqlScanConcurrency, acfg.IndexSerialScanConcurrency, tbl)); err != nil {
+				return err
+			}
+			fmt.Printf("analyze table %s done\n", tbl)
 		}
-		fmt.Printf("analyze table %s done\n", tbl)
+	} else if w.cfg.Driver == "postgres" {
+		for _, tbl := range allTables {
+			fmt.Printf("analyzing %s\n", tbl)
+			if _, err := s.Conn.ExecContext(ctx, fmt.Sprintf("ANALYZE %s", tbl)); err != nil {
+				return err
+			}
+			fmt.Printf("analyze %s done\n", tbl)
+		}
 	}
 	return nil
 }
@@ -205,8 +216,10 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	defer w.updateState(ctx)
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
-	query := queries[queryName]
-	if w.cfg.EnablePlanReplayer {
+	query := query(w.cfg.Driver, queryName)
+
+	// only for driver == mysql and EnablePlanReplayer == true
+	if w.cfg.EnablePlanReplayer && w.cfg.Driver == "mysql" {
 		err := w.dumpPlanReplayer(ctx, s, query, queryName)
 		if err != nil {
 			return err

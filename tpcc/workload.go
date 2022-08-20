@@ -54,6 +54,7 @@ const (
 
 // Config is the configuration for tpcc workload
 type Config struct {
+	Driver        string
 	DBName        string
 	Threads       int
 	Parts         int
@@ -206,7 +207,7 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	if w.db != nil {
 		if threadID == 0 {
-			if err := w.ddlManager.createTables(ctx); err != nil {
+			if err := w.ddlManager.createTables(ctx, w.cfg.Driver); err != nil {
 				return err
 			}
 		}
@@ -234,54 +235,54 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	}
 	if s.newOrderStmts == nil || refreshConn {
 		s.newOrderStmts = map[string]*sql.Stmt{
-			newOrderSelectCustomer: prepareStmt(ctx, s.Conn, newOrderSelectCustomer),
-			newOrderSelectDistrict: prepareStmt(ctx, s.Conn, newOrderSelectDistrict),
-			newOrderUpdateDistrict: prepareStmt(ctx, s.Conn, newOrderUpdateDistrict),
-			newOrderInsertOrder:    prepareStmt(ctx, s.Conn, newOrderInsertOrder),
-			newOrderInsertNewOrder: prepareStmt(ctx, s.Conn, newOrderInsertNewOrder),
+			newOrderSelectCustomer: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderSelectCustomer),
+			newOrderSelectDistrict: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderSelectDistrict),
+			newOrderUpdateDistrict: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderUpdateDistrict),
+			newOrderInsertOrder:    prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderInsertOrder),
+			newOrderInsertNewOrder: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderInsertNewOrder),
 			// batch select items
 			// batch select stock for update
-			newOrderUpdateStock: prepareStmt(ctx, s.Conn, newOrderUpdateStock),
+			newOrderUpdateStock: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderUpdateStock),
 			// batch insert order_line
 		}
 		for i := 5; i <= 15; i++ {
-			s.newOrderStmts[newOrderSelectItemSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderSelectItemSQLs[i])
-			s.newOrderStmts[newOrderSelectStockSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderSelectStockSQLs[i])
-			s.newOrderStmts[newOrderInsertOrderLineSQLs[i]] = prepareStmt(ctx, s.Conn, newOrderInsertOrderLineSQLs[i])
+			s.newOrderStmts[newOrderSelectItemSQLs[i]] = prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderSelectItemSQLs[i])
+			s.newOrderStmts[newOrderSelectStockSQLs[i]] = prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderSelectStockSQLs[i])
+			s.newOrderStmts[newOrderInsertOrderLineSQLs[i]] = prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderInsertOrderLineSQLs[i])
 		}
 
 		s.paymentStmts = map[string]*sql.Stmt{
-			paymentUpdateWarehouse:          prepareStmt(ctx, s.Conn, paymentUpdateWarehouse),
-			paymentSelectWarehouse:          prepareStmt(ctx, s.Conn, paymentSelectWarehouse),
-			paymentUpdateDistrict:           prepareStmt(ctx, s.Conn, paymentUpdateDistrict),
-			paymentSelectDistrict:           prepareStmt(ctx, s.Conn, paymentSelectDistrict),
-			paymentSelectCustomerListByLast: prepareStmt(ctx, s.Conn, paymentSelectCustomerListByLast),
-			paymentSelectCustomerForUpdate:  prepareStmt(ctx, s.Conn, paymentSelectCustomerForUpdate),
-			paymentSelectCustomerData:       prepareStmt(ctx, s.Conn, paymentSelectCustomerData),
-			paymentUpdateCustomerWithData:   prepareStmt(ctx, s.Conn, paymentUpdateCustomerWithData),
-			paymentUpdateCustomer:           prepareStmt(ctx, s.Conn, paymentUpdateCustomer),
-			paymentInsertHistory:            prepareStmt(ctx, s.Conn, paymentInsertHistory),
+			paymentUpdateWarehouse:          prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateWarehouse),
+			paymentSelectWarehouse:          prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectWarehouse),
+			paymentUpdateDistrict:           prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateDistrict),
+			paymentSelectDistrict:           prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectDistrict),
+			paymentSelectCustomerListByLast: prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectCustomerListByLast),
+			paymentSelectCustomerForUpdate:  prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectCustomerForUpdate),
+			paymentSelectCustomerData:       prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectCustomerData),
+			paymentUpdateCustomerWithData:   prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateCustomerWithData),
+			paymentUpdateCustomer:           prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateCustomer),
+			paymentInsertHistory:            prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentInsertHistory),
 		}
 
 		s.orderStatusStmts = map[string]*sql.Stmt{
-			orderStatusSelectCustomerCntByLast: prepareStmt(ctx, s.Conn, orderStatusSelectCustomerCntByLast),
-			orderStatusSelectCustomerByLast:    prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByLast),
-			orderStatusSelectCustomerByID:      prepareStmt(ctx, s.Conn, orderStatusSelectCustomerByID),
-			orderStatusSelectLatestOrder:       prepareStmt(ctx, s.Conn, orderStatusSelectLatestOrder),
-			orderStatusSelectOrderLine:         prepareStmt(ctx, s.Conn, orderStatusSelectOrderLine),
+			orderStatusSelectCustomerCntByLast: prepareStmt(w.cfg.Driver, ctx, s.Conn, orderStatusSelectCustomerCntByLast),
+			orderStatusSelectCustomerByLast:    prepareStmt(w.cfg.Driver, ctx, s.Conn, orderStatusSelectCustomerByLast),
+			orderStatusSelectCustomerByID:      prepareStmt(w.cfg.Driver, ctx, s.Conn, orderStatusSelectCustomerByID),
+			orderStatusSelectLatestOrder:       prepareStmt(w.cfg.Driver, ctx, s.Conn, orderStatusSelectLatestOrder),
+			orderStatusSelectOrderLine:         prepareStmt(w.cfg.Driver, ctx, s.Conn, orderStatusSelectOrderLine),
 		}
 		s.deliveryStmts = map[string]*sql.Stmt{
-			deliverySelectNewOrder:  prepareStmt(ctx, s.Conn, deliverySelectNewOrder),
-			deliveryDeleteNewOrder:  prepareStmt(ctx, s.Conn, deliveryDeleteNewOrder),
-			deliveryUpdateOrder:     prepareStmt(ctx, s.Conn, deliveryUpdateOrder),
-			deliverySelectOrders:    prepareStmt(ctx, s.Conn, deliverySelectOrders),
-			deliveryUpdateOrderLine: prepareStmt(ctx, s.Conn, deliveryUpdateOrderLine),
-			deliverySelectSumAmount: prepareStmt(ctx, s.Conn, deliverySelectSumAmount),
-			deliveryUpdateCustomer:  prepareStmt(ctx, s.Conn, deliveryUpdateCustomer),
+			deliverySelectNewOrder:  prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectNewOrder),
+			deliveryDeleteNewOrder:  prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryDeleteNewOrder),
+			deliveryUpdateOrder:     prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateOrder),
+			deliverySelectOrders:    prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectOrders),
+			deliveryUpdateOrderLine: prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateOrderLine),
+			deliverySelectSumAmount: prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectSumAmount),
+			deliveryUpdateCustomer:  prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateCustomer),
 		}
 		s.stockLevelStmt = map[string]*sql.Stmt{
-			stockLevelSelectDistrict: prepareStmt(ctx, s.Conn, stockLevelSelectDistrict),
-			stockLevelCount:          prepareStmt(ctx, s.Conn, stockLevelCount),
+			stockLevelSelectDistrict: prepareStmt(w.cfg.Driver, ctx, s.Conn, stockLevelSelectDistrict),
+			stockLevelCount:          prepareStmt(w.cfg.Driver, ctx, s.Conn, stockLevelCount),
 		}
 	}
 
@@ -444,21 +445,22 @@ func (w *Workloader) beginTx(ctx context.Context) (*sql.Tx, error) {
 	return tx, err
 }
 
-func prepareStmts(ctx context.Context, conn *sql.Conn, queries []string) []*sql.Stmt {
+func prepareStmts(driver string, ctx context.Context, conn *sql.Conn, queries []string) []*sql.Stmt {
 	stmts := make([]*sql.Stmt, len(queries))
 	for i, query := range queries {
 		if len(query) == 0 {
 			continue
 		}
-		stmts[i] = prepareStmt(ctx, conn, query)
+		stmts[i] = prepareStmt(driver, ctx, conn, query)
 	}
 
 	return stmts
 }
 
-func prepareStmt(ctx context.Context, conn *sql.Conn, query string) *sql.Stmt {
-	stmt, err := conn.PrepareContext(ctx, query)
+func prepareStmt(driver string, ctx context.Context, conn *sql.Conn, query string) *sql.Stmt {
+	stmt, err := conn.PrepareContext(ctx, convertToPQ(query, driver))
 	if err != nil {
+		fmt.Println(fmt.Sprintf("prepare statement error: %s", query))
 		panic(err)
 	}
 	return stmt

@@ -1,11 +1,33 @@
 package tpcc
 
 import (
+	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/util"
 )
+
+// convert the default mysql query to pq format
+// https://go.dev/doc/database/querying
+// Note: Parameter placeholders in prepared statements vary depending on the DBMS and driver you’re using. For example, the pq driver for Postgres requires a placeholder like $1 instead of ?.
+
+func convertToPQ(query string, driver string) string {
+	// return strings.Replace(query, "?", "", -1)
+	if driver == "postgres" {
+		i := 1
+		for {
+			prev := query
+			query = strings.Replace(query, "?", fmt.Sprintf("$%d", i), 1)
+			if prev == query {
+				break
+			}
+			i++ // repeated forever
+		}
+	}
+	return query
+}
 
 // randInt return a random int in [min, max]
 // refer 4.3.2.5

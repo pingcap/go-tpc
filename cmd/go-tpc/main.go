@@ -15,6 +15,8 @@ import (
 
 	// mysql package
 	_ "github.com/go-sql-driver/mysql"
+	// pg
+	_ "github.com/lib/pq"
 )
 
 var (
@@ -45,9 +47,9 @@ var (
 )
 
 const (
-	unknownDB   = "Unknown database"
-	createDBDDL = "CREATE DATABASE IF NOT EXISTS "
+	createDBDDL = "CREATE DATABASE "
 	mysqlDriver = "mysql"
+	pgDriver    = "postgres"
 )
 
 func closeDB() {
@@ -57,27 +59,58 @@ func closeDB() {
 	globalDB = nil
 }
 
+func buildDSN(tmp bool) string {
+	switch driver {
+	case mysqlDriver:
+		if tmp {
+			return fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
+		}
+		// allow multiple statements in one query to allow q15 on the TPC-H
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?multiStatements=true", user, password, host, port, dbName)
+		if len(connParams) > 0 {
+			dsn = dsn + "&" + connParams
+		}
+		return dsn
+	case pgDriver:
+		if tmp {
+			return fmt.Sprintf("postgres://%s:%s@%s:%d/?%s", user, password, host, port, connParams)
+		}
+		dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", user, password, host, port, dbName)
+		if len(connParams) > 0 {
+			dsn = dsn + "?" + connParams
+		}
+		return dsn
+	default:
+		panic(fmt.Errorf("unknown driver: %q", driver))
+	}
+}
+
+func isDBNotExist(err error) bool {
+	if err == nil {
+		return false
+	}
+	switch driver {
+	case mysqlDriver:
+		return strings.Contains(err.Error(), "Unknown database")
+	case pgDriver:
+		msg := err.Error()
+		return strings.HasPrefix(msg, "pq: database") && strings.HasSuffix(msg, "does not exist")
+	}
+	return false
+}
+
 func openDB() {
-	// TODO: support other drivers
 	var (
 		tmpDB *sql.DB
 		err   error
-		ds    = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", user, password, host, port, dbName)
 	)
-	// allow multiple statements in one query to allow q15 on the TPC-H
-	fullDsn := fmt.Sprintf("%s?multiStatements=true", ds)
-	if len(connParams) > 0 {
-		fullDsn = fmt.Sprintf("%s&%s", fullDsn, connParams)
-	}
-	globalDB, err = sql.Open(mysqlDriver, fullDsn)
+	globalDB, err = sql.Open(driver, buildDSN(false))
 	if err != nil {
 		panic(err)
 	}
 	if err := globalDB.Ping(); err != nil {
-		errString := err.Error()
-		if strings.Contains(errString, unknownDB) {
-			tmpDs := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
-			tmpDB, _ = sql.Open(mysqlDriver, tmpDs)
+		if isDBNotExist(err) {
+			tmpDB, _ = sql.Open(driver, buildDSN(true))
 			defer tmpDB.Close()
 			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
 				panic(fmt.Errorf("failed to create database, err %v\n", err))
@@ -106,7 +139,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVarP(&statusPort, "statusPort", "S", 10080, "Database status port")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 1, "Thread concurrency")
 	rootCmd.PersistentFlags().IntVarP(&acThreads, "acThreads", "t", 1, "OLAP client concurrency, only for CH-benCHmark")
-	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", "", "Database driver: mysql")
+	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", mysqlDriver, "Database driver: mysql, postgres")
 	rootCmd.PersistentFlags().DurationVar(&totalTime, "time", 1<<63-1, "Total execution time")
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 0, "Total execution count, 0 means infinite")
 	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
@@ -116,7 +149,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted,
 2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
 5: Snapshot, 6: Serializable, 7: Linerizable`)
-	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables")
+	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables, e.g. for TiDB --conn-params tidb_isolation_read_engines='tiflash', For PostgreSQL: --conn-params sslmode=disable")
 	rootCmd.PersistentFlags().StringVar(&outputStyle, "output", util.OutputStylePlain, "output style, valid values can be { plain | table | json }")
 
 	cobra.EnablePrefixMatching = true

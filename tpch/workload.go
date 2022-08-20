@@ -217,10 +217,9 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := query(w.cfg.Driver, queryName)
-	
-  // only for driver == mysql and EnablePlanReplayer == true
+
+	// only for driver == mysql and EnablePlanReplayer == true
 	if w.cfg.EnablePlanReplayer && w.cfg.Driver == "mysql" {
-    query := queries[queryName]
 		err := w.dumpPlanReplayer(ctx, s, query, queryName)
 		if err != nil {
 			return err

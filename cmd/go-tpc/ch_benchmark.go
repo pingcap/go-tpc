@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"runtime"
@@ -35,7 +36,7 @@ func registerCHBenchmark(root *cobra.Command) {
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
 		Run: func(cmd *cobra.Command, args []string) {
-			executeCH("prepare")
+			executeCH("prepare", nil)
 		},
 	}
 	cmdPrepare.PersistentFlags().BoolVar(&chConfig.CreateTiFlashReplica,
@@ -61,19 +62,42 @@ func registerCHBenchmark(root *cobra.Command) {
 		1,
 		"tidb_index_serial_scan_concurrency param for analyze jobs")
 
+	var (
+		apConnParams string
+		apHost       string
+		apPort       int
+	)
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
 		Run: func(cmd *cobra.Command, _ []string) {
-			executeCH("run")
+			executeCH("run", func() string {
+				origConnParams, origHost, origPort := connParams, host, port
+				defer func() {
+					connParams, host, port = origConnParams, origHost, origPort
+				}()
+				if len(apConnParams) > 0 {
+					connParams = apConnParams
+				}
+				if len(apHost) > 0 {
+					host = apHost
+				}
+				if apPort > 0 {
+					port = apPort
+				}
+				return buildDSN(false)
+			})
 		},
 	}
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
+	cmdRun.Flags().StringVar(&apConnParams, "ap-conn-params", "", "Connection parameters for analytical processing")
+	cmdRun.Flags().StringVar(&apHost, "ap-host", "", "Database host for analytical processing")
+	cmdRun.Flags().IntVar(&apPort, "ap-port", 0, "Database port for analytical processing")
 	cmd.AddCommand(cmdRun, cmdPrepare)
 	root.AddCommand(cmd)
 }
 
-func executeCH(action string) {
+func executeCH(action string, buildDSNForAP func() string) {
 	runtime.GOMAXPROCS(maxProcs)
 
 	openDB()
@@ -97,7 +121,17 @@ func executeCH(action string) {
 		fmt.Printf("Failed to init tp work loader: %v\n", err)
 		os.Exit(1)
 	}
-	ap = ch.NewWorkloader(globalDB, &chConfig)
+	if buildDSNForAP == nil {
+		ap = ch.NewWorkloader(globalDB, &chConfig)
+	} else {
+		db, err := sql.Open(driver, buildDSNForAP())
+		if err != nil {
+			fmt.Printf("Failed to open db for analytical processing: %v\n", err)
+			os.Exit(1)
+		}
+		db.SetMaxIdleConns(acThreads + 1)
+		ap = ch.NewWorkloader(db, &chConfig)
+	}
 	if err != nil {
 		fmt.Printf("Failed to init tp work loader: %v\n", err)
 		os.Exit(1)

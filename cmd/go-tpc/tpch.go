@@ -119,7 +119,7 @@ func registerTpch(root *cobra.Command) {
 			executeTpch("run")
 		},
 	}
-	
+
 	cmdRun.PersistentFlags().BoolVar(&tpchConfig.EnablePlanReplayer,
 		"use-plan-replayer",
 		false,

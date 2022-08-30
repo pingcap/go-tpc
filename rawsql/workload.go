@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	replayer "github.com/pingcap/go-tpc/pkg/plan-replayer"
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
@@ -26,7 +27,9 @@ type Config struct {
 	RefreshWait        time.Duration
 
 	// output style
-	OutputStyle string
+	OutputStyle        string
+	EnablePlanReplayer bool
+	PlanReplayerConfig replayer.PlanReplayerConfig
 }
 
 type rawsqlState struct {
@@ -39,6 +42,8 @@ type Workloader struct {
 	db  *sql.DB
 
 	measurement *measurement.Measurement
+
+	PlanReplayerRunner *replayer.PlanReplayerRunner
 }
 
 var _ workload.Workloader = &Workloader{}
@@ -97,6 +102,14 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := w.cfg.Queries[queryName]
+
+	if w.cfg.EnablePlanReplayer {
+		err := w.dumpPlanReplayer(ctx, s, query, queryName)
+		if err != nil {
+			return err
+		}
+	}
+
 	if w.cfg.ExecExplainAnalyze {
 		query = "explain analyze\n" + query
 	}
@@ -172,14 +185,25 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 	panic("not implemented") // TODO: Implement
 }
 
-func (w Workloader) IsPlanReplayerDumpEnabled() bool {
-	return false
+func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *rawsqlState, query, queryName string) error {
+	query = strings.Replace(query, "/*PLACEHOLDER*/", "plan replayer dump explain", 1)
+	return w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
 }
 
-func (w Workloader) PreparePlanReplayerDump() error {
-	return nil
+func (w *Workloader) IsPlanReplayerDumpEnabled() bool {
+	return w.cfg.EnablePlanReplayer
 }
 
-func (w Workloader) FinishPlanReplayerDump() error {
-	return nil
+func (w *Workloader) PreparePlanReplayerDump() error {
+	w.cfg.PlanReplayerConfig.WorkloadName = w.Name()
+	if w.PlanReplayerRunner == nil {
+		w.PlanReplayerRunner = &replayer.PlanReplayerRunner{
+			Config: w.cfg.PlanReplayerConfig,
+		}
+	}
+	return w.PlanReplayerRunner.Prepare()
+}
+
+func (w *Workloader) FinishPlanReplayerDump() error {
+	return w.PlanReplayerRunner.Finish()
 }

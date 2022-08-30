@@ -36,6 +36,22 @@ func registerRawsql(root *cobra.Command) {
 			execRawsql("run")
 		},
 	}
+
+	cmdRun.PersistentFlags().BoolVar(&rawsqlConfig.EnablePlanReplayer,
+		"use-plan-replayer",
+		false,
+		"Use Plan Replayer to dump stats and variables before running queries")
+
+	cmdRun.PersistentFlags().StringVar(&rawsqlConfig.PlanReplayerConfig.PlanReplayerDir,
+		"plan-replayer-dir",
+		"",
+		"Dir of Plan Replayer file dumps")
+
+	cmdRun.PersistentFlags().StringVar(&rawsqlConfig.PlanReplayerConfig.PlanReplayerFileName,
+		"plan-replayer-file",
+		"",
+		"Name of plan Replayer file dumps")
+
 	cmdRun.PersistentFlags().StringVar(&queryFiles,
 		"query-files",
 		"",
@@ -67,6 +83,8 @@ func execRawsql(action string) {
 	rawsqlConfig.QueryNames = strings.Split(queryFiles, ",")
 	rawsqlConfig.Queries = make(map[string]string, len(rawsqlConfig.QueryNames))
 	rawsqlConfig.RefreshWait = refreshConnWait
+	rawsqlConfig.PlanReplayerConfig.Host = host
+	rawsqlConfig.PlanReplayerConfig.StatusPort = statusPort
 
 	for i, filename := range rawsqlConfig.QueryNames {
 		queryData, err := ioutil.ReadFile(filename)

@@ -73,6 +73,16 @@ func registerCHBenchmark(root *cobra.Command) {
 		false,
 		"Use Plan Replayer to dump stats and variables before running queries")
 
+	cmdRun.PersistentFlags().StringVar(&chConfig.PlanReplayerConfig.PlanReplayerDir,
+		"plan-replayer-dir",
+		"",
+		"Dir of Plan Replayer file dumps")
+
+	cmdRun.PersistentFlags().StringVar(&chConfig.PlanReplayerConfig.PlanReplayerFileName,
+		"plan-replayer-file",
+		"",
+		"Name of plan Replayer file dumps")
+
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
 	cmd.AddCommand(cmdRun, cmdPrepare)
 	root.AddCommand(cmd)

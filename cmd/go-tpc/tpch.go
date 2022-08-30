@@ -63,16 +63,6 @@ func registerTpch(root *cobra.Command) {
 		false,
 		"Check output data, only when the scale factor equals 1")
 
-	cmd.PersistentFlags().StringVar(&tpchConfig.PlanReplayerConfig.PlanReplayerDir,
-		"plan-replayer-dir",
-		"",
-		"Dir of Plan Replayer file dumps")
-
-	cmd.PersistentFlags().StringVar(&tpchConfig.PlanReplayerConfig.PlanReplayerFileName,
-		"plan-replayer-file",
-		"",
-		"Name of plan Replayer file dumps")
-
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
@@ -124,6 +114,16 @@ func registerTpch(root *cobra.Command) {
 		"use-plan-replayer",
 		false,
 		"Use Plan Replayer to dump stats and variables before running queries")
+
+	cmdRun.PersistentFlags().StringVar(&tpchConfig.PlanReplayerConfig.PlanReplayerDir,
+		"plan-replayer-dir",
+		"",
+		"Dir of Plan Replayer file dumps")
+
+	cmdRun.PersistentFlags().StringVar(&tpchConfig.PlanReplayerConfig.PlanReplayerFileName,
+		"plan-replayer-file",
+		"",
+		"Name of plan Replayer file dumps")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

@@ -186,7 +186,7 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 }
 
 func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *rawsqlState, query, queryName string) error {
-	query = strings.Replace(query, "/*PLACEHOLDER*/", "plan replayer dump explain", 1)
+	query = "plan replayer dump explain " + query
 	return w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
 }
 

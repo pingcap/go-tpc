@@ -1,23 +1,17 @@
 package tpch
 
 import (
-	"archive/zip"
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
-	"math/rand"
-	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	replayer "github.com/pingcap/go-tpc/pkg/plan-replayer"
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpch/dbgen"
@@ -47,12 +41,9 @@ type Config struct {
 	AnalyzeTable         analyzeConfig
 	ExecExplainAnalyze   bool
 	PrepareThreads       int
-	Host                 string
-	StatusPort           int
 
-	EnablePlanReplayer   bool
-	PlanReplayerDir      string
-	PlanReplayerFileName string
+	PlanReplayerConfig replayer.PlanReplayerConfig
+	EnablePlanReplayer bool
 
 	// for prepare command only
 	OutputType string
@@ -75,11 +66,7 @@ type Workloader struct {
 	// stats
 	measurement *measurement.Measurement
 
-	zf *os.File
-	zw struct {
-		sync.Mutex
-		writer *zip.Writer
-	}
+	PlanReplayerRunner *replayer.PlanReplayerRunner
 }
 
 // NewWorkloader new work loader
@@ -305,33 +292,7 @@ func (w *Workloader) DBName() string {
 
 func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *tpchState, query, queryName string) error {
 	query = strings.Replace(query, "/*PLACEHOLDER*/", "plan replayer dump explain", 1)
-	rows, err := s.Conn.QueryContext(ctx, query)
-	if err != nil {
-		return fmt.Errorf("execute query %s failed %v", query, err)
-	}
-	defer rows.Close()
-	var token string
-	for rows.Next() {
-		err := rows.Scan(&token)
-		if err != nil {
-			return fmt.Errorf("execute query %s failed %v", query, err)
-		}
-	}
-	// TODO: support tls
-	r, err := http.Get(fmt.Sprintf("http://%s:%v/plan_replayer/dump/%s", w.cfg.Host, w.cfg.StatusPort, token))
-	if err != nil {
-		return fmt.Errorf("get plan replayer for query %s failed %v", queryName, err)
-	}
-	defer r.Body.Close()
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return fmt.Errorf("get plan replayer for query %s failed %v", queryName, err)
-	}
-	err = w.writeDataIntoZW(b, queryName)
-	if err != nil {
-		return fmt.Errorf("dump plan replayer for %s failed %v", queryName, err)
-	}
-	return nil
+	return w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
 }
 
 func (w *Workloader) IsPlanReplayerDumpEnabled() bool {
@@ -339,65 +300,15 @@ func (w *Workloader) IsPlanReplayerDumpEnabled() bool {
 }
 
 func (w *Workloader) PreparePlanReplayerDump() error {
-	if w.cfg.PlanReplayerDir == "" {
-		dir, err := os.Getwd()
-		if err != nil {
-			return err
+	w.cfg.PlanReplayerConfig.WorkloadName = w.Name()
+	if w.PlanReplayerRunner == nil {
+		w.PlanReplayerRunner = &replayer.PlanReplayerRunner{
+			Config: w.cfg.PlanReplayerConfig,
 		}
-		w.cfg.PlanReplayerDir = dir
 	}
-	if w.cfg.PlanReplayerFileName == "" {
-		w.cfg.PlanReplayerFileName = fmt.Sprintf("plan_replayer_%s_%s",
-			w.Name(), time.Now().Format("2006-01-02-15:04:05"))
-	}
-
-	fileName := fmt.Sprintf("%s.zip", w.cfg.PlanReplayerFileName)
-	zf, err := os.Create(filepath.Join(w.cfg.PlanReplayerDir, fileName))
-	if err != nil {
-		return err
-	}
-	w.zf = zf
-	// Create zip writer
-	w.zw.writer = zip.NewWriter(zf)
-	return nil
+	return w.PlanReplayerRunner.Prepare()
 }
 
 func (w *Workloader) FinishPlanReplayerDump() error {
-	w.zw.Lock()
-	err := w.zw.writer.Close()
-	if err != nil {
-		return err
-	}
-	w.zw.Unlock()
-
-	return w.zf.Close()
-}
-
-// writeDataIntoZW will dump query stats information by following format in zip
-/*
- |-q1_time.zip
- |-q2_time.zip
- |-q3_time.zip
- |-...
-*/
-func (w *Workloader) writeDataIntoZW(b []byte, queryName string) error {
-	k := make([]byte, 16)
-	//nolint: gosec
-	_, err := rand.Read(k)
-	if err != nil {
-		return err
-	}
-	key := base64.URLEncoding.EncodeToString(k)
-	w.zw.Lock()
-	defer w.zw.Unlock()
-	wr, err := w.zw.writer.Create(fmt.Sprintf("%v_%v_%v.zip",
-		queryName, time.Now().Format("2006-01-02-15:04:05"), key))
-	if err != nil {
-		return err
-	}
-	_, err = wr.Write(b)
-	if err != nil {
-		return err
-	}
-	return nil
+	return w.PlanReplayerRunner.Finish()
 }

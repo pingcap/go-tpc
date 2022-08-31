@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
+	replayer "github.com/pingcap/go-tpc/pkg/plan-replayer"
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpch"
@@ -37,6 +38,9 @@ type Config struct {
 	AnalyzeTable         analyzeConfig
 	RefreshConnWait      time.Duration
 
+	EnablePlanReplayer bool
+	PlanReplayerConfig replayer.PlanReplayerConfig
+
 	// output style
 	OutputStyle string
 }
@@ -53,11 +57,13 @@ type Workloader struct {
 
 	// stats
 	measurement *measurement.Measurement
+
+	PlanReplayerRunner *replayer.PlanReplayerRunner
 }
 
 // NewWorkloader new work loader
 func NewWorkloader(db *sql.DB, cfg *Config) workload.Workloader {
-	return Workloader{
+	return &Workloader{
 		db:  db,
 		cfg: cfg,
 		measurement: measurement.NewMeasurement(func(m *measurement.Measurement) {
@@ -79,12 +85,12 @@ func (w *Workloader) updateState(ctx context.Context) {
 }
 
 // Name return workloader name
-func (w Workloader) Name() string {
+func (w *Workloader) Name() string {
 	return "ch"
 }
 
 // InitThread inits thread
-func (w Workloader) InitThread(ctx context.Context, threadID int) context.Context {
+func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Context {
 	s := &chState{
 		queryIdx: threadID % len(w.cfg.QueryNames),
 		TpcState: workload.NewTpcState(ctx, w.db),
@@ -95,13 +101,13 @@ func (w Workloader) InitThread(ctx context.Context, threadID int) context.Contex
 }
 
 // CleanupThread cleans up thread
-func (w Workloader) CleanupThread(ctx context.Context, threadID int) {
+func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	s := w.getState(ctx)
 	s.Conn.Close()
 }
 
 // Prepare prepares data
-func (w Workloader) Prepare(ctx context.Context, threadID int) error {
+func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	if threadID != 0 {
 		return nil
 	}
@@ -138,7 +144,7 @@ func (w Workloader) Prepare(ctx context.Context, threadID int) error {
 	return nil
 }
 
-func (w Workloader) prepareView(ctx context.Context) error {
+func (w *Workloader) prepareView(ctx context.Context) error {
 	s := w.getState(ctx)
 	fmt.Println("creating view revenue1")
 	if _, err := s.Conn.ExecContext(ctx, `
@@ -155,7 +161,7 @@ create view revenue1 (supplier_no, total_revenue) as (
 	return nil
 }
 
-func (w Workloader) createTiFlashReplica(ctx context.Context, s *chState) error {
+func (w *Workloader) createTiFlashReplica(ctx context.Context, s *chState) error {
 	for _, tableName := range allTables {
 		fmt.Printf("creating tiflash replica for %s\n", tableName)
 		replicaSQL := fmt.Sprintf("ALTER TABLE %s SET TIFLASH REPLICA 1", tableName)
@@ -166,7 +172,7 @@ func (w Workloader) createTiFlashReplica(ctx context.Context, s *chState) error 
 	return nil
 }
 
-func (w Workloader) analyzeTables(ctx context.Context, acfg analyzeConfig) error {
+func (w *Workloader) analyzeTables(ctx context.Context, acfg analyzeConfig) error {
 	s := w.getState(ctx)
 	if w.cfg.Driver == "mysql" {
 		for _, tbl := range allTables {
@@ -190,12 +196,12 @@ func (w Workloader) analyzeTables(ctx context.Context, acfg analyzeConfig) error
 }
 
 // CheckPrepare checks prepare
-func (w Workloader) CheckPrepare(ctx context.Context, threadID int) error {
+func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 	return nil
 }
 
 // Run runs workload
-func (w Workloader) Run(ctx context.Context, threadID int) error {
+func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 	defer w.updateState(ctx)
 
@@ -209,6 +215,14 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := queries[queryName]
 
+	// only for driver == mysql and EnablePlanReplayer == true
+	if w.cfg.EnablePlanReplayer && w.cfg.Driver == "mysql" {
+		err := w.dumpPlanReplayer(ctx, s, query, queryName)
+		if err != nil {
+			return err
+		}
+	}
+
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
 	w.measurement.Measure(queryName, time.Now().Sub(start), err)
@@ -220,12 +234,12 @@ func (w Workloader) Run(ctx context.Context, threadID int) error {
 }
 
 // Cleanup cleans up workloader
-func (w Workloader) Cleanup(ctx context.Context, threadID int) error {
+func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 	return nil
 }
 
 // Check checks data
-func (w Workloader) Check(ctx context.Context, threadID int) error {
+func (w *Workloader) Check(ctx context.Context, threadID int) error {
 	return nil
 }
 
@@ -268,7 +282,7 @@ func chSummary(h *measurement.Histogram) []string {
 	}
 }
 
-func (w Workloader) OutputStats(ifSummaryReport bool) {
+func (w *Workloader) OutputStats(ifSummaryReport bool) {
 	w.measurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputRtMeasurement)
 	if ifSummaryReport {
 		var count int64
@@ -287,18 +301,29 @@ func (w Workloader) OutputStats(ifSummaryReport bool) {
 }
 
 // DBName returns the name of test db.
-func (w Workloader) DBName() string {
+func (w *Workloader) DBName() string {
 	return w.cfg.DBName
 }
 
-func (w Workloader) IsPlanReplayerDumpEnabled() bool {
-	return false
+func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *chState, query, queryName string) error {
+	query = strings.Replace(query, "/*PLACEHOLDER*/", "plan replayer dump explain", 1)
+	return w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
 }
 
-func (w Workloader) PreparePlanReplayerDump() error {
-	return nil
+func (w *Workloader) IsPlanReplayerDumpEnabled() bool {
+	return w.cfg.EnablePlanReplayer
 }
 
-func (w Workloader) FinishPlanReplayerDump() error {
-	return nil
+func (w *Workloader) PreparePlanReplayerDump() error {
+	w.cfg.PlanReplayerConfig.WorkloadName = w.Name()
+	if w.PlanReplayerRunner == nil {
+		w.PlanReplayerRunner = &replayer.PlanReplayerRunner{
+			Config: w.cfg.PlanReplayerConfig,
+		}
+	}
+	return w.PlanReplayerRunner.Prepare()
+}
+
+func (w *Workloader) FinishPlanReplayerDump() error {
+	return w.PlanReplayerRunner.Finish()
 }

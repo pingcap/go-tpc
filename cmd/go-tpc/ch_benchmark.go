@@ -89,6 +89,21 @@ func registerCHBenchmark(root *cobra.Command) {
 			})
 		},
 	}
+	cmdRun.PersistentFlags().BoolVar(&chConfig.EnablePlanReplayer,
+		"use-plan-replayer",
+		false,
+		"Use Plan Replayer to dump stats and variables before running queries")
+
+	cmdRun.PersistentFlags().StringVar(&chConfig.PlanReplayerConfig.PlanReplayerDir,
+		"plan-replayer-dir",
+		"",
+		"Dir of Plan Replayer file dumps")
+
+	cmdRun.PersistentFlags().StringVar(&chConfig.PlanReplayerConfig.PlanReplayerFileName,
+		"plan-replayer-file",
+		"",
+		"Name of plan Replayer file dumps")
+
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
 	cmdRun.Flags().StringVar(&apConnParams, "ap-conn-params", "", "Connection parameters for analytical processing")
 	cmdRun.Flags().StringVar(&apHost, "ap-host", "", "Database host for analytical processing")
@@ -109,8 +124,11 @@ func executeCH(action string, buildDSNForAP func() string) {
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
 	chConfig.OutputStyle = outputStyle
+	chConfig.Driver = driver
 	chConfig.DBName = dbName
 	chConfig.QueryNames = strings.Split(chConfig.RawQueries, ",")
+	chConfig.PlanReplayerConfig.Host = host
+	chConfig.PlanReplayerConfig.StatusPort = statusPort
 
 	var (
 		tp, ap workload.Workloader

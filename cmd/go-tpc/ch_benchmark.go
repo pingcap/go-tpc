@@ -18,6 +18,11 @@ import (
 )
 
 var chConfig ch.Config
+var (
+	apConnParams string
+	apHost       string
+	apPort       int
+)
 
 func registerCHBenchmark(root *cobra.Command) {
 	cmd := &cobra.Command{
@@ -62,11 +67,6 @@ func registerCHBenchmark(root *cobra.Command) {
 		1,
 		"tidb_index_serial_scan_concurrency param for analyze jobs")
 
-	var (
-		apConnParams string
-		apHost       string
-		apPort       int
-	)
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
@@ -127,7 +127,11 @@ func executeCH(action string, buildDSNForAP func() string) {
 	chConfig.Driver = driver
 	chConfig.DBName = dbName
 	chConfig.QueryNames = strings.Split(chConfig.RawQueries, ",")
-	chConfig.PlanReplayerConfig.Host = host
+	if len(apHost) > 0 {
+		chConfig.PlanReplayerConfig.Host = apHost
+	} else {
+		chConfig.PlanReplayerConfig.Host = host
+	}
 	chConfig.PlanReplayerConfig.StatusPort = statusPort
 
 	var (

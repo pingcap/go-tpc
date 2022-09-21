@@ -165,6 +165,8 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 
 2. Then uses `go-tpc ch prepare` to prepare the AP part schema and data
 
+A detail example to run CH workload on TiDB can be refered to [TiDB Doc](https://docs.pingcap.com/tidb/dev/benchmark-tidb-using-ch)
+
 ##### TiDB & MySQL
 ```bash
 # Prepare TP data

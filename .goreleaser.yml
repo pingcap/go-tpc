@@ -11,6 +11,7 @@ builds:
     main: ./cmd/go-tpc/
     goarch:
       - amd64
+      - arm64
     goos:
       - linux
       - darwin

@@ -408,25 +408,38 @@ func (w *Workloader) OutputStats(ifSummaryReport bool) {
 		w.waitTimeMeasurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputWaitTimesMeasurement)
 	}
 	if ifSummaryReport {
-		hist, e := w.rtMeasurement.OpSumMeasurement["new_order"]
-		if e && !hist.Empty() {
-			result := hist.GetInfo()
+		var (
+			newOrderHist *measurement.Histogram
+			totalOps     float64
+		)
+		for name, hist := range w.rtMeasurement.OpSumMeasurement {
+			if name == "new_order" {
+				newOrderHist = hist
+			}
+			if !strings.HasSuffix(name, "_ERR") {
+				totalOps += hist.GetInfo().Ops
+			}
+		}
+		if newOrderHist != nil && !newOrderHist.Empty() {
+			result := newOrderHist.GetInfo()
 			const specWarehouseFactor = 12.86
 			tpmC := result.Ops * 60
+			tpmTotal := totalOps * 60
 			efc := 100 * tpmC / (specWarehouseFactor * float64(w.cfg.Warehouses))
 			lines := [][]string{
 				{
 					util.FloatToOneString(tpmC),
+					util.FloatToOneString(tpmTotal),
 					util.FloatToOneString(efc) + "%",
 				},
 			}
 			switch w.cfg.OutputStyle {
 			case util.OutputStylePlain:
-				util.RenderString("tpmC: %s, efficiency: %s\n", nil, lines)
+				util.RenderString("tpmC: %s, tpmTotal: %s, efficiency: %s\n", nil, lines)
 			case util.OutputStyleTable:
-				util.RenderTable([]string{"tpmC", "efficiency"}, lines)
+				util.RenderTable([]string{"tpmC", "tpmTotal", "efficiency"}, lines)
 			case util.OutputStyleJson:
-				util.RenderJson([]string{"tpmC", "efficiency"}, lines)
+				util.RenderJson([]string{"tpmC", "tpmTotal", "efficiency"}, lines)
 			}
 		}
 	}

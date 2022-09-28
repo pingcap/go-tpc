@@ -82,7 +82,7 @@ use one thread to create that.
 ### Import data using lightning
 
 Since `Tiup` doesn't support `lightning` so far, we have to download the binary somewhere or build it from source. 
-For simplicity, this document will not include that part, please refer to [lightning doc](https://pingcap.com/docs/stable/reference/tools/tidb-lightning/overview/) for more details.
+For simplicity, this document will not include that part, please refer to [lightning doc](https://docs.pingcap.com/tidb/stable/tidb-lightning-overview) for more details.
 
 With the `lightning` binary, then it is easy to import data. We also provide an example [config](./tidb-lightning.toml) for `lightning`. You can just execute the command below:
 

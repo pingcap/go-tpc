@@ -44,10 +44,10 @@ func registerCHBenchmark(root *cobra.Command) {
 			executeCH("prepare", nil)
 		},
 	}
-	cmdPrepare.PersistentFlags().BoolVar(&chConfig.CreateTiFlashReplica,
+	cmdPrepare.PersistentFlags().IntVar(&chConfig.TiFlashReplica,
 		"tiflash",
-		false,
-		"Create tiflash replica")
+		0,
+		"Number of tiflash replica")
 
 	cmdPrepare.PersistentFlags().BoolVar(&chConfig.AnalyzeTable.Enable,
 		"analyze",

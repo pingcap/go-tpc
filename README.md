@@ -126,7 +126,7 @@ If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs
 # Prepare data with scale factor 1
 ./bin/go-tpc tpch --sf=1 prepare
 # Prepare data with scale factor 1, create tiflash replica, and analyze table after data loaded
-./bin/go-tpc tpch --sf 1 --analyze --tiflash prepare
+./bin/go-tpc tpch --sf 1 --analyze --tiflash 1 prepare
 ```
 
 ##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
@@ -172,7 +172,7 @@ A detail example to run CH workload on TiDB can be refered to [TiDB Doc](https:/
 # Prepare TP data
 ./bin/go-tpc tpcc --warehouses 10 run -T 4
 # Prepare AP data, create tiflash replica, and analyze table after data loaded
-./bin/go-tpc ch --analyze --tiflash prepare
+./bin/go-tpc ch --analyze --tiflash 1 prepare
 ```
 ##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
 

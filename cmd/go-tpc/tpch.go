@@ -71,10 +71,10 @@ func registerTpch(root *cobra.Command) {
 		},
 	}
 
-	cmdPrepare.PersistentFlags().BoolVar(&tpchConfig.CreateTiFlashReplica,
+	cmdPrepare.PersistentFlags().IntVar(&tpchConfig.TiFlashReplica,
 		"tiflash",
-		false,
-		"Create tiflash replica")
+		0,
+		"Number of tiflash replica")
 
 	cmdPrepare.PersistentFlags().BoolVar(&tpchConfig.AnalyzeTable.Enable,
 		"analyze",

@@ -170,9 +170,9 @@ A detail example to run CH workload on TiDB can be refered to [TiDB Doc](https:/
 ##### TiDB & MySQL
 ```bash
 # Prepare TP data
-./bin/go-tpc tpcc --warehouses 10 run -T 4
+./bin/go-tpc tpcc --warehouses 10 prepare -T 4 -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 # Prepare AP data, create tiflash replica, and analyze table after data loaded
-./bin/go-tpc ch --analyze --tiflash prepare
+./bin/go-tpc ch --analyze --tiflash prepare -D test -H 127.0.0.1 -P 5432 --conn-params sslmode=disable
 ```
 ##### PostgreSQL & CockroachDB & AlloyDB & Yugabyte
 

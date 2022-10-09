@@ -83,7 +83,7 @@ func execRawsql(action string) {
 	rawsqlConfig.QueryNames = strings.Split(queryFiles, ",")
 	rawsqlConfig.Queries = make(map[string]string, len(rawsqlConfig.QueryNames))
 	rawsqlConfig.RefreshWait = refreshConnWait
-	rawsqlConfig.PlanReplayerConfig.Host = host
+	rawsqlConfig.PlanReplayerConfig.Host = hosts[0]
 	rawsqlConfig.PlanReplayerConfig.StatusPort = statusPort
 
 	for i, filename := range rawsqlConfig.QueryNames {

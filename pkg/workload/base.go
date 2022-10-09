@@ -20,6 +20,9 @@ type TpcState struct {
 }
 
 func (t *TpcState) RefreshConn(ctx context.Context) error {
+	if t.Conn != nil {
+		t.Conn.Close()
+	}
 	conn, err := t.DB.Conn(ctx)
 	if err != nil {
 		return err

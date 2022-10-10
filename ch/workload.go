@@ -30,13 +30,13 @@ type analyzeConfig struct {
 
 // Config is the configuration for ch workload
 type Config struct {
-	Driver               string
-	DBName               string
-	RawQueries           string
-	QueryNames           []string
-	CreateTiFlashReplica bool
-	AnalyzeTable         analyzeConfig
-	RefreshConnWait      time.Duration
+	Driver          string
+	DBName          string
+	RawQueries      string
+	QueryNames      []string
+	TiFlashReplica  int
+	AnalyzeTable    analyzeConfig
+	RefreshConnWait time.Duration
 
 	EnablePlanReplayer bool
 	PlanReplayerConfig replayer.PlanReplayerConfig
@@ -130,8 +130,8 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 		return err
 	}
 
-	if w.cfg.CreateTiFlashReplica {
-		if err := w.createTiFlashReplica(ctx, s); err != nil {
+	if w.cfg.TiFlashReplica != 0 {
+		if err := w.createTiFlashReplica(ctx, s, w.cfg.TiFlashReplica); err != nil {
 			return err
 		}
 	}
@@ -161,10 +161,10 @@ create view revenue1 (supplier_no, total_revenue) as (
 	return nil
 }
 
-func (w *Workloader) createTiFlashReplica(ctx context.Context, s *chState) error {
+func (w *Workloader) createTiFlashReplica(ctx context.Context, s *chState, numberOfTiflashReplica int) error {
 	for _, tableName := range allTables {
 		fmt.Printf("creating tiflash replica for %s\n", tableName)
-		replicaSQL := fmt.Sprintf("ALTER TABLE %s SET TIFLASH REPLICA 1", tableName)
+		replicaSQL := fmt.Sprintf("ALTER TABLE %s SET TIFLASH REPLICA %d", tableName, numberOfTiflashReplica)
 		if _, err := s.Conn.ExecContext(ctx, replicaSQL); err != nil {
 			return err
 		}

@@ -31,16 +31,16 @@ type analyzeConfig struct {
 
 // Config is the configuration for tpch workload
 type Config struct {
-	Driver               string
-	DBName               string
-	RawQueries           string
-	QueryNames           []string
-	ScaleFactor          int
-	EnableOutputCheck    bool
-	CreateTiFlashReplica bool
-	AnalyzeTable         analyzeConfig
-	ExecExplainAnalyze   bool
-	PrepareThreads       int
+	Driver             string
+	DBName             string
+	RawQueries         string
+	QueryNames         []string
+	ScaleFactor        int
+	EnableOutputCheck  bool
+	TiFlashReplica     int
+	AnalyzeTable       analyzeConfig
+	ExecExplainAnalyze bool
+	PrepareThreads     int
 
 	PlanReplayerConfig replayer.PlanReplayerConfig
 	EnablePlanReplayer bool

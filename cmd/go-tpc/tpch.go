@@ -21,7 +21,7 @@ func executeTpch(action string) {
 		os.Exit(1)
 	}
 
-	tpchConfig.PlanReplayerConfig.Host = host
+	tpchConfig.PlanReplayerConfig.Host = hosts[0]
 	tpchConfig.PlanReplayerConfig.StatusPort = statusPort
 
 	tpchConfig.OutputStyle = outputStyle

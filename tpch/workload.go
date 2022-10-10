@@ -201,6 +201,11 @@ func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 	defer w.updateState(ctx)
+	if err := s.Conn.PingContext(ctx); err != nil {
+		if err := s.RefreshConn(ctx); err != nil {
+			return err
+		}
+	}
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := query(w.cfg.Driver, queryName)

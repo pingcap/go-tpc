@@ -20,8 +20,8 @@ import (
 var chConfig ch.Config
 var (
 	apConnParams string
-	apHost       string
-	apPort       int
+	apHosts      []string
+	apPorts      []int
 )
 
 func registerCHBenchmark(root *cobra.Command) {
@@ -70,22 +70,20 @@ func registerCHBenchmark(root *cobra.Command) {
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			if len(apConnParams) == 0 {
+				apConnParams = connParams
+			}
+			if len(apHosts) == 0 {
+				apHosts = hosts
+			}
+			if len(apPorts) == 0 {
+				apPorts = ports
+			}
+		},
 		Run: func(cmd *cobra.Command, _ []string) {
-			executeCH("run", func() string {
-				origConnParams, origHost, origPort := connParams, host, port
-				defer func() {
-					connParams, host, port = origConnParams, origHost, origPort
-				}()
-				if len(apConnParams) > 0 {
-					connParams = apConnParams
-				}
-				if len(apHost) > 0 {
-					host = apHost
-				}
-				if apPort > 0 {
-					port = apPort
-				}
-				return buildDSN(false)
+			executeCH("run", func() (*sql.DB, error) {
+				return newDB(makeTargets(apHosts, apPorts), driver, user, password, dbName, apConnParams)
 			})
 		},
 	}
@@ -106,13 +104,13 @@ func registerCHBenchmark(root *cobra.Command) {
 
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
 	cmdRun.Flags().StringVar(&apConnParams, "ap-conn-params", "", "Connection parameters for analytical processing")
-	cmdRun.Flags().StringVar(&apHost, "ap-host", "", "Database host for analytical processing")
-	cmdRun.Flags().IntVar(&apPort, "ap-port", 0, "Database port for analytical processing")
+	cmdRun.Flags().StringSliceVar(&apHosts, "ap-host", nil, "Database host for analytical processing")
+	cmdRun.Flags().IntSliceVar(&apPorts, "ap-port", nil, "Database port for analytical processing")
 	cmd.AddCommand(cmdRun, cmdPrepare)
 	root.AddCommand(cmd)
 }
 
-func executeCH(action string, buildDSNForAP func() string) {
+func executeCH(action string, openAP func() (*sql.DB, error)) {
 	runtime.GOMAXPROCS(maxProcs)
 
 	openDB()
@@ -127,11 +125,7 @@ func executeCH(action string, buildDSNForAP func() string) {
 	chConfig.Driver = driver
 	chConfig.DBName = dbName
 	chConfig.QueryNames = strings.Split(chConfig.RawQueries, ",")
-	if len(apHost) > 0 {
-		chConfig.PlanReplayerConfig.Host = apHost
-	} else {
-		chConfig.PlanReplayerConfig.Host = host
-	}
+	chConfig.PlanReplayerConfig.Host = apHosts[0]
 	chConfig.PlanReplayerConfig.StatusPort = statusPort
 
 	var (
@@ -143,10 +137,10 @@ func executeCH(action string, buildDSNForAP func() string) {
 		fmt.Printf("Failed to init tp work loader: %v\n", err)
 		os.Exit(1)
 	}
-	if buildDSNForAP == nil {
+	if openAP == nil {
 		ap = ch.NewWorkloader(globalDB, &chConfig)
 	} else {
-		db, err := sql.Open(driver, buildDSNForAP())
+		db, err := openAP()
 		if err != nil {
 			fmt.Printf("Failed to open db for analytical processing: %v\n", err)
 			os.Exit(1)

@@ -125,7 +125,11 @@ func executeCH(action string, openAP func() (*sql.DB, error)) {
 	chConfig.Driver = driver
 	chConfig.DBName = dbName
 	chConfig.QueryNames = strings.Split(chConfig.RawQueries, ",")
-	chConfig.PlanReplayerConfig.Host = apHosts[0]
+	if action == "run" {
+		chConfig.PlanReplayerConfig.Host = apHosts[0]
+	} else {
+		chConfig.PlanReplayerConfig.Host = hosts[0]
+	}
 	chConfig.PlanReplayerConfig.StatusPort = statusPort
 
 	var (

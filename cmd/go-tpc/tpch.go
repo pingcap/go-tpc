@@ -72,7 +72,7 @@ func registerTpch(root *cobra.Command) {
 	}
 
 	cmdPrepare.PersistentFlags().IntVar(&tpchConfig.TiFlashReplica,
-		"tiflash",
+		"tiflash-replica",
 		0,
 		"Number of tiflash replica")
 

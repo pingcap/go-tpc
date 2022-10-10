@@ -45,7 +45,7 @@ func registerCHBenchmark(root *cobra.Command) {
 		},
 	}
 	cmdPrepare.PersistentFlags().IntVar(&chConfig.TiFlashReplica,
-		"tiflash",
+		"tiflash-replica",
 		0,
 		"Number of tiflash replica")
 

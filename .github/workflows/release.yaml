@@ -1,8 +1,8 @@
 name: "release"
 on:
   push:
-    tags:
-      - '*'
+    tags: ['v*']
+    branches: [ master ]
 
 jobs:
   release:
@@ -12,11 +12,51 @@ jobs:
         with:
           go-version: 1.18.x
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-      - name: Run GoReleaser
+      - name: Release
+        if: github.event.ref != 'refs/heads/master'
         uses: goreleaser/goreleaser-action@v1
         with:
           version: latest
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        if: github.event.ref == 'refs/heads/master'
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: latest
+          args: build --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package
+        if: github.event.ref == 'refs/heads/master'
+        run: |
+          tar -zcf go-tpc_latest_linux_amd64.tar.gz  -C dist/go-tpc_linux_amd64_v1  go-tpc
+          tar -zcf go-tpc_latest_linux_arm64.tar.gz  -C dist/go-tpc_linux_arm64     go-tpc
+          tar -zcf go-tpc_latest_darwin_amd64.tar.gz -C dist/go-tpc_darwin_amd64_v1 go-tpc
+          tar -zcf go-tpc_latest_darwin_amd64.tar.gz -C dist/go-tpc_darwin_amd64    go-tpc
+
+      - name: Release latest build
+        uses: softprops/action-gh-release@v1
+        if: github.event.ref == 'refs/heads/master'
+        with:
+          name: Latest Build
+          tag_name: latest-${{ github.sha }}
+          files: |
+            *.tar.gz
+      - name: Clean legacy latest releases
+        uses: actions/github-script@v6
+        if: github.event.ref == 'refs/heads/master'
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const releases = (await github.rest.repos.listReleases({ owner, repo })).data.filter(r => r.draft && r.tag_name.startsWith('latest'));
+            for (const r of releases) { await github.rest.repos.deleteRelease({ owner, repo, release_id: r.id }).catch(_ => {}); }
+      - name: Clean legacy latest tags
+        if: github.event.ref == 'refs/heads/master'
+        run: |
+          git tag -l | grep latest | grep -v latest-${{ github.sha }} | xargs -I{} git push -d origin {} || true

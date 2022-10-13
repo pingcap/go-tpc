@@ -38,7 +38,7 @@ jobs:
           tar -zcf go-tpc_latest_linux_amd64.tar.gz  -C dist/go-tpc_linux_amd64_v1  go-tpc
           tar -zcf go-tpc_latest_linux_arm64.tar.gz  -C dist/go-tpc_linux_arm64     go-tpc
           tar -zcf go-tpc_latest_darwin_amd64.tar.gz -C dist/go-tpc_darwin_amd64_v1 go-tpc
-          tar -zcf go-tpc_latest_darwin_amd64.tar.gz -C dist/go-tpc_darwin_amd64    go-tpc
+          tar -zcf go-tpc_latest_darwin_arm64.tar.gz -C dist/go-tpc_darwin_arm64    go-tpc
 
       - name: Release latest build
         uses: softprops/action-gh-release@v1

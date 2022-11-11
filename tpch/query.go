@@ -402,7 +402,7 @@ where
 	and l_shipdate < date_add('1996-12-01', interval '1' month);
 `
 	q15 = `
-create view revenue0 (supplier_no, total_revenue) as
+/*PLACEHOLDER*/ create view revenue0 (supplier_no, total_revenue) as
 	select
 		l_suppkey,
 		sum(l_extendedprice * (1 - l_discount))

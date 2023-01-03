@@ -210,6 +210,26 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]
 	query := query(w.cfg.Driver, queryName)
 
+	if queryName == "q15" {
+		_, err := w.db.Exec(`create view revenue0 (supplier_no, total_revenue) as
+	select
+		l_suppkey,
+		sum(l_extendedprice * (1 - l_discount))
+	from
+		lineitem
+	where
+		l_shipdate >= '1997-07-01'
+		and l_shipdate < date_add('1997-07-01', interval '3' month)
+	group by
+		l_suppkey;`)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			w.db.Exec("drop view revenue0;")
+		}()
+	}
+
 	// only for driver == mysql and EnablePlanReplayer == true
 	if w.cfg.EnablePlanReplayer && w.cfg.Driver == "mysql" {
 		err := w.dumpPlanReplayer(ctx, s, query, queryName)

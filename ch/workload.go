@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -219,7 +220,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	if w.cfg.EnablePlanReplayer && w.cfg.Driver == "mysql" {
 		err := w.dumpPlanReplayer(ctx, s, query, queryName)
 		if err != nil {
-			fmt.Errorf("dump query %s plan replayer failed %v", queryName, err)
+			fmt.Fprintf(os.Stderr, "dump query %s plan replayer failed %v", queryName, err)
 		}
 	}
 

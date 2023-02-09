@@ -104,10 +104,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	query := w.cfg.Queries[queryName]
 
 	if w.cfg.EnablePlanReplayer {
-		err := w.dumpPlanReplayer(ctx, s, query, queryName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dump query %s plan replayer failed %v", queryName, err)
-		}
+		w.dumpPlanReplayer(ctx, s, query, queryName)
 	}
 
 	if w.cfg.ExecExplainAnalyze {
@@ -185,9 +182,12 @@ func (w *Workloader) Check(ctx context.Context, threadID int) error {
 	panic("not implemented") // TODO: Implement
 }
 
-func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *rawsqlState, query, queryName string) error {
+func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *rawsqlState, query, queryName string) {
 	query = "plan replayer dump explain " + query
-	return w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
+	err := w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
+	if err != nil {
+		fmt.Printf("dump query %s plan replayer failed %v", queryName, err)
+	}
 }
 
 func (w *Workloader) IsPlanReplayerDumpEnabled() bool {

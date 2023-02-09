@@ -232,10 +232,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 
 	// only for driver == mysql and EnablePlanReplayer == true
 	if w.cfg.EnablePlanReplayer && w.cfg.Driver == "mysql" {
-		err := w.dumpPlanReplayer(ctx, s, query, queryName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dump query %s plan replayer failed %v", queryName, err)
-		}
+		w.dumpPlanReplayer(ctx, s, query, queryName)
 	}
 
 	if w.cfg.ExecExplainAnalyze {
@@ -315,9 +312,12 @@ func (w *Workloader) DBName() string {
 	return w.cfg.DBName
 }
 
-func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *tpchState, query, queryName string) error {
+func (w *Workloader) dumpPlanReplayer(ctx context.Context, s *tpchState, query, queryName string) {
 	query = strings.Replace(query, "/*PLACEHOLDER*/", "plan replayer dump explain", 1)
-	return w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
+	err := w.PlanReplayerRunner.Dump(ctx, s.Conn, query, queryName)
+	if err != nil {
+		fmt.Printf("dump query %s plan replayer failed %v", queryName, err)
+	}
 }
 
 func (w *Workloader) IsPlanReplayerDumpEnabled() bool {

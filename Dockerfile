@@ -12,17 +12,11 @@ RUN go mod download
 COPY . .
 
 # Build
-RUN GOOS=linux GOARCH=amd64 make build
+ARG TARGETARCH
+RUN GOOS=linux GOARCH=$TARGETARCH make build
 
-FROM pingcap/alpine-glibc:3.10
-
-RUN apk add --no-cache \
-  dumb-init \
-  tzdata \
-  # help to setup or teardown database schemas
-  mariadb-client
+FROM ubuntu:22.04
 
 COPY --from=builder /workspace/bin/go-tpc /go-tpc
 
-ENTRYPOINT [ "/usr/bin/dumb-init" ]
-CMD ["/go-tpc"]
+ENTRYPOINT [ "/go-tpc" ]

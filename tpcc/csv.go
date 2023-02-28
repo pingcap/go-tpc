@@ -499,3 +499,7 @@ func (c *CSVWorkLoader) PreparePlanReplayerDump() error {
 func (c *CSVWorkLoader) FinishPlanReplayerDump() error {
 	return nil
 }
+
+func (c *CSVWorkLoader) Exec(sql string) error {
+	return nil
+}

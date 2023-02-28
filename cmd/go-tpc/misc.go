@@ -37,10 +37,10 @@ func checkPrepare(ctx context.Context, w workload.Workloader) {
 	wg.Wait()
 }
 
-func execute(ctx context.Context, w workload.Workloader, action string, threads, index int) error {
+func execute(timeoutCtx context.Context, w workload.Workloader, action string, threads, index int) error {
 	count := totalCount / threads
 
-	ctx = w.InitThread(ctx, index)
+	ctx := w.InitThread(context.Background(), index)
 	defer w.CleanupThread(ctx, index)
 
 	switch action {
@@ -58,30 +58,8 @@ func execute(ctx context.Context, w workload.Workloader, action string, threads,
 		return w.Check(ctx, index)
 	}
 
-	enabledDumpPlanReplayer := w.IsPlanReplayerDumpEnabled()
-	if enabledDumpPlanReplayer {
-		err := w.PreparePlanReplayerDump()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err := w.FinishPlanReplayerDump()
-			if err != nil {
-				fmt.Printf("[%s] dump plan replayer failed, err%v\n",
-					time.Now().Format("2006-01-02 15:04:05"), err)
-			}
-		}()
-	}
-
 	for i := 0; i < count || count <= 0; i++ {
 		err := w.Run(ctx, index)
-
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
-
 		if err != nil {
 			if !silence {
 				fmt.Printf("[%s] execute %s failed, err %v\n", time.Now().Format("2006-01-02 15:04:05"), action, err)
@@ -89,6 +67,11 @@ func execute(ctx context.Context, w workload.Workloader, action string, threads,
 			if !ignoreError {
 				return err
 			}
+		}
+		select {
+		case <-timeoutCtx.Done():
+			return nil
+		default:
 		}
 	}
 
@@ -115,6 +98,37 @@ func executeWorkload(ctx context.Context, w workload.Workloader, threads int, ac
 			}
 		}
 	}()
+	if w.Name() == "tpch" && action == "run" {
+		err := w.Exec(`create or replace view revenue0 (supplier_no, total_revenue) as
+	select
+		l_suppkey,
+		sum(l_extendedprice * (1 - l_discount))
+	from
+		lineitem
+	where
+		l_shipdate >= '1997-07-01'
+		and l_shipdate < date_add('1997-07-01', interval '3' month)
+	group by
+		l_suppkey;`)
+		if err != nil {
+			panic(fmt.Sprintf("a fatal occurred when preparing view data: %v", err))
+		}
+	}
+	enabledDumpPlanReplayer := w.IsPlanReplayerDumpEnabled()
+	if enabledDumpPlanReplayer {
+		err := w.PreparePlanReplayerDump()
+		if err != nil {
+			fmt.Printf("[%s] prepare plan replayer failed, err%v\n",
+				time.Now().Format("2006-01-02 15:04:05"), err)
+		}
+		defer func() {
+			err = w.FinishPlanReplayerDump()
+			if err != nil {
+				fmt.Printf("[%s] dump plan replayer failed, err%v\n",
+					time.Now().Format("2006-01-02 15:04:05"), err)
+			}
+		}()
+	}
 
 	for i := 0; i < threads; i++ {
 		go func(index int) {

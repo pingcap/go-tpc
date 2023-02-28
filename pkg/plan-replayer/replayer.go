@@ -24,15 +24,22 @@ type PlanReplayerConfig struct {
 }
 
 type PlanReplayerRunner struct {
-	Config PlanReplayerConfig
-	zf     *os.File
-	zw     struct {
-		sync.Mutex
+	sync.Mutex
+	prepared bool
+	finished bool
+	Config   PlanReplayerConfig
+	zf       *os.File
+	zw       struct {
 		writer *zip.Writer
 	}
 }
 
 func (r *PlanReplayerRunner) Prepare() error {
+	r.Lock()
+	defer r.Unlock()
+	if r.prepared {
+		return nil
+	}
 	if r.Config.PlanReplayerDir == "" {
 		dir, err := os.Getwd()
 		if err != nil {
@@ -53,20 +60,27 @@ func (r *PlanReplayerRunner) Prepare() error {
 	r.zf = zf
 	// Create zip writer
 	r.zw.writer = zip.NewWriter(zf)
+	r.prepared = true
 	return nil
 }
 
 func (r *PlanReplayerRunner) Finish() error {
-	r.zw.Lock()
+	r.Lock()
+	defer r.Unlock()
+	if r.finished {
+		return nil
+	}
 	err := r.zw.writer.Close()
 	if err != nil {
 		return err
 	}
-	r.zw.Unlock()
+	r.finished = true
 	return r.zf.Close()
 }
 
 func (r *PlanReplayerRunner) Dump(ctx context.Context, conn *sql.Conn, query, queryName string) error {
+	r.Lock()
+	defer r.Unlock()
 	rows, err := conn.QueryContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("execute query %s failed %v", query, err)
@@ -111,8 +125,6 @@ func (r *PlanReplayerRunner) writeDataIntoZW(b []byte, queryName string) error {
 		return err
 	}
 	key := base64.URLEncoding.EncodeToString(k)
-	r.zw.Lock()
-	defer r.zw.Unlock()
 	wr, err := r.zw.writer.Create(fmt.Sprintf("%v_%v_%v.zip",
 		queryName, time.Now().Format("2006-01-02-15:04:05"), key))
 	if err != nil {

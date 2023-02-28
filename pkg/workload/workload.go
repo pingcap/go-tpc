@@ -20,4 +20,5 @@ type Workloader interface {
 	IsPlanReplayerDumpEnabled() bool
 	PreparePlanReplayerDump() error
 	FinishPlanReplayerDump() error
+	Exec(sql string) error
 }

@@ -207,3 +207,7 @@ func (w *Workloader) PreparePlanReplayerDump() error {
 func (w *Workloader) FinishPlanReplayerDump() error {
 	return w.PlanReplayerRunner.Finish()
 }
+
+func (w *Workloader) Exec(sql string) error {
+	return nil
+}

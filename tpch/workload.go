@@ -219,22 +219,18 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	}
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
-	if err != nil {
-		return fmt.Errorf("execute query %s failed %v", query, err)
-	}
-	defer rows.Close()
-	w.measurement.Measure(queryName, time.Now().Sub(start), err)
-
+	defer w.measurement.Measure(queryName, time.Now().Sub(start), err)
 	if err != nil {
 		return fmt.Errorf("execute %s failed %v", queryName, err)
 	}
+	defer rows.Close()
 
 	if w.cfg.ExecExplainAnalyze {
 		table, err := util.RenderExplainAnalyze(rows)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "explain analyze result of query %s:\n%s\n", queryName, table)
+		util.StdErrLogger.Printf("explain analyze result of query %s (takes %s):\n%s\n", queryName, time.Now().Sub(start), table)
 		return nil
 	}
 	if err := w.scanQueryResult(queryName, rows); err != nil {

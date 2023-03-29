@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/rawsql"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +30,7 @@ func registerRawsql(root *cobra.Command) {
 		Short: "Run workload",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(queryFiles) == 0 {
-				fmt.Fprintln(os.Stderr, "empty query files")
+				util.StdErrLogger.Printf("empty query files")
 				os.Exit(1)
 			}
 
@@ -74,7 +75,7 @@ func execRawsql(action string) {
 
 	// if globalDB == nil
 	if globalDB == nil {
-		fmt.Fprintln(os.Stderr, "cannot connect to the database")
+		util.StdErrLogger.Printf("cannot connect to the database")
 		os.Exit(1)
 	}
 
@@ -89,7 +90,7 @@ func execRawsql(action string) {
 	for i, filename := range rawsqlConfig.QueryNames {
 		queryData, err := ioutil.ReadFile(filename)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "read file: %s, err: %v\n", filename, err)
+			util.StdErrLogger.Printf("read file: %s, err: %v\n", filename, err)
 			os.Exit(1)
 		}
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -16,6 +17,13 @@ const (
 	OutputStyleTable = "table"
 	OutputStyleJson  = "json"
 )
+
+// This logger is goroutine-safe.
+var StdErrLogger *log.Logger
+
+func init() {
+	StdErrLogger = log.New(os.Stderr, "", 0)
+}
 
 func RenderString(format string, headers []string, values [][]string) {
 	if len(values) == 0 {

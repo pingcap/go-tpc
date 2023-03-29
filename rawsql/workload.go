@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -122,7 +121,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "explain analyze result of query %s:\n%s\n", queryName, table)
+		util.StdErrLogger.Printf("explain analyze result of query %s:\n%s\n", queryName, table)
 		return nil
 	}
 

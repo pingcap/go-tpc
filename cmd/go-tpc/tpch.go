@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/tpch"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +18,7 @@ func executeTpch(action string) {
 	defer closeDB()
 
 	if globalDB == nil {
-		fmt.Fprintln(os.Stderr, "cannot connect to the database")
+		util.StdErrLogger.Printf("cannot connect to the database")
 		os.Exit(1)
 	}
 

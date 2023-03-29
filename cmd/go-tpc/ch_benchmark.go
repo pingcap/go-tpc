@@ -102,6 +102,11 @@ func registerCHBenchmark(root *cobra.Command) {
 		"",
 		"Name of plan Replayer file dumps")
 
+	cmdRun.PersistentFlags().BoolVar(&chConfig.ExecExplainAnalyze,
+		"use-explain",
+		false,
+		"execute explain analyze")
+
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
 	cmdRun.Flags().StringVar(&apConnParams, "ap-conn-params", "", "Connection parameters for analytical processing")
 	cmdRun.Flags().StringSliceVar(&apHosts, "ap-host", nil, "Database host for analytical processing")

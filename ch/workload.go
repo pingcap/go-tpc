@@ -30,13 +30,14 @@ type analyzeConfig struct {
 
 // Config is the configuration for ch workload
 type Config struct {
-	Driver          string
-	DBName          string
-	RawQueries      string
-	QueryNames      []string
-	TiFlashReplica  int
-	AnalyzeTable    analyzeConfig
-	RefreshConnWait time.Duration
+	Driver             string
+	DBName             string
+	RawQueries         string
+	QueryNames         []string
+	TiFlashReplica     int
+	AnalyzeTable       analyzeConfig
+	ExecExplainAnalyze bool
+	RefreshConnWait    time.Duration
 
 	EnablePlanReplayer bool
 	PlanReplayerConfig replayer.PlanReplayerConfig
@@ -220,14 +221,36 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		w.dumpPlanReplayer(ctx, s, query, queryName)
 	}
 
+	if w.cfg.ExecExplainAnalyze {
+		query = strings.Replace(query, "/*PLACEHOLDER*/", "explain analyze", 1)
+	}
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
-	w.measurement.Measure(queryName, time.Now().Sub(start), err)
+	defer w.measurement.Measure(queryName, time.Now().Sub(start), err)
 	if err != nil {
 		return fmt.Errorf("execute query %s failed %v", queryName, err)
 	}
 	defer rows.Close()
+
+	if w.cfg.ExecExplainAnalyze {
+		table, err := util.RenderExplainAnalyze(rows)
+		if err != nil {
+			return err
+		}
+		util.StdErrLogger.Printf("explain analyze result of query %s (takes %s):\n%s\n", queryName, time.Now().Sub(start), table)
+		return nil
+	}
+	if err := w.drainQueryResult(queryName, rows); err != nil {
+		return fmt.Errorf("execute query %s failed %v", queryName, err)
+	}
+
 	return nil
+}
+
+func (w *Workloader) drainQueryResult(queryName string, rows *sql.Rows) error {
+	for rows.Next() {
+	}
+	return rows.Err()
 }
 
 // Cleanup cleans up workloader

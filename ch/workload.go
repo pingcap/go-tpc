@@ -306,16 +306,16 @@ func (w *Workloader) OutputStats(ifSummaryReport bool) {
 	w.measurement.Output(ifSummaryReport, w.cfg.OutputStyle, outputRtMeasurement)
 	if ifSummaryReport {
 		var count int64
-		var elapsed float64
+		var sum float64
 		for _, m := range w.measurement.OpSumMeasurement {
 			if !m.Empty() {
 				r := m.GetInfo()
 				count += r.Count
-				elapsed += r.Elapsed
+				sum += r.Sum
 			}
 		}
-		if elapsed != 0 {
-			fmt.Printf("QphH: %.1f\n", 3600/elapsed*float64(count))
+		if sum != 0 {
+			fmt.Printf("QphH: %.1f\n", 3600*1000/sum*float64(count))
 		}
 	}
 }

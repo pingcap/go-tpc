@@ -1,6 +1,6 @@
 module github.com/pingcap/go-tpc
 
-go 1.18
+go 1.21
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0

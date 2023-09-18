@@ -116,7 +116,7 @@ func registerCHBenchmark(root *cobra.Command) {
 }
 
 func executeCH(action string, openAP func() (*sql.DB, error)) {
-	if maxProcs == 0 {
+	if maxProcs != 0 {
 		runtime.GOMAXPROCS(maxProcs)
 	}
 

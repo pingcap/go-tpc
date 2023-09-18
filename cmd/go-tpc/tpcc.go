@@ -39,7 +39,7 @@ func executeTpcc(action string) {
 			}
 		}()
 	}
-	if maxProcs == 0 {
+	if maxProcs != 0 {
 		runtime.GOMAXPROCS(maxProcs)
 	}
 

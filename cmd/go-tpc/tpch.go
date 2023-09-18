@@ -22,7 +22,7 @@ func executeTpch(action string) {
 		util.StdErrLogger.Printf("cannot connect to the database")
 		os.Exit(1)
 	}
-	if maxProcs == 0 {
+	if maxProcs != 0 {
 		runtime.GOMAXPROCS(maxProcs)
 	}
 

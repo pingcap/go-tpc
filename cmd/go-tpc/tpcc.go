@@ -39,7 +39,9 @@ func executeTpcc(action string) {
 			}
 		}()
 	}
-	runtime.GOMAXPROCS(maxProcs)
+	if maxProcs == 0 {
+		runtime.GOMAXPROCS(maxProcs)
+	}
 
 	openDB()
 	defer closeDB()

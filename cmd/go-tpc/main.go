@@ -17,7 +17,7 @@ import (
 
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/spf13/cobra"
-
+	_ "go.uber.org/automaxprocs"
 	// mysql package
 	"github.com/go-sql-driver/mysql"
 	// pg

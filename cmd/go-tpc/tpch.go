@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/pingcap/go-tpc/pkg/util"
@@ -20,6 +21,9 @@ func executeTpch(action string) {
 	if globalDB == nil {
 		util.StdErrLogger.Printf("cannot connect to the database")
 		os.Exit(1)
+	}
+	if maxProcs == 0 {
+		runtime.GOMAXPROCS(maxProcs)
 	}
 
 	tpchConfig.PlanReplayerConfig.Host = hosts[0]

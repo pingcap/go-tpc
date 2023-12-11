@@ -3,14 +3,18 @@ package tpcc
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
+	"sync/atomic"
+
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/pingcap/go-tpc/pkg/dtable"
 	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/sink"
 	"github.com/pingcap/go-tpc/pkg/util"
@@ -102,6 +106,9 @@ type Workloader struct {
 	// stats
 	rtMeasurement       *measurement.Measurement
 	waitTimeMeasurement *measurement.Measurement
+
+	TotalTxnCount    int64
+	ErrConflictCount int64
 }
 
 // NewWorkloader creates the tpc-c workloader
@@ -150,7 +157,7 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		{name: "payment", action: w.runPayment, weight: cfg.Weight[1], keyingTime: 3, thinkingTime: 12},
 		{name: "order_status", action: w.runOrderStatus, weight: cfg.Weight[2], keyingTime: 2, thinkingTime: 10},
 		{name: "delivery", action: w.runDelivery, weight: cfg.Weight[3], keyingTime: 2, thinkingTime: 5},
-		{name: "stock_level", action: w.runStockLevel, weight: cfg.Weight[4], keyingTime: 2, thinkingTime: 5},
+		// {name: "stock_level", action: w.runStockLevel, weight: cfg.Weight[4], keyingTime: 2, thinkingTime: 5},
 	}
 
 	if w.db != nil {
@@ -244,6 +251,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 			// batch select stock for update
 			newOrderUpdateStock: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderUpdateStock),
 			// batch insert order_line
+			newOrderSelectUpdateStock: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderSelectUpdateStock),
 		}
 		for i := 5; i <= 15; i++ {
 			s.newOrderStmts[newOrderSelectItemSQLs[i]] = prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderSelectItemSQLs[i])
@@ -253,8 +261,10 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 
 		s.paymentStmts = map[string]*sql.Stmt{
 			paymentUpdateWarehouse:          prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateWarehouse),
+			paymentSelectUpdateWarehouse:    prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectUpdateWarehouse),
 			paymentSelectWarehouse:          prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectWarehouse),
 			paymentUpdateDistrict:           prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateDistrict),
+			paymentSelectUpdateDistrict:     prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectUpdateDistrict),
 			paymentSelectDistrict:           prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectDistrict),
 			paymentSelectCustomerListByLast: prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectCustomerListByLast),
 			paymentSelectCustomerForUpdate:  prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectCustomerForUpdate),
@@ -262,6 +272,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 			paymentUpdateCustomerWithData:   prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateCustomerWithData),
 			paymentUpdateCustomer:           prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentUpdateCustomer),
 			paymentInsertHistory:            prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentInsertHistory),
+			paymentSelectUpdateCustomer:     prepareStmt(w.cfg.Driver, ctx, s.Conn, paymentSelectUpdateCustomer),
 		}
 
 		s.orderStatusStmts = map[string]*sql.Stmt{
@@ -272,13 +283,14 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 			orderStatusSelectOrderLine:         prepareStmt(w.cfg.Driver, ctx, s.Conn, orderStatusSelectOrderLine),
 		}
 		s.deliveryStmts = map[string]*sql.Stmt{
-			deliverySelectNewOrder:  prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectNewOrder),
-			deliveryDeleteNewOrder:  prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryDeleteNewOrder),
-			deliveryUpdateOrder:     prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateOrder),
-			deliverySelectOrders:    prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectOrders),
-			deliveryUpdateOrderLine: prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateOrderLine),
-			deliverySelectSumAmount: prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectSumAmount),
-			deliveryUpdateCustomer:  prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateCustomer),
+			deliverySelectNewOrder:       prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectNewOrder),
+			deliveryDeleteNewOrder:       prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryDeleteNewOrder),
+			deliveryUpdateOrder:          prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateOrder),
+			deliverySelectOrders:         prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectOrders),
+			deliveryUpdateOrderLine:      prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateOrderLine),
+			deliverySelectSumAmount:      prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectSumAmount),
+			deliveryUpdateCustomer:       prepareStmt(w.cfg.Driver, ctx, s.Conn, deliveryUpdateCustomer),
+			deliverySelectUpdateCustomer: prepareStmt(w.cfg.Driver, ctx, s.Conn, deliverySelectUpdateCustomer),
 		}
 		s.stockLevelStmt = map[string]*sql.Stmt{
 			stockLevelSelectDistrict: prepareStmt(w.cfg.Driver, ctx, s.Conn, stockLevelSelectDistrict),
@@ -306,9 +318,13 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		time.Sleep(time.Duration(txn.keyingTime * float64(time.Second)))
 		w.waitTimeMeasurement.Measure(fmt.Sprintf("keyingTime-%s", txn.name), time.Now().Sub(start), nil)
 	}
-
+	atomic.AddInt64(&w.TotalTxnCount, 1)
 	start := time.Now()
 	err := txn.action(ctx, threadID)
+	if errors.Is(err, dtable.ErrConflict) {
+		err = nil
+		atomic.AddInt64(&w.ErrConflictCount, 1)
+	}
 
 	w.rtMeasurement.Measure(txn.name, time.Now().Sub(start), err)
 
@@ -431,11 +447,14 @@ func (w *Workloader) OutputStats(ifSummaryReport bool) {
 					util.FloatToOneString(tpmC),
 					util.FloatToOneString(tpmTotal),
 					util.FloatToOneString(efc) + "%",
+					util.FloatToOneString(float64(w.ErrConflictCount)),
+					util.FloatToOneString(float64(w.TotalTxnCount)),
+					util.FloatToOneString(float64(w.ErrConflictCount*100)/(float64(w.TotalTxnCount))) + "%",
 				},
 			}
 			switch w.cfg.OutputStyle {
 			case util.OutputStylePlain:
-				util.RenderString("tpmC: %s, tpmTotal: %s, efficiency: %s\n", nil, lines)
+				util.RenderString("tpmC: %s, tpmTotal: %s, efficiency: %s, abortCount: %s,  totalCount: %s, abortRate: %s\n", nil, lines)
 			case util.OutputStyleTable:
 				util.RenderTable([]string{"tpmC", "tpmTotal", "efficiency"}, lines)
 			case util.OutputStyleJson:

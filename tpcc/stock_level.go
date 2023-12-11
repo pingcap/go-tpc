@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-const stockLevelCount = `SELECT /*+ TIDB_INLJ(order_line,stock) */ COUNT(DISTINCT (s_i_id)) stock_count FROM order_line, stock 
+const stockLevelCount = `SELECT  COUNT(DISTINCT (s_i_id)) stock_count FROM order_line, stock 
 WHERE ol_w_id = ? AND ol_d_id = ? AND ol_o_id < ? AND ol_o_id >= ? - 20 AND s_w_id = ? AND s_i_id = ol_i_id AND s_quantity < ?`
 const stockLevelSelectDistrict = `SELECT d_next_o_id FROM district WHERE d_w_id = ? AND d_id = ?`
 

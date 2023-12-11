@@ -14,23 +14,41 @@ type deliveryData struct {
 }
 
 const (
-	deliverySelectNewOrder = "SELECT no_o_id FROM new_order WHERE no_w_id = ? AND no_d_id = ? ORDER BY no_o_id ASC LIMIT 1 FOR UPDATE"
-	deliveryDeleteNewOrder = `DELETE FROM new_order WHERE (no_w_id, no_d_id, no_o_id) IN (
-	(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?)
-)`
-	deliveryUpdateOrder = `UPDATE orders SET o_carrier_id = ? WHERE (o_w_id, o_d_id, o_id) IN (
-	(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?)
-)`
-	deliverySelectOrders = `SELECT o_d_id, o_c_id FROM orders WHERE (o_w_id, o_d_id, o_id) IN (
-	(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?)
-)`
-	deliveryUpdateOrderLine = `UPDATE order_line SET ol_delivery_d = ? WHERE (ol_w_id, ol_d_id, ol_o_id) IN (
-	(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?)
-)`
-	deliverySelectSumAmount = `SELECT ol_d_id, SUM(ol_amount) FROM order_line WHERE (ol_w_id, ol_d_id, ol_o_id) IN (
-	(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?),(?,?,?)
-) GROUP BY ol_d_id`
-	deliveryUpdateCustomer = `UPDATE customer SET c_balance = c_balance + ?, c_delivery_cnt = c_delivery_cnt + 1 WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
+	deliverySelectNewOrder = "SELECT no_o_id FROM new_order WHERE no_w_id = ? AND no_d_id = ? ORDER BY no_o_id ASC LIMIT 1"
+	deliveryDeleteNewOrder = `DELETE FROM new_order WHERE 
+	(no_w_id=? AND no_d_id=? AND no_o_id=? ) OR (no_w_id=? AND no_d_id=? AND no_o_id=? ) OR 
+	(no_w_id=? AND no_d_id=? AND no_o_id=? ) OR (no_w_id=? AND no_d_id=? AND no_o_id=? ) OR 
+	(no_w_id=? AND no_d_id=? AND no_o_id=? ) OR (no_w_id=? AND no_d_id=? AND no_o_id=? ) OR 
+	(no_w_id=? AND no_d_id=? AND no_o_id=? ) OR (no_w_id=? AND no_d_id=? AND no_o_id=? ) OR 
+	(no_w_id=? AND no_d_id=? AND no_o_id=? ) OR (no_w_id=? AND no_d_id=? AND no_o_id=? )
+`
+	deliveryUpdateOrder = `UPDATE orders SET o_carrier_id = ? WHERE 
+	(o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR 
+	(o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR 
+	(o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR 
+	(o_w_id=? AND o_d_id=? AND o_id=?) 
+`
+	deliverySelectOrders = `SELECT o_d_id, o_c_id FROM orders WHERE
+	(o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR 
+	(o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR 
+	(o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR (o_w_id=? AND o_d_id=? AND o_id=?) OR 
+	(o_w_id=? AND o_d_id=? AND o_id=?)
+`
+	deliveryUpdateOrderLine = `UPDATE order_line SET ol_delivery_d = ? WHERE 
+	(ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR 
+	(ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR 
+	(ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id =? AND ol_d_id=? AND ol_o_id=?) OR 
+	(ol_w_id =? AND ol_d_id=? AND ol_o_id=?)
+`
+	deliverySelectSumAmount = `SELECT ol_d_id, SUM(ol_amount) FROM order_line WHERE
+	(ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR 
+	(ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR 
+	(ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR 
+	(ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR 
+	(ol_w_id=? AND ol_d_id=? AND ol_o_id=?) OR (ol_w_id=? AND ol_d_id=? AND ol_o_id=?) 
+GROUP BY ol_d_id`
+	deliverySelectUpdateCustomer = `SELECT c_balance + ?, c_delivery_cnt + 1 FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
+	deliveryUpdateCustomer       = `UPDATE customer SET c_balance = ?, c_delivery_cnt = ? WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
 )
 
 func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
@@ -157,8 +175,12 @@ func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
 		if order.oID == 0 {
 			continue
 		}
-		if _, err = s.deliveryStmts[deliveryUpdateCustomer].ExecContext(ctx, order.amount, d.wID, i+1, order.cID); err != nil {
-			return fmt.Errorf("exec %s failed %v", deliveryUpdateCustomer, err)
+		var c_balance, c_delivery_cnt float64
+		if err := s.deliveryStmts[deliverySelectUpdateCustomer].QueryRowContext(ctx, order.amount, d.wID, i+1, order.cID).Scan(&c_balance, &c_delivery_cnt); err != nil {
+			return fmt.Errorf("exec %s failed %v", deliverySelectUpdateCustomer, err)
+		}
+		if _, err = s.deliveryStmts[deliveryUpdateCustomer].ExecContext(ctx, c_balance, c_delivery_cnt, d.wID, i+1, order.cID); err != nil {
+			return fmt.Errorf("exec %s failed %w", deliveryUpdateCustomer, err)
 		}
 	}
 	return tx.Commit()

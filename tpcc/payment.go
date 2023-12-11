@@ -7,19 +7,22 @@ import (
 )
 
 const (
-	paymentUpdateDistrict           = `UPDATE district SET d_ytd = d_ytd + ? WHERE d_w_id = ? AND d_id = ?`
+	paymentSelectUpdateDistrict     = `SELECT  d_ytd + ? FROM district  WHERE d_w_id = ? AND d_id = ? `
+	paymentUpdateDistrict           = `UPDATE district SET d_ytd = ? WHERE d_w_id = ? AND d_id = ?`
 	paymentSelectDistrict           = `SELECT d_street_1, d_street_2, d_city, d_state, d_zip, d_name FROM district WHERE d_w_id = ? AND d_id = ?`
-	paymentUpdateWarehouse          = `UPDATE warehouse SET w_ytd = w_ytd + ? WHERE w_id = ?`
+	paymentSelectUpdateWarehouse    = `SELECT  w_ytd + ? FROM warehouse  WHERE w_id = ? `
+	paymentUpdateWarehouse          = `UPDATE warehouse SET w_ytd = ? WHERE w_id = ?`
 	paymentSelectWarehouse          = `SELECT w_street_1, w_street_2, w_city, w_state, w_zip, w_name FROM warehouse WHERE w_id = ?`
 	paymentSelectCustomerListByLast = `SELECT c_id FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_last = ? ORDER BY c_first`
 	paymentSelectCustomerForUpdate  = `SELECT c_first, c_middle, c_last, c_street_1, c_street_2, c_city, c_state, c_zip, c_phone,
 c_credit, c_credit_lim, c_discount, c_balance, c_since FROM customer WHERE c_w_id = ? AND c_d_id = ? 
-AND c_id = ? FOR UPDATE`
-	paymentUpdateCustomer = `UPDATE customer SET c_balance = c_balance - ?, c_ytd_payment = c_ytd_payment + ?, 
-c_payment_cnt = c_payment_cnt + 1 WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
+AND c_id = ? `
+	paymentSelectUpdateCustomer = `SELECT c_balance - ?,c_ytd_payment + ?,c_payment_cnt + 1 FROM customer  WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
+	paymentUpdateCustomer       = `UPDATE customer SET c_balance = ?, c_ytd_payment = ?, 
+c_payment_cnt = ? WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
 	paymentSelectCustomerData     = `SELECT c_data FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
-	paymentUpdateCustomerWithData = `UPDATE customer SET c_balance = c_balance - ?, c_ytd_payment = c_ytd_payment + ?, 
-c_payment_cnt = c_payment_cnt + 1, c_data = ? WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
+	paymentUpdateCustomerWithData = `UPDATE customer SET c_balance = ?, c_ytd_payment = ?, 
+c_payment_cnt = ?, c_data = ? WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?`
 	paymentInsertHistory = `INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id, h_w_id, h_date, h_amount, h_data)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 )
@@ -95,7 +98,12 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 	defer tx.Rollback()
 
 	// Process 1
-	if _, err := s.paymentStmts[paymentUpdateDistrict].ExecContext(ctx, d.hAmount, d.wID, d.dID); err != nil {
+	var d_ytd float64
+	if err := s.paymentStmts[paymentSelectUpdateDistrict].QueryRowContext(ctx, d.hAmount, d.wID, d.dID).Scan(&d_ytd); err != nil {
+		return fmt.Errorf("exec %s failed %v", paymentSelectUpdateDistrict, err)
+
+	}
+	if _, err := s.paymentStmts[paymentUpdateDistrict].ExecContext(ctx, d_ytd, d.wID, d.dID); err != nil {
 		return fmt.Errorf("exec %s failed %v", paymentUpdateDistrict, err)
 	}
 
@@ -106,8 +114,12 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 	}
 
 	// Process 3
-	if _, err := s.paymentStmts[paymentUpdateWarehouse].ExecContext(ctx, d.hAmount, d.wID); err != nil {
-		return fmt.Errorf("exec %s failed %v", paymentUpdateWarehouse, err)
+	var w_ytd float64
+	if err := s.paymentStmts[paymentSelectUpdateWarehouse].QueryRowContext(ctx, d.hAmount, d.wID).Scan(&w_ytd); err != nil {
+		return fmt.Errorf("exec %s failed %v", paymentSelectUpdateWarehouse, err)
+	}
+	if _, err := s.paymentStmts[paymentUpdateWarehouse].ExecContext(ctx, w_ytd, d.wID); err != nil {
+		return fmt.Errorf("exec %s failed %w", paymentUpdateWarehouse, err)
 	}
 
 	// Process 4
@@ -140,13 +152,18 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 	if err := s.paymentStmts[paymentSelectCustomerForUpdate].QueryRowContext(ctx, d.cWID, d.cDID, d.cID).Scan(&d.cFirst, &d.cMiddle, &d.cLast,
 		&d.cStreet1, &d.cStreet2, &d.cCity, &d.cState, &d.cZip, &d.cPhone, &d.cCredit, &d.cCreditLim,
 		&d.cDiscount, &d.cBalance, &d.cSince); err != nil {
-		return fmt.Errorf("exec %s failed %v", paymentSelectCustomerForUpdate, err)
+		return fmt.Errorf("exec %s failed %w", paymentSelectCustomerForUpdate, err)
 	}
 
+	var c_balance, c_ytd_payment float64
+	var c_payment_cnt int
+	if err := s.paymentStmts[paymentSelectUpdateCustomer].QueryRowContext(ctx, d.hAmount, d.hAmount, d.cWID, d.cDID, d.cID).Scan(&c_balance, &c_ytd_payment, &c_payment_cnt); err != nil {
+		return fmt.Errorf("exec %s failed %w", paymentSelectUpdateCustomer, err)
+	}
 	if d.cCredit == "BC" {
 		// Process 7
 		if err := s.paymentStmts[paymentSelectCustomerData].QueryRowContext(ctx, d.cWID, d.cDID, d.cID).Scan(&d.cData); err != nil {
-			return fmt.Errorf("exec %s failed %v", paymentSelectCustomerData, err)
+			return fmt.Errorf("exec %s failed %w", paymentSelectCustomerData, err)
 		}
 
 		newData := fmt.Sprintf("| %4d %2d %4d %2d %4d $%7.2f %12s %24s", d.cID, d.cDID, d.cWID,
@@ -158,20 +175,20 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 		}
 
 		// Process 8
-		if _, err := s.paymentStmts[paymentUpdateCustomerWithData].ExecContext(ctx, d.hAmount, d.hAmount, newData, d.cWID, d.cDID, d.cID); err != nil {
-			return fmt.Errorf("exec %s failed %v", paymentUpdateCustomerWithData, err)
+		if _, err := s.paymentStmts[paymentUpdateCustomerWithData].ExecContext(ctx, c_balance, c_ytd_payment, c_payment_cnt, newData, d.cWID, d.cDID, d.cID); err != nil {
+			return fmt.Errorf("exec %s failed %w", paymentUpdateCustomerWithData, err)
 		}
 	} else {
 		// Process 9
-		if _, err := s.paymentStmts[paymentUpdateCustomer].ExecContext(ctx, d.hAmount, d.hAmount, d.cWID, d.cDID, d.cID); err != nil {
-			return fmt.Errorf("exec %s failed %v", paymentUpdateCustomer, err)
+		if _, err := s.paymentStmts[paymentUpdateCustomer].ExecContext(ctx, c_balance, c_ytd_payment, c_payment_cnt, d.cWID, d.cDID, d.cID); err != nil {
+			return fmt.Errorf("exec %s failed %w", paymentUpdateCustomer, err)
 		}
 	}
 
 	// Process 10
 	hData := fmt.Sprintf("%10s    %10s", d.wName, d.dName)
 	if _, err := s.paymentStmts[paymentInsertHistory].ExecContext(ctx, d.cDID, d.cWID, d.cID, d.dID, d.wID, time.Now().Format(timeFormat), d.hAmount, hData); err != nil {
-		return fmt.Errorf("exec %s failed %v", paymentInsertHistory, err)
+		return fmt.Errorf("exec %s failed %w", paymentInsertHistory, err)
 	}
 
 	return tx.Commit()

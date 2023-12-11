@@ -9,12 +9,13 @@ import (
 )
 
 const (
-	newOrderSelectCustomer = `SELECT c_discount, c_last, c_credit, w_tax FROM customer, warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
-	newOrderSelectDistrict = `SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE`
-	newOrderUpdateDistrict = `UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?`
-	newOrderInsertOrder    = `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (?, ?, ?, ?, ?, ?, ?)`
-	newOrderInsertNewOrder = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
-	newOrderUpdateStock    = `UPDATE stock SET s_quantity = ?, s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, s_remote_cnt = s_remote_cnt + ? WHERE s_i_id = ? AND s_w_id = ?`
+	newOrderSelectCustomer    = `SELECT c_discount, c_last, c_credit, w_tax FROM customer, warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`
+	newOrderSelectDistrict    = `SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? `
+	newOrderUpdateDistrict    = `UPDATE district SET d_next_o_id = ? WHERE d_id = ? AND d_w_id = ?`
+	newOrderInsertOrder       = `INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	newOrderInsertNewOrder    = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
+	newOrderSelectUpdateStock = `SELECT s_ytd + ?, s_order_cnt + 1, s_remote_cnt + ? FROM stock WHERE s_i_id = ? AND s_w_id = ?`
+	newOrderUpdateStock       = `UPDATE stock SET s_quantity = ?, s_ytd = ?, s_order_cnt = ?, s_remote_cnt = ? WHERE s_i_id = ? AND s_w_id = ?`
 )
 
 var (
@@ -44,14 +45,14 @@ func genNewOrderSelectItemsSQL(cnt int) string {
 }
 
 func genNewOrderSelectStockSQL(cnt int) string {
-	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE (s_w_id, s_i_id) IN (")
+	buf := bytes.NewBufferString("SELECT s_i_id, s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE ")
 	for i := 0; i < cnt; i++ {
-		if i != 0 {
-			buf.WriteByte(',')
+		buf.WriteString("(s_w_id=? AND s_i_id=?)")
+		if i < cnt-1 {
+			buf.WriteString(" OR ")
 		}
-		buf.WriteString("(?,?)")
 	}
-	buf.WriteString(") FOR UPDATE")
+
 	return buf.String()
 }
 
@@ -183,8 +184,8 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	}
 
 	// Process 3
-	if _, err := s.newOrderStmts[newOrderUpdateDistrict].ExecContext(ctx, d.dNextOID, d.dID, d.wID); err != nil {
-		return fmt.Errorf("exec %s failed %v", newOrderUpdateDistrict, err)
+	if _, err := s.newOrderStmts[newOrderUpdateDistrict].ExecContext(ctx, d.dNextOID+1, d.dID, d.wID); err != nil {
+		return fmt.Errorf("exec %s failed %w", newOrderUpdateDistrict, err)
 	}
 
 	oID := d.dNextOID
@@ -276,8 +277,12 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		if item.olIID < 0 {
 			return nil
 		}
-		if _, err = s.newOrderStmts[newOrderUpdateStock].ExecContext(ctx, item.sQuantity, item.olQuantity, item.remoteWarehouse, item.olIID, d.wID); err != nil {
-			return fmt.Errorf("exec %s failed %v", newOrderUpdateStock, err)
+		var s_ytd, s_order_cnt, s_remote_cnt int
+		if err = s.newOrderStmts[newOrderSelectUpdateStock].QueryRowContext(ctx, item.olQuantity, item.remoteWarehouse, item.olIID, d.wID).Scan(&s_ytd, &s_order_cnt, &s_remote_cnt); err != nil {
+			return fmt.Errorf("exec %s failed %w", newOrderSelectUpdateStock, err)
+		}
+		if _, err = s.newOrderStmts[newOrderUpdateStock].ExecContext(ctx, item.sQuantity, s_ytd, s_order_cnt, s_remote_cnt, item.olIID, d.wID); err != nil {
+			return fmt.Errorf("exec %s failed %w", newOrderUpdateStock, err)
 		}
 	}
 
@@ -297,7 +302,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		insertOrderLineArgs[i*9+8] = item.sDist
 	}
 	if _, err = s.newOrderStmts[insertOrderLineSQL].ExecContext(ctx, insertOrderLineArgs...); err != nil {
-		return fmt.Errorf("exec %s failed %v", insertOrderLineSQL, err)
+		return fmt.Errorf("exec %s failed %w", insertOrderLineSQL, err)
 	}
 	return tx.Commit()
 }

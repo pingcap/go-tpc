@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pingcap/go-tpc/pkg/dtable"
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/spf13/cobra"
 	_ "go.uber.org/automaxprocs"
@@ -50,12 +51,16 @@ var (
 
 	globalDB  *sql.DB
 	globalCtx context.Context
+
+	baseId     string
+	privateKey string
 )
 
 const (
-	createDBDDL = "CREATE DATABASE "
-	mysqlDriver = "mysql"
-	pgDriver    = "postgres"
+	createDBDDL  = "CREATE DATABASE "
+	mysqlDriver  = "mysql"
+	pgDriver     = "postgres"
+	dtableDriver = "dtable"
 )
 
 type MuxDriver struct {
@@ -111,6 +116,10 @@ func newDB(targets []string, driver string, user string, password string, dbName
 			}
 			names[i] = dsn
 			drv = &pq.Driver{}
+		case dtableDriver:
+			dsn := fmt.Sprintf("http://%s?baseId=%s&privateKey=%s", addr, baseId, privateKey)
+			names[i] = dsn
+			drv = &dtable.Driver{}
 		default:
 			panic(fmt.Errorf("unknown driver: %q", driver))
 		}
@@ -208,6 +217,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables, e.g. for TiDB --conn-params tidb_isolation_read_engines='tiflash', For PostgreSQL: --conn-params sslmode=disable")
 	rootCmd.PersistentFlags().StringVar(&outputStyle, "output", util.OutputStylePlain, "output style, valid values can be { plain | table | json }")
 	rootCmd.PersistentFlags().StringSliceVar(&targets, "targets", nil, "Target database addresses")
+	rootCmd.PersistentFlags().StringVar(&baseId, "base-id", "", "Dtable base Id")
+	rootCmd.PersistentFlags().StringVar(&privateKey, "private-key", "", "Dtable private key")
 	rootCmd.PersistentFlags().MarkHidden("targets")
 
 	cobra.EnablePrefixMatching = true

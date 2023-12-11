@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/pingcap/go-tpc/pkg/dtable"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
@@ -62,10 +64,14 @@ func execute(timeoutCtx context.Context, w workload.Workloader, action string, t
 		err := w.Run(ctx, index)
 		if err != nil {
 			if !silence {
-				fmt.Printf("[%s] execute %s failed, err %v\n", time.Now().Format("2006-01-02 15:04:05"), action, err)
+				if !errors.Is(err, dtable.ErrConflict) {
+					fmt.Printf("[%s] execute %s failed, err %v\n", time.Now().Format("2006-01-02 15:04:05"), action, err)
+				}
 			}
 			if !ignoreError {
-				return err
+				if !errors.Is(err, dtable.ErrConflict) {
+					return err
+				}
 			}
 		}
 		select {
@@ -130,6 +136,7 @@ func executeWorkload(ctx context.Context, w workload.Workloader, threads int, ac
 		}()
 	}
 
+	now := time.Now()
 	for i := 0; i < threads; i++ {
 		go func(index int) {
 			defer wg.Done()
@@ -144,7 +151,8 @@ func executeWorkload(ctx context.Context, w workload.Workloader, threads int, ac
 	}
 
 	wg.Wait()
-
+	dura := time.Since(now)
+	fmt.Printf("Duration: %fs\n", dura.Seconds())
 	if action == "prepare" {
 		// For prepare, we must check the data consistency after all prepare finished
 		checkPrepare(ctx, w)

@@ -98,7 +98,7 @@ func newDB(targets []string, driver string, user string, password string, dbName
 		switch driver {
 		case mysqlDriver:
 			// allow multiple statements in one query to allow q15 on the TPC-H
-			dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?multiStatements=true", user, password, addr, dbName)
+			dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?multiStatements=true&tls=preferred", user, password, addr, dbName)
 			if len(connParams) > 0 {
 				dsn = dsn + "&" + connParams
 			}

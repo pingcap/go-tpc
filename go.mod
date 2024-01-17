@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/lib/pq v1.10.6
 	github.com/olekukonko/tablewriter v0.0.5

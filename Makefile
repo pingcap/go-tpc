@@ -13,6 +13,7 @@ GOBUILD=$(GO) build -ldflags '$(LDFLAGS)'
 
 # Image URL to use all building/pushing image targets
 IMG ?= go-tpc:latest
+PLATFORM ?= linux/amd64,linux/arm64
 
 all: format test build
 
@@ -42,3 +43,8 @@ docker-build: test
 
 docker-push: docker-build
 	docker push ${IMG}
+
+# Create multiarch driver if not exists:
+#   docker buildx create --name multiarch --driver docker-container --use
+docker-multiarch: test
+	docker buildx build --platform ${PLATFORM} . -t ${IMG} --push

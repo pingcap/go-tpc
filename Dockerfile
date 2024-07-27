@@ -1,5 +1,5 @@
 # Build the go-tpc binary
-FROM golang:1.18 as builder
+FROM golang:1.21 as builder
 
 WORKDIR /workspace
 COPY go.mod go.mod
@@ -12,9 +12,10 @@ RUN go mod download
 COPY . .
 
 # Build
-RUN GOOS=linux GOARCH=amd64 make build
+ARG TARGETOS TARGETARCH
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make build
 
-FROM pingcap/alpine-glibc:3.10
+FROM alpine
 
 RUN apk add --no-cache \
   dumb-init \

@@ -34,6 +34,7 @@ func executeTpch(action string) {
 	tpchConfig.DBName = dbName
 	tpchConfig.PrepareThreads = threads
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
+	tpchConfig.QueryTuningConfig.Vars = strings.Split(tpchConfig.QueryTuningConfig.VarsRaw, ";")
 	w := tpch.NewWorkloader(globalDB, &tpchConfig)
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
@@ -129,6 +130,15 @@ func registerTpch(root *cobra.Command) {
 		"plan-replayer-file",
 		"",
 		"Name of plan Replayer file dumps")
+
+	cmdPrepare.PersistentFlags().BoolVar(&tpchConfig.QueryTuningConfig.Enable,
+		"enable-query-tuning",
+		true,
+		"Enable query tuning by setting specified session variables")
+	cmdPrepare.PersistentFlags().StringVar(&tpchConfig.QueryTuningConfig.VarsRaw,
+		"query-tuning-vars",
+		"tidb_default_string_match_selectivity=0.1;tidb_opt_join_reorder_threshold=60;tidb_prefer_broadcast_join_by_exchange_data_size=ON",
+		"Specify a sequence of session variables to set before executing each query, in the form of 'name=value', separated by semicolon. Defaulted to some variables known effective for tpch queries.")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

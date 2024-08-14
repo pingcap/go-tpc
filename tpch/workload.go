@@ -206,7 +206,7 @@ func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 }
 
 func (w *Workloader) setQueryTuningVars(ctx context.Context) error {
-	if w.cfg.QueryTuningConfig.Enable && w.cfg.Driver != "mysql" {
+	if w.cfg.QueryTuningConfig.Enable && w.cfg.Driver == "mysql" {
 		conn := w.getState(ctx).Conn
 		for _, v := range w.cfg.QueryTuningConfig.Vars {
 			if _, err := conn.ExecContext(ctx, fmt.Sprintf("SET @@session.%s", v)); err != nil {

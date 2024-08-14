@@ -29,12 +29,6 @@ type analyzeConfig struct {
 	IndexSerialScanConcurrency int
 }
 
-type queryTuningConfig struct {
-	Enable  bool
-	VarsRaw string
-	Vars    []string
-}
-
 // Config is the configuration for tpch workload
 type Config struct {
 	Driver             string
@@ -51,7 +45,7 @@ type Config struct {
 	PlanReplayerConfig replayer.PlanReplayerConfig
 	EnablePlanReplayer bool
 
-	QueryTuningConfig queryTuningConfig
+	EnableQueryTuning bool
 
 	// for prepare command only
 	OutputType string

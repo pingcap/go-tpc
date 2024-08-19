@@ -14,7 +14,31 @@ import (
 
 var tpchConfig tpch.Config
 
+var queryTuningVars = []struct {
+	name  string
+	value string
+}{
+	// For optimal join order, esp. for q9.
+	{"tidb_default_string_match_selectivity", "0.1"},
+	// For optimal join order for all queries.
+	{"tidb_opt_join_reorder_threshold", "60"},
+	// For optimal join type between broadcast and hash partition join.
+	{"tidb_prefer_broadcast_join_by_exchange_data_size", "ON"},
+}
+
+func appendQueryTuningVarsToConnParams() {
+	for _, v := range queryTuningVars {
+		if !strings.Contains(connParams, v.name) {
+			connParams = fmt.Sprintf("%s&%s=%s", connParams, v.name, v.value)
+		}
+	}
+}
+
 func executeTpch(action string) {
+	if action == "run" && driver == "mysql" && tpchConfig.EnableQueryTuning {
+		appendQueryTuningVarsToConnParams()
+	}
+
 	openDB()
 	defer closeDB()
 
@@ -34,7 +58,6 @@ func executeTpch(action string) {
 	tpchConfig.DBName = dbName
 	tpchConfig.PrepareThreads = threads
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
-	tpchConfig.QueryTuningConfig.Vars = strings.Split(tpchConfig.QueryTuningConfig.VarsRaw, ";")
 	w := tpch.NewWorkloader(globalDB, &tpchConfig)
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
@@ -131,14 +154,10 @@ func registerTpch(root *cobra.Command) {
 		"",
 		"Name of plan Replayer file dumps")
 
-	cmdRun.PersistentFlags().BoolVar(&tpchConfig.QueryTuningConfig.Enable,
+	cmdRun.PersistentFlags().BoolVar(&tpchConfig.EnableQueryTuning,
 		"enable-query-tuning",
 		true,
-		"Enable query tuning by setting specified session variables")
-	cmdRun.PersistentFlags().StringVar(&tpchConfig.QueryTuningConfig.VarsRaw,
-		"query-tuning-vars",
-		"tidb_default_string_match_selectivity=0.1;tidb_opt_join_reorder_threshold=60;tidb_prefer_broadcast_join_by_exchange_data_size=ON",
-		"Specify a sequence of session variables to set before executing each query, in the form of 'name=value', separated by semicolon. Defaulted to some variables known effective for tpch queries.")
+		"Tune queries by setting some session variables known effective for tpch")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

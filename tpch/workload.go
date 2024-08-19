@@ -199,18 +199,6 @@ func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 	return nil
 }
 
-func (w *Workloader) setQueryTuningVars(ctx context.Context) error {
-	if w.cfg.QueryTuningConfig.Enable && w.cfg.Driver == "mysql" {
-		conn := w.getState(ctx).Conn
-		for _, v := range w.cfg.QueryTuningConfig.Vars {
-			if _, err := conn.ExecContext(ctx, fmt.Sprintf("SET @@session.%s", v)); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // Run runs workload
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
@@ -219,10 +207,6 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		if err := s.RefreshConn(ctx); err != nil {
 			return err
 		}
-	}
-
-	if err := w.setQueryTuningVars(ctx); err != nil {
-		return fmt.Errorf("set query tuning variables failed %v", err)
 	}
 
 	queryName := w.cfg.QueryNames[s.queryIdx%len(w.cfg.QueryNames)]

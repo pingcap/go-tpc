@@ -14,8 +14,8 @@ import (
 
 var tpchConfig tpch.Config
 
-queryTuningVars := []struct {
-	name string
+var queryTuningVars = []struct {
+	name  string
 	value string
 }{
 	// For optimal join order, esp. for q9.
@@ -26,11 +26,21 @@ queryTuningVars := []struct {
 	{"tidb_prefer_broadcast_join_by_exchange_data_size", "ON"},
 }
 
-func 
+func appendQueryTuningVarsToConnParams() {
+	for _, v := range queryTuningVars {
+		if !strings.Contains(connParams, v.name) {
+			connParams = fmt.Sprintf("%s&%s=%s", connParams, v.name, v.value)
+		}
+	}
+}
 
 func executeTpch(action string) {
-	if tpchConfig.EnableQueryTuning {
+	if action == "run" && driver == "mysql" && tpchConfig.EnableQueryTuning {
+		appendQueryTuningVarsToConnParams()
 	}
+
+	fmt.Println("Conn params: ")
+	fmt.Println(connParams)
 
 	openDB()
 	defer closeDB()
@@ -151,10 +161,6 @@ func registerTpch(root *cobra.Command) {
 		"enable-query-tuning",
 		true,
 		"Tune queries by setting some session variables known effective for tpch")
-	// cmdRun.PersistentFlags().StringVar(&tpchConfig.QueryTuningConfig.VarsRaw,
-	// 	"query-tuning-vars",
-	// 	"tidb_default_string_match_selectivity=0.1;tidb_opt_join_reorder_threshold=60;tidb_prefer_broadcast_join_by_exchange_data_size=ON",
-	// 	"Specify a sequence of session variables to set before executing each query, in the form of 'name=value', separated by semicolon. Defaulted to some variables known effective for tpch queries.")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

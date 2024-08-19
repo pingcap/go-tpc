@@ -39,9 +39,6 @@ func executeTpch(action string) {
 		appendQueryTuningVarsToConnParams()
 	}
 
-	fmt.Println("Conn params: ")
-	fmt.Println(connParams)
-
 	openDB()
 	defer closeDB()
 

@@ -14,7 +14,31 @@ import (
 
 var tpchConfig tpch.Config
 
+var queryTuningVars = []struct {
+	name  string
+	value string
+}{
+	// For optimal join order, esp. for q9.
+	{"tidb_default_string_match_selectivity", "0.1"},
+	// For optimal join order for all queries.
+	{"tidb_opt_join_reorder_threshold", "60"},
+	// For optimal join type between broadcast and hash partition join.
+	{"tidb_prefer_broadcast_join_by_exchange_data_size", "ON"},
+}
+
+func appendQueryTuningVarsToConnParams() {
+	for _, v := range queryTuningVars {
+		if !strings.Contains(connParams, v.name) {
+			connParams = fmt.Sprintf("%s&%s=%s", connParams, v.name, v.value)
+		}
+	}
+}
+
 func executeTpch(action string) {
+	if action == "run" && driver == "mysql" && tpchConfig.EnableQueryTuning {
+		appendQueryTuningVarsToConnParams()
+	}
+
 	openDB()
 	defer closeDB()
 
@@ -129,6 +153,11 @@ func registerTpch(root *cobra.Command) {
 		"plan-replayer-file",
 		"",
 		"Name of plan Replayer file dumps")
+
+	cmdRun.PersistentFlags().BoolVar(&tpchConfig.EnableQueryTuning,
+		"enable-query-tuning",
+		true,
+		"Tune queries by setting some session variables known effective for tpch")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

@@ -45,6 +45,8 @@ type Config struct {
 	PlanReplayerConfig replayer.PlanReplayerConfig
 	EnablePlanReplayer bool
 
+	EnableQueryTuning bool
+
 	// for prepare command only
 	OutputType string
 	OutputDir  string

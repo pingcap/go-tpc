@@ -302,7 +302,7 @@ func registerMysqlTLSConfig() {
 	}
 
 	tlsConfig := &tls.Config{
-		MinVersion:   tls.VersionTLS10,
+		MinVersion:   tls.VersionTLS12,
 		Certificates: certificates,
 		RootCAs:      certPool,
 		ClientCAs:    certPool,

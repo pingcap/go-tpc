@@ -311,6 +311,6 @@ func registerMysqlTLSConfig() {
 
 	err = mysql.RegisterTLSConfig(customTlsName, tlsConfig)
 	if err != nil {
-		panic(fmt.Errorf("failed to register TLS configs, err %v", err))
+		panic(fmt.Errorf("failed to register TLS config, err %v", err))
 	}
 }

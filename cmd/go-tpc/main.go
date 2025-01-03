@@ -293,7 +293,7 @@ func registerMysqlTLSConfig() {
 	certPool := x509.NewCertPool()
 	ca, err := os.ReadFile(sslCA)
 	if err != nil {
-		panic(fmt.Errorf("could not read ca certificate, err %v", err))
+		panic(fmt.Errorf("could not read CA certificate, err %v", err))
 	}
 
 	// Append the certificates from the CA

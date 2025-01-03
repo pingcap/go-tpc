@@ -298,7 +298,7 @@ func registerMysqlTLSConfig() {
 
 	// Append the certificates from the CA
 	if !certPool.AppendCertsFromPEM(ca) {
-		panic(fmt.Errorf("failed to append ca certs"))
+		panic(fmt.Errorf("failed to append CA certs"))
 	}
 
 	tlsConfig := &tls.Config{

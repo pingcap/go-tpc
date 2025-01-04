@@ -306,7 +306,6 @@ func registerMysqlTLSConfig() {
 		Certificates: certificates,
 		RootCAs:      certPool,
 		ClientCAs:    certPool,
-		NextProtos:   []string{"h2", "http/1.1"}, // specify `h2` to let Go use HTTP/2.
 	}
 
 	err = mysql.RegisterTLSConfig(customTlsName, tlsConfig)

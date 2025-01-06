@@ -288,7 +288,7 @@ func registerMysqlTLSConfig() {
 		}
 		certificates = []tls.Certificate{cert}
 	} else if len(sslCert) > 0 || len(sslKey) > 0 {
-	    panic(errors.New("incomplete key pair configuration"))
+		panic("incomplete key pair configuration")
 	}
 
 	// Create a certificate pool from CA
@@ -300,7 +300,7 @@ func registerMysqlTLSConfig() {
 
 	// Append the certificates from the CA
 	if !certPool.AppendCertsFromPEM(ca) {
-		panic(fmt.Errorf("failed to append CA certs"))
+		panic("failed to append CA certs")
 	}
 
 	tlsConfig := &tls.Config{

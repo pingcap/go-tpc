@@ -121,7 +121,7 @@ func newDB(targets []string, driver string, user string, password string, dbName
 			names[i] = dsn
 			drv = &mysql.MySQLDriver{}
 		case pgDriver:
-			if len(sslCA) > 0 {
+			if len(sslCA) > 0 || len(sslKey) > 0 || len(sslCert) > 0 {
 				panic("postgresql driver doesn't support TLS yet")
 			}
 

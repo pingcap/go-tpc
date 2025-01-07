@@ -101,7 +101,7 @@ func newDB(targets []string, driver string, user string, password string, dbName
 	hash.Write([]byte(dbName))
 	hash.Write([]byte(connParams))
 
-	if driver == mysqlDriver && (len(sslCA) > 0 || len(sslCert) >0 || len(sslKey) > 0) {
+	if driver == mysqlDriver && (len(sslCA) > 0 || len(sslCert) > 0 || len(sslKey) > 0) {
 		registerMysqlTLSConfig()
 	}
 

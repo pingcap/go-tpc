@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/pingcap/go-tpc/pkg/util"
@@ -26,19 +28,7 @@ var queryTuningVars = []struct {
 	{"tidb_prefer_broadcast_join_by_exchange_data_size", "ON"},
 }
 
-func appendQueryTuningVarsToConnParams() {
-	for _, v := range queryTuningVars {
-		if !strings.Contains(connParams, v.name) {
-			connParams = fmt.Sprintf("%s&%s=%s", connParams, v.name, v.value)
-		}
-	}
-}
-
 func executeTpch(action string) {
-	if action == "run" && driver == "mysql" && tpchConfig.EnableQueryTuning {
-		appendQueryTuningVarsToConnParams()
-	}
-
 	openDB()
 	defer closeDB()
 
@@ -48,6 +38,16 @@ func executeTpch(action string) {
 	}
 	if maxProcs != 0 {
 		runtime.GOMAXPROCS(maxProcs)
+	}
+
+	version, err := getServerVersion(globalDB)
+	if err != nil {
+		panic(fmt.Errorf("get server version failed: %v", err))
+	}
+	if action == "run" && isValidTuningVersion(version) && tpchConfig.EnableQueryTuning {
+		if err := setQueryTuningVars(globalDB); err != nil {
+			panic(fmt.Errorf("set session variables failed: %v", err))
+		}
 	}
 
 	tpchConfig.PlanReplayerConfig.Host = hosts[0]
@@ -65,6 +65,62 @@ func executeTpch(action string) {
 	executeWorkload(timeoutCtx, w, threads, action)
 	fmt.Println("Finished")
 	w.OutputStats(true)
+}
+
+func getServerVersion(db *sql.DB) (string, error) {
+	var version string
+	err := db.QueryRow("SELECT VERSION()").Scan(&version)
+	return version, err
+}
+
+// isValidTuningVersion checks if the version is a valid TiDB version for query tuning params @queryTuningVars
+// @version the output serverVersion of tidb using @getServerVersion
+// INFO: Should be optimized if some vars are changed in the future.
+func isValidTuningVersion(version string) bool {
+	isTiDB := strings.Contains(strings.ToLower(version), "tidb")
+	if !isTiDB {
+		return false
+	}
+
+	verItems := strings.Split(version, "-v")
+
+	if len(verItems) < 2 {
+		return false
+	}
+	verStr := strings.Split(verItems[1], "-")[0]
+
+	parts := strings.Split(verStr, ".")
+	if len(parts) < 3 {
+		return false
+	}
+
+	major, _ := strconv.Atoi(parts[0])
+	minor, _ := strconv.Atoi(parts[1])
+	// Compare as string to handle versions with non-numeric suffixes (e.g. '7.1.0-alpha')
+	patchStr := parts[2]
+
+	if major > 1 {
+		return true
+	}
+	if major < 7 {
+		return false
+	}
+	if minor > 1 {
+		return true
+	}
+	if minor < 1 {
+		return false
+	}
+	return strings.Compare(patchStr, "0") >= 0
+}
+
+func setQueryTuningVars(db *sql.DB) error {
+	for _, v := range queryTuningVars {
+		if _, err := db.Exec(fmt.Sprintf("SET SESSION %s = %s", v.name, v.value)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func registerTpch(root *cobra.Command) {

@@ -99,7 +99,7 @@ func isValidTuningVersion(version string) bool {
 	// Compare as string to handle versions with non-numeric suffixes (e.g. '7.1.0-alpha')
 	patchStr := parts[2]
 
-	if major > 1 {
+	if major > 7 {
 		return true
 	}
 	if major < 7 {

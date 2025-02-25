@@ -30,20 +30,7 @@ var queryTuningVars = []struct {
 // isSysVarSupported determines if a system variable is supported in given TiDB version
 // INFO: Should be optimized if some vars are changed in the future.
 func isSysVarSupported(ver util.SemVersion, sysVar string) bool {
-	if ver.Major > 7 {
-		return true
-	}
-	if ver.Major < 7 {
-		return false
-	}
-	if ver.Minor > 1 {
-		return true
-	}
-	if ver.Minor < 1 {
-		return false
-	}
-
-	return ver.Patch >= 0
+	return ver.Compare(util.SemVersion{Major: 7, Minor: 1, Patch: 0}) >= 0
 }
 
 func executeTpch(action string) {
@@ -64,7 +51,7 @@ func executeTpch(action string) {
 			panic(fmt.Errorf("get server version failed: %v", err))
 		}
 		if semVer, ok := util.NewTiDBSemVersion(serverVer); ok {
-			if err := setQueryTuningVars(globalDB, semVer); err != nil {
+			if err := setTiDBQueryTuningVars(globalDB, semVer); err != nil {
 				panic(fmt.Errorf("set session variables failed: %v", err))
 			}
 		}
@@ -93,12 +80,14 @@ func getServerVersion(db *sql.DB) (string, error) {
 	return version, err
 }
 
-func setQueryTuningVars(db *sql.DB, ver util.SemVersion) error {
+func setTiDBQueryTuningVars(db *sql.DB, ver util.SemVersion) error {
 	for _, v := range queryTuningVars {
 		if isSysVarSupported(ver, v.name) {
 			if _, err := db.Exec(fmt.Sprintf("SET SESSION %s = %s", v.name, v.value)); err != nil {
 				return err
 			}
+		} else {
+			fmt.Printf("Unsupported query tunning var %s for TiDB version %s \n", v.name, ver.String())
 		}
 	}
 	return nil

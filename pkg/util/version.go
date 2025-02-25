@@ -48,5 +48,31 @@ func NewTiDBSemVersion(version string) (SemVersion, bool) {
 		Minor: minor,
 		Patch: patch,
 	}, true
+}
 
+func (s SemVersion) String() string {
+	return strconv.Itoa(s.Major) + "." + strconv.Itoa(s.Minor) + "." + strconv.Itoa(s.Patch)
+}
+
+func (s SemVersion) Compare(other SemVersion) int {
+	sign := func(x int) int {
+		if x > 0 {
+			return 1
+		}
+		if x < 0 {
+			return -1
+		}
+		return 0
+	}
+
+	if diff := s.Major - other.Major; diff != 0 {
+		return sign(diff)
+	}
+	if diff := s.Minor - other.Minor; diff != 0 {
+		return sign(diff)
+	}
+	if diff := s.Patch - other.Patch; diff != 0 {
+		return sign(diff)
+	}
+	return 0
 }

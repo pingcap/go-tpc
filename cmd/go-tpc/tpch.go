@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/pingcap/go-tpc/pkg/util"
@@ -28,6 +27,25 @@ var queryTuningVars = []struct {
 	{"tidb_prefer_broadcast_join_by_exchange_data_size", "ON"},
 }
 
+// isSysVarSupported determines if a system variable is supported in given TiDB version
+// INFO: Should be optimized if some vars are changed in the future.
+func isSysVarSupported(ver util.SemVersion, sysVar string) bool {
+	if ver.Major > 7 {
+		return true
+	}
+	if ver.Major < 7 {
+		return false
+	}
+	if ver.Minor > 1 {
+		return true
+	}
+	if ver.Minor < 1 {
+		return false
+	}
+
+	return ver.Patch >= 0
+}
+
 func executeTpch(action string) {
 	openDB()
 	defer closeDB()
@@ -40,13 +58,15 @@ func executeTpch(action string) {
 		runtime.GOMAXPROCS(maxProcs)
 	}
 
-	version, err := getServerVersion(globalDB)
-	if err != nil {
-		panic(fmt.Errorf("get server version failed: %v", err))
-	}
-	if action == "run" && isValidTuningVersion(version) && tpchConfig.EnableQueryTuning {
-		if err := setQueryTuningVars(globalDB); err != nil {
-			panic(fmt.Errorf("set session variables failed: %v", err))
+	if action == "run" && tpchConfig.EnableQueryTuning {
+		serverVer, err := getServerVersion(globalDB)
+		if err != nil {
+			panic(fmt.Errorf("get server version failed: %v", err))
+		}
+		if semVer, ok := util.NewTiDBSemVersion(serverVer); ok {
+			if err := setQueryTuningVars(globalDB, semVer); err != nil {
+				panic(fmt.Errorf("set session variables failed: %v", err))
+			}
 		}
 	}
 
@@ -73,51 +93,12 @@ func getServerVersion(db *sql.DB) (string, error) {
 	return version, err
 }
 
-// isValidTuningVersion checks if the version is a valid TiDB version for query tuning params @queryTuningVars
-// @version the output serverVersion of tidb using @getServerVersion
-// INFO: Should be optimized if some vars are changed in the future.
-func isValidTuningVersion(version string) bool {
-	isTiDB := strings.Contains(strings.ToLower(version), "tidb")
-	if !isTiDB {
-		return false
-	}
-
-	verItems := strings.Split(version, "-v")
-
-	if len(verItems) < 2 {
-		return false
-	}
-	verStr := strings.Split(verItems[1], "-")[0]
-
-	parts := strings.Split(verStr, ".")
-	if len(parts) < 3 {
-		return false
-	}
-
-	major, _ := strconv.Atoi(parts[0])
-	minor, _ := strconv.Atoi(parts[1])
-	// Compare as string to handle versions with non-numeric suffixes (e.g. '7.1.0-alpha')
-	patchStr := parts[2]
-
-	if major > 7 {
-		return true
-	}
-	if major < 7 {
-		return false
-	}
-	if minor > 1 {
-		return true
-	}
-	if minor < 1 {
-		return false
-	}
-	return strings.Compare(patchStr, "0") >= 0
-}
-
-func setQueryTuningVars(db *sql.DB) error {
+func setQueryTuningVars(db *sql.DB, ver util.SemVersion) error {
 	for _, v := range queryTuningVars {
-		if _, err := db.Exec(fmt.Sprintf("SET SESSION %s = %s", v.name, v.value)); err != nil {
-			return err
+		if isSysVarSupported(ver, v.name) {
+			if _, err := db.Exec(fmt.Sprintf("SET SESSION %s = %s", v.name, v.value)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

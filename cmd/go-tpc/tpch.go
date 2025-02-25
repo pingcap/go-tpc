@@ -28,7 +28,7 @@ var queryTuningVars = []struct {
 }
 
 // isSysVarSupported determines if a system variable is supported in given TiDB version
-// INFO: Should be optimized if some vars are changed in the future.
+// TODO: Every known sys var should have a minimal supported version and be checked individually. For now we just assume all sys vars are supported since 7.1.0.
 func isSysVarSupported(ver util.SemVersion, sysVar string) bool {
 	if ver.Major > 7 {
 		return true

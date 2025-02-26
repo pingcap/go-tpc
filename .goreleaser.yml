@@ -16,6 +16,11 @@ builds:
       - linux
       - darwin
     mod_timestamp: '{{ .CommitTimestamp }}'
+    targets:
+      - linux_amd64_v1
+      - linux_arm64_v1
+      - darwin_amd64_v1
+      - darwin_arm64_v1
 
 archives:
   - files:

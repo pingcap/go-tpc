@@ -45,15 +45,20 @@ func executeTpch(action string) {
 		runtime.GOMAXPROCS(maxProcs)
 	}
 
-	if action == "run" && tpchConfig.EnableQueryTuning {
+	if action == "run" && driver == mysqlDriver && tpchConfig.EnableQueryTuning {
 		serverVer, err := getServerVersion(globalDB)
 		if err != nil {
 			panic(fmt.Errorf("get server version failed: %v", err))
 		}
+		fmt.Printf("Server version: %s\n", serverVer)
+
 		if semVer, ok := util.NewTiDBSemVersion(serverVer); ok {
+			fmt.Printf("Enabling query tuning for TiDB version %s.\n", semVer.String())
 			if err := setTiDBQueryTuningVars(globalDB, semVer); err != nil {
 				panic(fmt.Errorf("set session variables failed: %v", err))
 			}
+		} else {
+			fmt.Printf("Query tuning is enabled(by default) but server version doesn't appear to be TiDB, skipping tuning.\n")
 		}
 	}
 

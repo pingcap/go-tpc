@@ -55,7 +55,7 @@ func (s SemVersion) String() string {
 }
 
 func (s SemVersion) Compare(other SemVersion) int {
-	sign := func(x int) int {
+	signum := func(x int) int {
 		if x > 0 {
 			return 1
 		}
@@ -66,13 +66,13 @@ func (s SemVersion) Compare(other SemVersion) int {
 	}
 
 	if diff := s.Major - other.Major; diff != 0 {
-		return sign(diff)
+		return signum(diff)
 	}
 	if diff := s.Minor - other.Minor; diff != 0 {
-		return sign(diff)
+		return signum(diff)
 	}
 	if diff := s.Patch - other.Patch; diff != 0 {
-		return sign(diff)
+		return signum(diff)
 	}
 	return 0
 }

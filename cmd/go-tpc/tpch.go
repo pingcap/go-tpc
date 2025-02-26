@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"runtime"
@@ -26,19 +27,13 @@ var queryTuningVars = []struct {
 	{"tidb_prefer_broadcast_join_by_exchange_data_size", "ON"},
 }
 
-func appendQueryTuningVarsToConnParams() {
-	for _, v := range queryTuningVars {
-		if !strings.Contains(connParams, v.name) {
-			connParams = fmt.Sprintf("%s&%s=%s", connParams, v.name, v.value)
-		}
-	}
+// isSysVarSupported determines if a system variable is supported in given TiDB version
+// TODO: Every known sys var should have a minimal supported version and be checked individually. For now we just assume all sys vars are supported since 7.1.0.
+func isSysVarSupported(ver util.SemVersion, sysVar string) bool {
+	return ver.Compare(util.SemVersion{Major: 7, Minor: 1, Patch: 0}) >= 0
 }
 
 func executeTpch(action string) {
-	if action == "run" && driver == "mysql" && tpchConfig.EnableQueryTuning {
-		appendQueryTuningVarsToConnParams()
-	}
-
 	openDB()
 	defer closeDB()
 
@@ -48,6 +43,23 @@ func executeTpch(action string) {
 	}
 	if maxProcs != 0 {
 		runtime.GOMAXPROCS(maxProcs)
+	}
+
+	if action == "run" && driver == mysqlDriver && tpchConfig.EnableQueryTuning {
+		serverVer, err := getServerVersion(globalDB)
+		if err != nil {
+			panic(fmt.Errorf("get server version failed: %v", err))
+		}
+		fmt.Printf("Server version: %s\n", serverVer)
+
+		if semVer, ok := util.NewTiDBSemVersion(serverVer); ok {
+			fmt.Printf("Enabling query tuning for TiDB version %s.\n", semVer.String())
+			if err := setTiDBQueryTuningVars(globalDB, semVer); err != nil {
+				panic(fmt.Errorf("set session variables failed: %v", err))
+			}
+		} else {
+			fmt.Printf("Query tuning is enabled(by default) but server version doesn't appear to be TiDB, skipping tuning.\n")
+		}
 	}
 
 	tpchConfig.PlanReplayerConfig.Host = hosts[0]
@@ -65,6 +77,25 @@ func executeTpch(action string) {
 	executeWorkload(timeoutCtx, w, threads, action)
 	fmt.Println("Finished")
 	w.OutputStats(true)
+}
+
+func getServerVersion(db *sql.DB) (string, error) {
+	var version string
+	err := db.QueryRow("SELECT VERSION()").Scan(&version)
+	return version, err
+}
+
+func setTiDBQueryTuningVars(db *sql.DB, ver util.SemVersion) error {
+	for _, v := range queryTuningVars {
+		if isSysVarSupported(ver, v.name) {
+			if _, err := db.Exec(fmt.Sprintf("SET SESSION %s = %s", v.name, v.value)); err != nil {
+				return err
+			}
+		} else {
+			fmt.Printf("Unsupported query tunning var %s for TiDB version %s \n", v.name, ver.String())
+		}
+	}
+	return nil
 }
 
 func registerTpch(root *cobra.Command) {

@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/pingcap/go-tpc/pkg/util"
 	"github.com/pingcap/go-tpc/tpch"
 	"github.com/spf13/cobra"
@@ -29,8 +30,13 @@ var queryTuningVars = []struct {
 
 // isSysVarSupported determines if a system variable is supported in given TiDB version
 // TODO: Every known sys var should have a minimal supported version and be checked individually. For now we just assume all sys vars are supported since 7.1.0.
-func isSysVarSupported(ver util.SemVersion, sysVar string) bool {
-	return ver.Compare(util.SemVersion{Major: 7, Minor: 1, Patch: 0}) >= 0
+func isSysVarSupported(ver *semver.Version, _ string) bool {
+	return ver.Compare(semver.Version{Major: 7, Minor: 1, Patch: 0}) >= 0
+}
+
+// isInvertedIndexSupported checks if inverted index is supported in given TiDB version
+func isInvertedIndexSupported(ver semver.Version) bool {
+	return ver.Compare(semver.Version{Major: 9, Minor: 0, Patch: 0, PreRelease: "beta.1"}) > 0
 }
 
 func executeTpch(action string) {
@@ -45,20 +51,34 @@ func executeTpch(action string) {
 		runtime.GOMAXPROCS(maxProcs)
 	}
 
-	if action == "run" && driver == mysqlDriver && tpchConfig.EnableQueryTuning {
+	isTiDB := false
+	var TiDBSemVer *semver.Version
+	if driver == mysqlDriver {
 		serverVer, err := getServerVersion(globalDB)
 		if err != nil {
 			panic(fmt.Errorf("get server version failed: %v", err))
 		}
 		fmt.Printf("Server version: %s\n", serverVer)
+		TiDBSemVer, isTiDB = util.NewTiDBSemVersion(serverVer)
+	}
 
-		if semVer, ok := util.NewTiDBSemVersion(serverVer); ok {
-			fmt.Printf("Enabling query tuning for TiDB version %s.\n", semVer.String())
-			if err := setTiDBQueryTuningVars(globalDB, semVer); err != nil {
+	if action == "run" && tpchConfig.EnableQueryTuning {
+		if isTiDB {
+			fmt.Printf("Enabling query tuning for TiDB version %s.\n", TiDBSemVer.String())
+			if err := setTiDBQueryTuningVars(globalDB, TiDBSemVer); err != nil {
 				panic(fmt.Errorf("set session variables failed: %v", err))
 			}
 		} else {
 			fmt.Printf("Query tuning is enabled(by default) but server version doesn't appear to be TiDB, skipping tuning.\n")
+		}
+	}
+
+	if tpchConfig.AddInvertedIndex {
+		if !isTiDB || !isInvertedIndexSupported(*TiDBSemVer) || tpchConfig.TiFlashReplica == 0 {
+			fmt.Printf("Inverted index is only supported when TiDB version is > 9.0.0-beta.1 and TiFlash replica > 0.\n")
+			tpchConfig.AddInvertedIndex = false
+		} else {
+			tpchConfig.AddInvertedIndex = true
 		}
 	}
 
@@ -85,7 +105,7 @@ func getServerVersion(db *sql.DB) (string, error) {
 	return version, err
 }
 
-func setTiDBQueryTuningVars(db *sql.DB, ver util.SemVersion) error {
+func setTiDBQueryTuningVars(db *sql.DB, ver *semver.Version) error {
 	for _, v := range queryTuningVars {
 		if isSysVarSupported(ver, v.name) {
 			if _, err := db.Exec(fmt.Sprintf("SET SESSION %s = %s", v.name, v.value)); err != nil {
@@ -189,6 +209,10 @@ func registerTpch(root *cobra.Command) {
 		"enable-query-tuning",
 		true,
 		"Tune queries by setting some session variables known effective for tpch")
+	cmdRun.PersistentFlags().BoolVar(&tpchConfig.AddInvertedIndex,
+		"add-inverted-index",
+		true,
+		"Add some inverted index to accelerate queries")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

@@ -3,76 +3,51 @@ package util
 import (
 	"strconv"
 	"strings"
+
+	"github.com/coreos/go-semver/semver"
 )
 
-type SemVersion struct {
-	Major int
-	Minor int
-	Patch int
-}
-
 // @version is the `SELECT VERSION()` output of TiDB
-func NewTiDBSemVersion(version string) (SemVersion, bool) {
+func NewTiDBSemVersion(version string) (*semver.Version, bool) {
 	isTiDB := strings.Contains(strings.ToLower(version), "tidb")
 	if !isTiDB {
-		return SemVersion{}, false
+		return nil, false
 	}
 
 	verItems := strings.Split(version, "-v")
 	if len(verItems) < 2 {
-		return SemVersion{}, false
+		return nil, false
 	}
-	verStr := strings.Split(verItems[1], "-")[0]
+	verParts := strings.Split(verItems[1], "-")
+	verStr := verParts[0]
+	var preReleaseStr string
+	if len(verParts) > 1 {
+		preReleaseStr = verParts[1]
+	}
 
 	parts := strings.Split(verStr, ".")
 	if len(parts) < 3 {
-		return SemVersion{}, false
+		return nil, false
 	}
 
-	major, err := strconv.Atoi(parts[0])
+	major, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
-		return SemVersion{}, false
+		return nil, false
 	}
-	minor, err := strconv.Atoi(parts[1])
+	minor, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
-		return SemVersion{}, false
-	}
-
-	patch, err := strconv.Atoi(parts[2])
-	if err != nil {
-		return SemVersion{}, false
+		return nil, false
 	}
 
-	return SemVersion{
-		Major: major,
-		Minor: minor,
-		Patch: patch,
+	patch, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return nil, false
+	}
+
+	return &semver.Version{
+		Major:      major,
+		Minor:      minor,
+		Patch:      patch,
+		PreRelease: semver.PreRelease(preReleaseStr),
 	}, true
-}
-
-func (s SemVersion) String() string {
-	return strconv.Itoa(s.Major) + "." + strconv.Itoa(s.Minor) + "." + strconv.Itoa(s.Patch)
-}
-
-func (s SemVersion) Compare(other SemVersion) int {
-	signum := func(x int) int {
-		if x > 0 {
-			return 1
-		}
-		if x < 0 {
-			return -1
-		}
-		return 0
-	}
-
-	if diff := s.Major - other.Major; diff != 0 {
-		return signum(diff)
-	}
-	if diff := s.Minor - other.Minor; diff != 0 {
-		return signum(diff)
-	}
-	if diff := s.Patch - other.Patch; diff != 0 {
-		return signum(diff)
-	}
-	return 0
 }

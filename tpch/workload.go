@@ -212,6 +212,14 @@ func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 	defer w.updateState(ctx)
+
+	// Create inverted index if needed.
+	if w.cfg.AddInvertedIndex {
+		if err := w.createInvertedIndexes(ctx); err != nil {
+			return err
+		}
+	}
+
 	if err := s.Conn.PingContext(ctx); err != nil {
 		if err := s.RefreshConn(ctx); err != nil {
 			return err

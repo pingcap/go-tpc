@@ -158,9 +158,9 @@ func (w *Workloader) dropTables(ctx context.Context) error {
 
 func (w *Workloader) createInvertedIndexes(ctx context.Context) error {
 	indexes := map[string]string{
-		"idx_l_receiptdate": "ALTER TABLE lineitem ADD COLUMNAR INDEX idx_l_receiptdate (l_receiptdate) USING INVERTED",
-		"idx_l_shipdate":    "ALTER TABLE lineitem ADD COLUMNAR INDEX idx_l_shipdate (l_shipdate) USING INVERTED",
-		"idx_o_orderdate":   "ALTER TABLE orders ADD COLUMNAR INDEX idx_o_orderdate (o_orderdate) USING INVERTED",
+		"idx_l_receiptdate": "CREATE COLUMNAR INDEX IF NOT EXISTS idx_l_receiptdate ON lineitem (l_receiptdate) USING INVERTED",
+		"idx_l_shipdate":    "CREATE COLUMNAR INDEX IF NOT EXISTS idx_l_shipdate ON lineitem (l_shipdate) USING INVERTED",
+		"idx_o_orderdate":   "CREATE COLUMNAR INDEX IF NOT EXISTS idx_o_orderdate ON orders (o_orderdate) USING INVERTED",
 	}
 	s := w.getState(ctx)
 	for name, stmt := range indexes {

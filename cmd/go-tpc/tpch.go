@@ -78,6 +78,7 @@ func executeTpch(action string) {
 			fmt.Printf("Inverted index is only supported when TiDB version is > 9.0.0-beta.1 and TiFlash replica > 0.\n")
 			tpchConfig.AddInvertedIndex = false
 		} else {
+			fmt.Printf("Enabling inverted index to accelerate queries.\n")
 			tpchConfig.AddInvertedIndex = true
 		}
 	}

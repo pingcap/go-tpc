@@ -46,6 +46,15 @@ func (w *ddlManager) createIndexDDL(ctx context.Context, query string, indexName
 	return nil
 }
 
+func (w *ddlManager) createForeignKeyDDL(ctx context.Context, query string, indexName string) error {
+	s := getTPCCState(ctx)
+	fmt.Printf("creating foreign key %s\n", indexName)
+	if _, err := s.Conn.ExecContext(ctx, query); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (w *ddlManager) appendPartition(query string, partKeys string) string {
 	if w.parts <= 1 {
 		return query
@@ -307,7 +316,85 @@ CREATE TABLE IF NOT EXISTS item (
 		}
 
 		if w.useFK {
-			// TODO: Add foreign key constraint
+			query = `		
+alter table district add constraint d_warehouse_fkey
+    foreign key (d_w_id)
+    references warehouse (w_id)`
+			if err := w.createIndexDDL(ctx, query, "d_warehouse_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table customer add constraint c_district_fkey
+    foreign key (c_w_id, c_d_id)
+    references district (d_w_id, d_id)`
+			if err := w.createIndexDDL(ctx, query, "c_district_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table history add constraint h_customer_fkey
+    foreign key (h_c_w_id, h_c_d_id, h_c_id)
+    references customer (c_w_id, c_d_id, c_id)`
+			if err := w.createIndexDDL(ctx, query, "h_customer_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table history add constraint h_district_fkey
+    foreign key (h_w_id, h_d_id)
+    references district (d_w_id, d_id)`
+			if err := w.createIndexDDL(ctx, query, "h_district_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table new_order add constraint no_order_fkey
+    foreign key (no_w_id, no_d_id, no_o_id)
+    references orders (o_w_id, o_d_id, o_id)`
+			if err := w.createIndexDDL(ctx, query, "no_order_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table orders add constraint o_customer_fkey
+    foreign key (o_w_id, o_d_id, o_c_id)
+    references customer (c_w_id, c_d_id, c_id)`
+			if err := w.createIndexDDL(ctx, query, "o_customer_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table order_line add constraint ol_order_fkey
+    foreign key (ol_w_id, ol_d_id, ol_o_id)
+    references orders (o_w_id, o_d_id, o_id)`
+			if err := w.createIndexDDL(ctx, query, "ol_order_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table order_line add constraint ol_stock_fkey
+    foreign key (ol_supply_w_id, ol_i_id)
+    references stock (s_w_id, s_i_id)`
+			if err := w.createIndexDDL(ctx, query, "ol_stock_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table stock add constraint s_warehouse_fkey
+    foreign key (s_w_id)
+    references warehouse (w_id)`
+			if err := w.createIndexDDL(ctx, query, "s_warehouse_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table stock add constraint s_item_fkey
+    foreign key (s_i_id)
+    references item (i_id)`
+			if err := w.createIndexDDL(ctx, query, "s_item_fkey"); err != nil {
+				return err
+			}
 		}
 
 		if w.parts > 1 {
@@ -505,7 +592,85 @@ CREATE TABLE IF NOT EXISTS item (
 		}
 
 		if w.useFK {
-			// TODO: Add foreign key constraint
+			query = `		
+alter table district add constraint d_warehouse_fkey
+    foreign key (d_w_id)
+    references warehouse (w_id)`
+			if err := w.createIndexDDL(ctx, query, "d_warehouse_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table customer add constraint c_district_fkey
+    foreign key (c_w_id, c_d_id)
+    references district (d_w_id, d_id)`
+			if err := w.createIndexDDL(ctx, query, "c_district_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table history add constraint h_customer_fkey
+    foreign key (h_c_w_id, h_c_d_id, h_c_id)
+    references customer (c_w_id, c_d_id, c_id)`
+			if err := w.createIndexDDL(ctx, query, "h_customer_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table history add constraint h_district_fkey
+    foreign key (h_w_id, h_d_id)
+    references district (d_w_id, d_id)`
+			if err := w.createIndexDDL(ctx, query, "h_district_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table new_order add constraint no_order_fkey
+    foreign key (no_w_id, no_d_id, no_o_id)
+    references orders (o_w_id, o_d_id, o_id)`
+			if err := w.createIndexDDL(ctx, query, "no_order_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table orders add constraint o_customer_fkey
+    foreign key (o_w_id, o_d_id, o_c_id)
+    references customer (c_w_id, c_d_id, c_id)`
+			if err := w.createIndexDDL(ctx, query, "o_customer_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table order_line add constraint ol_order_fkey
+    foreign key (ol_w_id, ol_d_id, ol_o_id)
+    references orders (o_w_id, o_d_id, o_id)`
+			if err := w.createIndexDDL(ctx, query, "ol_order_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table order_line add constraint ol_stock_fkey
+    foreign key (ol_supply_w_id, ol_i_id)
+    references stock (s_w_id, s_i_id)`
+			if err := w.createIndexDDL(ctx, query, "ol_stock_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table stock add constraint s_warehouse_fkey
+    foreign key (s_w_id)
+    references warehouse (w_id)`
+			if err := w.createIndexDDL(ctx, query, "s_warehouse_fkey"); err != nil {
+				return err
+			}
+
+			query = `
+alter table stock add constraint s_item_fkey
+    foreign key (s_i_id)
+    references item (i_id)`
+			if err := w.createIndexDDL(ctx, query, "s_item_fkey"); err != nil {
+				return err
+			}
 		}
 
 		if w.parts > 1 {

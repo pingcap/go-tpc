@@ -43,6 +43,9 @@ type tpccState struct {
 	deliveryStmts    map[string]*sql.Stmt
 	stockLevelStmt   map[string]*sql.Stmt
 	paymentStmts     map[string]*sql.Stmt
+
+	// for automatic connection refresh
+	lastConnRefresh time.Time
 }
 
 const (
@@ -84,6 +87,9 @@ type Config struct {
 
 	// output style
 	OutputStyle string
+
+	// automatic connection refresh interval to balance traffic across new replicas
+	ConnRefreshInterval time.Duration
 }
 
 // Workloader is TPCC workload
@@ -168,9 +174,10 @@ func (w *Workloader) Name() string {
 // InitThread implements Workloader interface
 func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Context {
 	s := &tpccState{
-		TpcState: workload.NewTpcState(ctx, w.db),
-		index:    0,
-		decks:    make([]int, 0, 23),
+		TpcState:        workload.NewTpcState(ctx, w.db),
+		index:           0,
+		decks:           make([]int, 0, 23),
+		lastConnRefresh: time.Now(),
 	}
 
 	for index, txn := range w.txns {
@@ -227,10 +234,20 @@ func getTPCCState(ctx context.Context) *tpccState {
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := getTPCCState(ctx)
 	refreshConn := false
-	if err := s.Conn.PingContext(ctx); err != nil {
+
+	// Check if automatic connection refresh is needed
+	if w.cfg.ConnRefreshInterval > 0 && time.Since(s.lastConnRefresh) >= w.cfg.ConnRefreshInterval {
 		if err := s.RefreshConn(ctx); err != nil {
 			return err
 		}
+		s.lastConnRefresh = time.Now()
+		refreshConn = true
+	} else if err := s.Conn.PingContext(ctx); err != nil {
+		// Fallback to ping-based refresh if automatic refresh didn't happen
+		if err := s.RefreshConn(ctx); err != nil {
+			return err
+		}
+		s.lastConnRefresh = time.Now()
 		refreshConn = true
 	}
 	if s.newOrderStmts == nil || refreshConn {

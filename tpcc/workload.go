@@ -231,21 +231,37 @@ func getTPCCState(ctx context.Context) *tpccState {
 }
 
 // Run implements Workloader interface
-func (w *Workloader) Run(ctx context.Context, threadID int) error {
+func (w *Workloader) Run(ctx context.Context, threadID int) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in TPC-C Run (thread %d): %v", threadID, r)
+		}
+	}()
+
 	s := getTPCCState(ctx)
 	refreshConn := false
 
+	// Helper function to safely refresh connection with panic recovery
+	safeRefreshConn := func() error {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic during connection refresh (thread %d): %v", threadID, r)
+			}
+		}()
+		return s.RefreshConn(ctx)
+	}
+
 	// Check if automatic connection refresh is needed
 	if w.cfg.ConnRefreshInterval > 0 && time.Since(s.lastConnRefresh) >= w.cfg.ConnRefreshInterval {
-		if err := s.RefreshConn(ctx); err != nil {
-			return err
+		if err := safeRefreshConn(); err != nil {
+			return fmt.Errorf("automatic connection refresh failed (thread %d): %w", threadID, err)
 		}
 		s.lastConnRefresh = time.Now()
 		refreshConn = true
 	} else if err := s.Conn.PingContext(ctx); err != nil {
 		// Fallback to ping-based refresh if automatic refresh didn't happen
-		if err := s.RefreshConn(ctx); err != nil {
-			return err
+		if err := safeRefreshConn(); err != nil {
+			return fmt.Errorf("ping-based connection refresh failed (thread %d): %w", threadID, err)
 		}
 		s.lastConnRefresh = time.Now()
 		refreshConn = true
@@ -325,7 +341,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	}
 
 	start := time.Now()
-	err := txn.action(ctx, threadID)
+	err = txn.action(ctx, threadID)
 
 	w.rtMeasurement.Measure(txn.name, time.Now().Sub(start), err)
 

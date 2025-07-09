@@ -46,6 +46,7 @@ type Config struct {
 	EnablePlanReplayer bool
 
 	EnableQueryTuning bool
+	AddInvertedIndex  bool
 
 	// for prepare command only
 	OutputType string
@@ -124,6 +125,14 @@ func (w *Workloader) Prepare(ctx context.Context, threadID int) error {
 	if err := w.createTables(ctx); err != nil {
 		return err
 	}
+
+	// Create inverted index if needed.
+	if w.cfg.AddInvertedIndex {
+		if err := w.createInvertedIndexes(ctx); err != nil {
+			return err
+		}
+	}
+
 	var sqlLoader map[dbgen.Table]dbgen.Loader
 	if w.cfg.OutputType == "csv" {
 		if _, err := os.Stat(w.cfg.OutputDir); err != nil {
@@ -203,6 +212,14 @@ func (w *Workloader) CheckPrepare(ctx context.Context, threadID int) error {
 func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	s := w.getState(ctx)
 	defer w.updateState(ctx)
+
+	// Create inverted index if needed.
+	if w.cfg.AddInvertedIndex {
+		if err := w.createInvertedIndexes(ctx); err != nil {
+			return err
+		}
+	}
+
 	if err := s.Conn.PingContext(ctx); err != nil {
 		if err := s.RefreshConn(ctx); err != nil {
 			return err
@@ -246,7 +263,7 @@ func (w *Workloader) Cleanup(ctx context.Context, threadID int) error {
 	if threadID != 0 {
 		return nil
 	}
-	return w.dropTable(ctx)
+	return w.dropTables(ctx)
 }
 
 // Check checks data

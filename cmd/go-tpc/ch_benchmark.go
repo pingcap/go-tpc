@@ -108,7 +108,7 @@ func registerCHBenchmark(root *cobra.Command) {
 		"execute explain analyze")
 
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
-	cmdRun.Flags().DurationVar(&tpccConfig.ConnRefreshInterval, "conn-refresh-interval", 0, "automatically refresh connections every interval to balance traffic across new replicas (0 = disabled)")
+	cmdRun.Flags().DurationVar(&tpccConfig.ConnRefreshInterval, "conn-refresh-interval", 0, "automatically refresh database connections at specified intervals to balance traffic across new replicas (0 = disabled, e.g., 10s)")
 	cmdRun.Flags().StringVar(&apConnParams, "ap-conn-params", "", "Connection parameters for analytical processing")
 	cmdRun.Flags().StringSliceVar(&apHosts, "ap-host", nil, "Database host for analytical processing")
 	cmdRun.Flags().IntSliceVar(&apPorts, "ap-port", nil, "Database port for analytical processing")

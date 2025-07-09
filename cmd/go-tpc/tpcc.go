@@ -46,13 +46,6 @@ func executeTpcc(action string) {
 	openDB()
 	defer closeDB()
 
-	// Set a reasonable connection max lifetime when auto-refresh is enabled
-	// This ensures connections are actually closed and not just returned to pool
-	if tpccConfig.ConnRefreshInterval > 0 {
-		globalDB.SetConnMaxLifetime(tpccConfig.ConnRefreshInterval)
-		fmt.Printf("Auto-setting connection max lifetime to %v (refresh interval)\n", tpccConfig.ConnRefreshInterval)
-	}
-
 	tpccConfig.OutputStyle = outputStyle
 	tpccConfig.Driver = driver
 	tpccConfig.DBName = dbName
@@ -70,6 +63,13 @@ func executeTpcc(action string) {
 		}
 		w, err = tpcc.NewCSVWorkloader(globalDB, &tpccConfig)
 	default:
+		// Set a reasonable connection max lifetime when auto-refresh is enabled
+		// This ensures connections are actually closed and not just returned to pool
+		if tpccConfig.ConnRefreshInterval > 0 {
+			globalDB.SetConnMaxLifetime(tpccConfig.ConnRefreshInterval)
+			fmt.Printf("Auto-setting connection max lifetime to %v (refresh interval)\n", tpccConfig.ConnRefreshInterval)
+		}
+
 		w, err = tpcc.NewWorkloader(globalDB, &tpccConfig)
 	}
 

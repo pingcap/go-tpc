@@ -108,9 +108,11 @@ func registerCHBenchmark(root *cobra.Command) {
 		"execute explain analyze")
 
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
+	cmdRun.Flags().DurationVar(&tpccConfig.ConnRefreshInterval, "conn-refresh-interval", 0, "automatically refresh connections every interval to balance traffic across new replicas (0 = disabled)")
 	cmdRun.Flags().StringVar(&apConnParams, "ap-conn-params", "", "Connection parameters for analytical processing")
 	cmdRun.Flags().StringSliceVar(&apHosts, "ap-host", nil, "Database host for analytical processing")
 	cmdRun.Flags().IntSliceVar(&apPorts, "ap-port", nil, "Database port for analytical processing")
+
 	cmd.AddCommand(cmdRun, cmdPrepare)
 	root.AddCommand(cmd)
 }
@@ -143,6 +145,13 @@ func executeCH(action string, openAP func() (*sql.DB, error)) {
 		tp, ap workload.Workloader
 		err    error
 	)
+
+	// Set a reasonable connection max lifetime when auto-refresh is enabled
+	// This ensures connections are actually closed and not just returned to pool
+	if tpccConfig.ConnRefreshInterval > 0 {
+		globalDB.SetConnMaxLifetime(tpccConfig.ConnRefreshInterval)
+		fmt.Printf("Auto-setting connection max lifetime to %v (refresh interval)\n", tpccConfig.ConnRefreshInterval)
+	}
 	tp, err = tpcc.NewWorkloader(globalDB, &tpccConfig)
 	if err != nil {
 		fmt.Printf("Failed to init tp work loader: %v\n", err)

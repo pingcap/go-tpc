@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS customer (
 	c_data VARCHAR(500),
 	PRIMARY KEY(c_w_id, c_d_id, c_id) /*T![clustered_index] CLUSTERED */,
 	INDEX idx_customer (c_w_id, c_d_id, c_last, c_first)
-)`
+) partition by hash(c_w_id) partitions 3`
 
 		query = w.appendPartition(query, "c_w_id")
 
@@ -238,7 +238,7 @@ CREATE TABLE IF NOT EXISTS orders (
 	o_all_local INT,
 	PRIMARY KEY(o_w_id, o_d_id, o_id) /*T![clustered_index] CLUSTERED */,
 	INDEX idx_order (o_w_id, o_d_id, o_c_id, o_id)
-)`
+) partition by hash(o_w_id) partitions 3`
 
 		query = w.appendPartition(query, "o_w_id")
 		if err := w.createTableDDL(ctx, query, tableOrders); err != nil {
@@ -285,7 +285,7 @@ CREATE TABLE IF NOT EXISTS stock (
 	s_remote_cnt INT,
 	s_data VARCHAR(50),
 	PRIMARY KEY(s_w_id, s_i_id) /*T![clustered_index] CLUSTERED */
-)`
+) partition by hash(s_w_id) partitions 3`
 
 		query = w.appendPartition(query, "s_w_id")
 		if err := w.createTableDDL(ctx, query, tableStock); err != nil {
@@ -329,7 +329,7 @@ CREATE TABLE IF NOT EXISTS warehouse (
 	w_tax DECIMAL(4, 4),
 	w_ytd DECIMAL(12, 2),
 	PRIMARY KEY (w_id)
-)`
+) partition by hash(w_id) partitions 3`
 
 		if err := w.createTableDDL(ctx, query, tableWareHouse); err != nil {
 			return err
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS district (
 	d_ytd DECIMAL(12, 2),
 	d_next_o_id INT,
 	PRIMARY KEY (d_w_id, d_id)
-)`
+) partition by hash(d_w_id) partitions 3`
 
 		if err := w.createTableDDL(ctx, query, tableDistrict); err != nil {
 			return err
@@ -400,7 +400,7 @@ CREATE TABLE IF NOT EXISTS history (
 	h_date TIMESTAMP,
 	h_amount DECIMAL(6, 2),
 	h_data VARCHAR(24)
-)`
+) partition by hash(h_w_id) partitions 3`
 		if err := w.createTableDDL(ctx, query, tableHistory); err != nil {
 			return err
 		}
@@ -418,7 +418,7 @@ CREATE TABLE IF NOT EXISTS new_order (
 	no_d_id INT NOT NULL,
 	no_w_id INT NOT NULL,
 	PRIMARY KEY(no_w_id, no_d_id, no_o_id)
-)`
+) partition by hash(no_w_id) partitions 3`
 
 		if err := w.createTableDDL(ctx, query, tableNewOrder); err != nil {
 			return err
@@ -459,7 +459,7 @@ CREATE TABLE IF NOT EXISTS orders (
 		ol_amount DECIMAL(6, 2),
 		ol_dist_info CHAR(24),
 		PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number)
-)`
+) partition by hash(ol_w_id) partitions 3`
 
 		if err := w.createTableDDL(ctx, query, tableOrderLine); err != nil {
 			return err

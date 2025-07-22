@@ -164,6 +164,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		item.olQuantity = randInt(s.R, 1, 10)
 	}
 
+	begin := time.Now()
 	tx, err := w.beginTx(ctx)
 	if err != nil {
 		return err
@@ -299,5 +300,22 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	if _, err = s.newOrderStmts[insertOrderLineSQL].ExecContext(ctx, insertOrderLineArgs...); err != nil {
 		return fmt.Errorf("exec %s failed %v", insertOrderLineSQL, err)
 	}
-	return tx.Commit()
+
+	beginCommit := time.Now()
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	durCommit := time.Since(beginCommit)
+	durTxn := time.Since(begin)
+
+	w.totDurTxn += int64(durTxn)
+	w.totDurCommit += int64(durCommit)
+	w.totCnt++
+	if w.totCnt%100 == 0 {
+		avgDurTxn := float64(w.totDurTxn) / float64(w.totCnt)
+		avgDurCommit := float64(w.totDurCommit) / float64(w.totCnt)
+		fmt.Printf("Thread %d: avgDurTxn: %.2fms, avgDurCommit: %.2fms, ratio: %.2f\n", thread, avgDurTxn/1e6, avgDurCommit/1e6, avgDurCommit/avgDurTxn)
+	}
+	return nil
 }

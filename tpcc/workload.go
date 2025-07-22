@@ -102,6 +102,10 @@ type Workloader struct {
 	// stats
 	rtMeasurement       *measurement.Measurement
 	waitTimeMeasurement *measurement.Measurement
+
+	totDurTxn    int64
+	totDurCommit int64
+	totCnt       int64
 }
 
 // NewWorkloader creates the tpc-c workloader

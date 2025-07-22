@@ -46,8 +46,14 @@ func newOrder(conn *sql.Conn) {
 }
 
 func main() {
+	//m := make(map[int]string)
+	//m[0] = "sdf"
+	//x, err := json.Marshal(m)
+	//fmt.Println(">>>>>>> ", string(x), err)
+	//return
+
 	fmt.Println("start")
-	db, err := sql.Open("mysql", "root:@tcp(localhost:4001)/test")
+	db, err := sql.Open("mysql", "root:@tcp(10.2.106.108:4005)/test")
 	fmt.Println("err ", err)
 	if err != nil {
 		panic(err)
@@ -61,6 +67,8 @@ func main() {
 
 	newOrder(conn)
 }
+
+//set global tidb_xproxy_forward_map = '{"0":"10.2.106.238:4005", "1":"10.2.106.108:4005", "2":"10.2.106.183:4005"}';
 
 const (
 	newOrderSelectCustomer = `SELECT c_discount, c_last, c_credit, w_tax FROM customer, warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?`

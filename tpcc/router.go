@@ -7,13 +7,15 @@ import (
 )
 
 var (
-	AllServers  map[string]struct{}
-	WIDRouteMap map[int]string
+	AllServers map[string]struct{}
+	PID2Addr   map[int]string
+	Addr2PID   = make(map[string][]int) // for reverse lookup, not used in this example
 )
 
 func init() {
 	AllServers = make(map[string]struct{})
-	WIDRouteMap = make(map[int]string)
+	PID2Addr = make(map[int]string)
+	Addr2PID = make(map[string][]int)
 	for _, line := range strings.Split(routeData, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -28,15 +30,12 @@ func init() {
 		addr := strings.TrimSpace(tmp[3])
 		addr = fmt.Sprintf("%v:4002", strings.Split(addr, ":")[0])
 		AllServers[addr] = struct{}{}
-		WIDRouteMap[pID] = addr
+		PID2Addr[pID] = addr
+		if _, ok := Addr2PID[addr]; !ok {
+			Addr2PID[addr] = []int{}
+		}
+		Addr2PID[addr] = append(Addr2PID[addr], pID)
 	}
-
-	fmt.Println("================================ route info ======================================")
-	fmt.Println("All Servers:", AllServers)
-	for wid, addr := range WIDRouteMap {
-		fmt.Printf("WID %d -> %s\n", wid, addr)
-	}
-	fmt.Println("================================ route info ======================================")
 }
 
 // store_id | partition_name | partition_addr

@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/pingcap/go-tpc/pkg/measurement"
@@ -73,6 +74,34 @@ func executeTpcc(action string) {
 
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
+
+	if route {
+		var ws []workload.Workloader
+		for addr := range tpcc.AllServers {
+			db, err := newDB([]string{addr}, driver, user, password, dbName, connParams)
+			if err != nil {
+				panic(err)
+			}
+			w, err := tpcc.NewWorkloader(db, &tpccConfig)
+			if err != nil {
+				panic(err)
+			}
+			w.(*tpcc.Workloader).Addr = addr
+			ws = append(ws, w)
+		}
+
+		var wg sync.WaitGroup
+		for i := range ws {
+			wg.Add(1)
+			go func(id int) {
+				executeWorkload(timeoutCtx, ws[id], threads, action)
+				ws[id].OutputStats(true)
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()
+		return
+	}
 
 	executeWorkload(timeoutCtx, w, threads, action)
 

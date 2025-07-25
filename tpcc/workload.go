@@ -88,7 +88,8 @@ type Config struct {
 
 // Workloader is TPCC workload
 type Workloader struct {
-	db *sql.DB
+	Addr string
+	db   *sql.DB
 
 	cfg *Config
 

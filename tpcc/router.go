@@ -2,6 +2,7 @@ package tpcc
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 )
@@ -11,6 +12,13 @@ var (
 	PID2Addr   map[int]string
 	Addr2PID   = make(map[string][]int) // for reverse lookup, not used in this example
 )
+
+func genWID(addr string) int {
+	pidList := Addr2PID[addr]
+	pid := pidList[rand.Intn(len(pidList))]
+	wid := pid + 200*rand.Intn(5)
+	return wid % 1000
+}
 
 func init() {
 	AllServers = make(map[string]struct{})

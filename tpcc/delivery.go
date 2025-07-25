@@ -37,7 +37,7 @@ func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
 	s := getTPCCState(ctx)
 
 	d := deliveryData{
-		wID:        randInt(s.R, 1, w.cfg.Warehouses),
+		wID:        genWID(w.Addr),
 		oCarrierID: randInt(s.R, 1, 10),
 	}
 

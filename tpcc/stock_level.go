@@ -17,7 +17,7 @@ func (w *Workloader) runStockLevel(ctx context.Context, thread int) error {
 	}
 	defer tx.Rollback()
 
-	wID := randInt(s.R, 1, w.cfg.Warehouses)
+	wID := genWID(w.Addr)
 	dID := randInt(s.R, 1, 10)
 	threshold := randInt(s.R, 10, 20)
 

@@ -39,6 +39,7 @@ func init() {
 	fmt.Println("================================ route info ======================================")
 }
 
+// store_id | partition_name | partition_addr
 var routeData = `
 |        7 | p0             | 192.168.173.161:25360 |
 |        6 | p1             | 192.168.173.159:25360 |

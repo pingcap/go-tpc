@@ -3,6 +3,7 @@ package tpcc
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -21,6 +22,12 @@ func genWID(addr string) int {
 }
 
 func init() {
+	data, err := os.ReadFile("./route.txt")
+	if err != nil {
+		fmt.Println("read route.txt err:", err)
+		return
+	}
+	routeData := string(data)
 	AllServers = make(map[string]struct{})
 	PID2Addr = make(map[int]string)
 	Addr2PID = make(map[string][]int)
@@ -44,10 +51,10 @@ func init() {
 		}
 		Addr2PID[addr] = append(Addr2PID[addr], pID)
 	}
+	fmt.Println("============================== route info ==============================")
+	fmt.Println("AllServers:", AllServers)
+	for addr, pids := range Addr2PID {
+		fmt.Println("Addr:", addr, "PIDs:", pids)
+	}
+	fmt.Println("============================== route info ==============================")
 }
-
-// store_id | partition_name | partition_addr
-var routeData = `
-|        7 | p0             | 192.168.173.161:25360 |
-|        6 | p1             | 192.168.173.159:25360 |
-|        7 | p10            | 192.168.173.161:25360 |`

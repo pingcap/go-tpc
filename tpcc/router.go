@@ -43,7 +43,7 @@ func init() {
 			panic("Invalid partition name: " + pName)
 		}
 		addr := strings.TrimSpace(tmp[3])
-		addr = fmt.Sprintf("%v:4002", strings.Split(addr, ":")[0])
+		addr = strings.Split(addr, ":")[0]
 		AllServers[addr] = struct{}{}
 		PID2Addr[pID] = addr
 		if _, ok := Addr2PID[addr]; !ok {

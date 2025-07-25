@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -86,7 +87,7 @@ func executeTpcc(action string) {
 			if err != nil {
 				panic(err)
 			}
-			w.(*tpcc.Workloader).Addr = addr
+			w.(*tpcc.Workloader).Addr = strings.Split(addr, ":")[0]
 			ws = append(ws, w)
 		}
 

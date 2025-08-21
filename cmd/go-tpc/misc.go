@@ -114,6 +114,23 @@ func executeWorkload(ctx context.Context, w workload.Workloader, threads int, ac
 			panic(fmt.Sprintf("a fatal occurred when preparing view data: %v", err))
 		}
 	}
+	// CH benchmark requires the revenue1 view for analytical queries.
+	// During normal prepare flow, this view is created in prepareView() method.
+	// However, when using CSV data ingestion, the prepare stage is skipped and
+	// the view won't exist. So we create it here when action is "run" to ensure
+	// the view is available regardless of how data was loaded.
+	if w.Name() == "ch" && action == "run" {
+		err := w.Exec(`create or replace view revenue1 (supplier_no, total_revenue) as (
+    select	mod((s_w_id * s_i_id),10000) as supplier_no,
+              sum(ol_amount) as total_revenue
+    from	order_line, stock
+    where ol_i_id = s_i_id and ol_supply_w_id = s_w_id
+      and ol_delivery_d >= '2007-01-02 00:00:00.000000'
+    group by mod((s_w_id * s_i_id),10000));`)
+		if err != nil {
+			panic(fmt.Sprintf("a fatal occurred when preparing view data: %v", err))
+		}
+	}
 	enabledDumpPlanReplayer := w.IsPlanReplayerDumpEnabled()
 	if enabledDumpPlanReplayer {
 		err := w.PreparePlanReplayerDump()

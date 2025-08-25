@@ -207,7 +207,14 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	defer w.updateState(ctx)
 
 	if err := s.Conn.PingContext(ctx); err != nil {
-		time.Sleep(w.cfg.RefreshConnWait) // I feel it silly to sleep, but don't come up with better idea
+		select {
+		case <-time.After(w.cfg.RefreshConnWait):
+			// Sleep completed normally
+		case <-ctx.Done():
+			// Context was cancelled or timed out during sleep
+			return ctx.Err()
+		}
+
 		if err := s.RefreshConn(ctx); err != nil {
 			return err
 		}
@@ -226,8 +233,14 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 	}
 	start := time.Now()
 	rows, err := s.Conn.QueryContext(ctx, query)
-	defer w.measurement.Measure(queryName, time.Now().Sub(start), err)
+	defer func() {
+		w.measurement.Measure(queryName, time.Since(start), err)
+	}()
 	if err != nil {
+		// Check if error is due to context cancellation/timeout
+		if ctx.Err() != nil {
+			return fmt.Errorf("query %s cancelled due to timeout: %v", queryName, ctx.Err())
+		}
 		return fmt.Errorf("execute query %s failed %v", queryName, err)
 	}
 	defer rows.Close()
@@ -237,7 +250,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) error {
 		if err != nil {
 			return err
 		}
-		util.StdErrLogger.Printf("explain analyze result of query %s (takes %s):\n%s\n", queryName, time.Now().Sub(start), table)
+		util.StdErrLogger.Printf("explain analyze result of query %s (takes %s):\n%s\n", queryName, time.Since(start), table)
 		return nil
 	}
 	if err := w.drainQueryResult(queryName, rows); err != nil {

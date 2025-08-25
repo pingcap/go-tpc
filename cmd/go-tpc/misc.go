@@ -40,7 +40,14 @@ func checkPrepare(ctx context.Context, w workload.Workloader) {
 func execute(timeoutCtx context.Context, w workload.Workloader, action string, threads, index int) error {
 	count := totalCount / threads
 
-	ctx := w.InitThread(context.Background(), index)
+	// For prepare, cleanup and check operations, use background context to avoid timeout constraints
+	// Only run phases should be limited by timeout
+	var ctx context.Context
+	if action == "prepare" || action == "cleanup" || action == "check" {
+		ctx = w.InitThread(context.Background(), index)
+	} else {
+		ctx = w.InitThread(timeoutCtx, index)
+	}
 	defer w.CleanupThread(ctx, index)
 
 	switch action {
@@ -58,20 +65,36 @@ func execute(timeoutCtx context.Context, w workload.Workloader, action string, t
 		return w.Check(ctx, index)
 	}
 
+	// This loop is only reached for "run" action since other actions return earlier
 	for i := 0; i < count || count <= 0; i++ {
+		// Check if timeout has occurred before starting next query
+		select {
+		case <-ctx.Done():
+			if !silence {
+				fmt.Printf("[%s] %s worker %d stopped due to timeout after %d iterations\n",
+					time.Now().Format("2006-01-02 15:04:05"), action, index, i)
+			}
+			return nil
+		default:
+		}
+
 		err := w.Run(ctx, index)
 		if err != nil {
+			// Check if the error is due to timeout/cancellation
+			if ctx.Err() != nil {
+				if !silence {
+					fmt.Printf("[%s] %s worker %d stopped due to timeout: %v\n",
+						time.Now().Format("2006-01-02 15:04:05"), action, index, err)
+				}
+				return nil // Don't treat timeout as an error
+			}
+
 			if !silence {
 				fmt.Printf("[%s] execute %s failed, err %v\n", time.Now().Format("2006-01-02 15:04:05"), action, err)
 			}
 			if !ignoreError {
 				return err
 			}
-		}
-		select {
-		case <-timeoutCtx.Done():
-			return nil
-		default:
 		}
 	}
 

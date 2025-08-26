@@ -365,5 +365,12 @@ func (w *Workloader) FinishPlanReplayerDump() error {
 }
 
 func (w *Workloader) Exec(sql string) error {
-	return nil
+	ctx := context.Background()
+	s := &chState{
+		TpcState: workload.NewTpcState(ctx, w.db),
+	}
+	defer s.Conn.Close()
+
+	_, err := s.Conn.ExecContext(ctx, sql)
+	return err
 }

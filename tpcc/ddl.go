@@ -18,14 +18,15 @@ const (
 )
 
 type ddlManager struct {
-	parts         int
-	warehouses    int
-	partitionType int
-	useFK         bool
+	parts             int
+	warehouses        int
+	partitionType     int
+	useFK             bool
+	useClusteredIndex bool
 }
 
-func newDDLManager(parts int, useFK bool, warehouses, partitionType int) *ddlManager {
-	return &ddlManager{parts: parts, useFK: useFK, warehouses: warehouses, partitionType: partitionType}
+func newDDLManager(parts int, useFK bool, warehouses, partitionType int, useClusteredIndex bool) *ddlManager {
+	return &ddlManager{parts: parts, useFK: useFK, warehouses: warehouses, partitionType: partitionType, useClusteredIndex: useClusteredIndex}
 }
 
 func (w *ddlManager) createTableDDL(ctx context.Context, query string, tableName string) error {
@@ -123,8 +124,16 @@ func (w *ddlManager) appendPartition(query string, partKeys string) string {
 // createTables creates tables schema.
 func (w *ddlManager) createTables(ctx context.Context, driver string) error {
 	if driver == "mysql" {
+
+		var clusteredIndexType string
+		if w.useClusteredIndex {
+			clusteredIndexType = "CLUSTERED"
+		} else {
+			clusteredIndexType = "NONCLUSTERED"
+		}
+
 		// Warehouse
-		query := `
+		query := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS warehouse (
 	w_id INT NOT NULL,
 	w_name VARCHAR(10),
@@ -135,8 +144,8 @@ CREATE TABLE IF NOT EXISTS warehouse (
 	w_zip CHAR(9),
 	w_tax DECIMAL(4, 4),
 	w_ytd DECIMAL(12, 2),
-	PRIMARY KEY (w_id) /*T![clustered_index] CLUSTERED */
-)`
+	PRIMARY KEY (w_id) /*T![clustered_index] %s */
+)`, clusteredIndexType)
 
 		query = w.appendPartition(query, "w_id")
 
@@ -145,7 +154,7 @@ CREATE TABLE IF NOT EXISTS warehouse (
 		}
 
 		// District
-		query = `
+		query = fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS district (
 	d_id INT NOT NULL,
 	d_w_id INT NOT NULL,
@@ -158,8 +167,8 @@ CREATE TABLE IF NOT EXISTS district (
 	d_tax DECIMAL(4, 4),
 	d_ytd DECIMAL(12, 2),
 	d_next_o_id INT,
-	PRIMARY KEY (d_w_id, d_id) /*T![clustered_index] CLUSTERED */
-)`
+	PRIMARY KEY (d_w_id, d_id) /*T![clustered_index] %s */
+)`, clusteredIndexType)
 
 		query = w.appendPartition(query, "d_w_id")
 
@@ -168,32 +177,32 @@ CREATE TABLE IF NOT EXISTS district (
 		}
 
 		// Customer
-		query = `
+		query = fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS customer (
-	c_id INT NOT NULL, 
+	c_id INT NOT NULL,
 	c_d_id INT NOT NULL,
-	c_w_id INT NOT NULL, 
-	c_first VARCHAR(16), 
-	c_middle CHAR(2), 
-	c_last VARCHAR(16), 
-	c_street_1 VARCHAR(20), 
-	c_street_2 VARCHAR(20), 
-	c_city VARCHAR(20), 
-	c_state CHAR(2), 
-	c_zip CHAR(9), 
-	c_phone CHAR(16), 
-	c_since DATETIME, 
-	c_credit CHAR(2), 
-	c_credit_lim DECIMAL(12, 2), 
-	c_discount DECIMAL(4,4), 
-	c_balance DECIMAL(12,2), 
-	c_ytd_payment DECIMAL(12,2), 
-	c_payment_cnt INT, 
-	c_delivery_cnt INT, 
+	c_w_id INT NOT NULL,
+	c_first VARCHAR(16),
+	c_middle CHAR(2),
+	c_last VARCHAR(16),
+	c_street_1 VARCHAR(20),
+	c_street_2 VARCHAR(20),
+	c_city VARCHAR(20),
+	c_state CHAR(2),
+	c_zip CHAR(9),
+	c_phone CHAR(16),
+	c_since DATETIME,
+	c_credit CHAR(2),
+	c_credit_lim DECIMAL(12, 2),
+	c_discount DECIMAL(4,4),
+	c_balance DECIMAL(12,2),
+	c_ytd_payment DECIMAL(12,2),
+	c_payment_cnt INT,
+	c_delivery_cnt INT,
 	c_data VARCHAR(500),
-	PRIMARY KEY(c_w_id, c_d_id, c_id) /*T![clustered_index] CLUSTERED */,
+	PRIMARY KEY(c_w_id, c_d_id, c_id) /*T![clustered_index] %s */,
 	INDEX idx_customer (c_w_id, c_d_id, c_last, c_first)
-)`
+)`, clusteredIndexType)
 
 		query = w.appendPartition(query, "c_w_id")
 
@@ -221,13 +230,13 @@ CREATE TABLE IF NOT EXISTS history (
 			return err
 		}
 
-		query = `
+		query = fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS new_order (
 	no_o_id INT NOT NULL,
 	no_d_id INT NOT NULL,
 	no_w_id INT NOT NULL,
-	PRIMARY KEY(no_w_id, no_d_id, no_o_id) /*T![clustered_index] CLUSTERED */
-)`
+	PRIMARY KEY(no_w_id, no_d_id, no_o_id) /*T![clustered_index] %s */
+)`, clusteredIndexType)
 
 		query = w.appendPartition(query, "no_w_id")
 		if err := w.createTableDDL(ctx, query, tableNewOrder); err != nil {
@@ -235,7 +244,7 @@ CREATE TABLE IF NOT EXISTS new_order (
 		}
 
 		// because order is a keyword, so here we use orders instead
-		query = `
+		query = fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS orders (
 	o_id INT NOT NULL,
 	o_d_id INT NOT NULL,
@@ -245,16 +254,16 @@ CREATE TABLE IF NOT EXISTS orders (
 	o_carrier_id INT,
 	o_ol_cnt INT,
 	o_all_local INT,
-	PRIMARY KEY(o_w_id, o_d_id, o_id) /*T![clustered_index] CLUSTERED */,
+	PRIMARY KEY(o_w_id, o_d_id, o_id) /*T![clustered_index] %s */,
 	INDEX idx_order (o_w_id, o_d_id, o_c_id, o_id)
-)`
+)`, clusteredIndexType)
 
 		query = w.appendPartition(query, "o_w_id")
 		if err := w.createTableDDL(ctx, query, tableOrders); err != nil {
 			return err
 		}
 
-		query = `
+		query = fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS order_line (
 		ol_o_id INT NOT NULL,
 		ol_d_id INT NOT NULL,
@@ -266,57 +275,57 @@ CREATE TABLE IF NOT EXISTS orders (
 		ol_quantity INT,
 		ol_amount DECIMAL(6, 2),
 		ol_dist_info CHAR(24),
-		PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number) /*T![clustered_index] CLUSTERED */
-)`
+		PRIMARY KEY(ol_w_id, ol_d_id, ol_o_id, ol_number) /*T![clustered_index] %s */
+)`, clusteredIndexType)
 
 		query = w.appendPartition(query, "ol_w_id")
 		if err := w.createTableDDL(ctx, query, tableOrderLine); err != nil {
 			return err
 		}
 
-		query = `
+		query = fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS stock (
 	s_i_id INT NOT NULL,
 	s_w_id INT NOT NULL,
 	s_quantity INT,
-	s_dist_01 CHAR(24), 
+	s_dist_01 CHAR(24),
 	s_dist_02 CHAR(24),
 	s_dist_03 CHAR(24),
-	s_dist_04 CHAR(24), 
-	s_dist_05 CHAR(24), 
-	s_dist_06 CHAR(24), 
-	s_dist_07 CHAR(24), 
-	s_dist_08 CHAR(24), 
-	s_dist_09 CHAR(24), 
-	s_dist_10 CHAR(24), 
-	s_ytd INT, 
-	s_order_cnt INT, 
+	s_dist_04 CHAR(24),
+	s_dist_05 CHAR(24),
+	s_dist_06 CHAR(24),
+	s_dist_07 CHAR(24),
+	s_dist_08 CHAR(24),
+	s_dist_09 CHAR(24),
+	s_dist_10 CHAR(24),
+	s_ytd INT,
+	s_order_cnt INT,
 	s_remote_cnt INT,
 	s_data VARCHAR(50),
-	PRIMARY KEY(s_w_id, s_i_id) /*T![clustered_index] CLUSTERED */
-)`
+	PRIMARY KEY(s_w_id, s_i_id) /*T![clustered_index] %s */
+)`, clusteredIndexType)
 
 		query = w.appendPartition(query, "s_w_id")
 		if err := w.createTableDDL(ctx, query, tableStock); err != nil {
 			return err
 		}
 
-		query = `
+		query = fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS item (
 	i_id INT NOT NULL,
 	i_im_id INT,
 	i_name VARCHAR(24),
 	i_price DECIMAL(5, 2),
 	i_data VARCHAR(50),
-	PRIMARY KEY(i_id) /*T![clustered_index] CLUSTERED */
-)`
+	PRIMARY KEY(i_id) /*T![clustered_index] %s */
+)`, clusteredIndexType)
 
 		if err := w.createTableDDL(ctx, query, tableItem); err != nil {
 			return err
 		}
 
 		if w.useFK {
-			query = `		
+			query = `
 alter table district add constraint d_warehouse_fkey
     foreign key (d_w_id)
     references warehouse (w_id)`
@@ -446,26 +455,26 @@ CREATE TABLE IF NOT EXISTS district (
 		// Customer
 		query = `
 CREATE TABLE IF NOT EXISTS customer (
-	c_id INT NOT NULL, 
+	c_id INT NOT NULL,
 	c_d_id INT NOT NULL,
-	c_w_id INT NOT NULL, 
-	c_first VARCHAR(16), 
-	c_middle CHAR(2), 
-	c_last VARCHAR(16), 
-	c_street_1 VARCHAR(20), 
-	c_street_2 VARCHAR(20), 
-	c_city VARCHAR(20), 
-	c_state CHAR(2), 
-	c_zip CHAR(9), 
-	c_phone CHAR(16), 
-	c_since TIMESTAMP, 
-	c_credit CHAR(2), 
-	c_credit_lim DECIMAL(12, 2), 
-	c_discount DECIMAL(4,4), 
-	c_balance DECIMAL(12,2), 
-	c_ytd_payment DECIMAL(12,2), 
-	c_payment_cnt INT, 
-	c_delivery_cnt INT, 
+	c_w_id INT NOT NULL,
+	c_first VARCHAR(16),
+	c_middle CHAR(2),
+	c_last VARCHAR(16),
+	c_street_1 VARCHAR(20),
+	c_street_2 VARCHAR(20),
+	c_city VARCHAR(20),
+	c_state CHAR(2),
+	c_zip CHAR(9),
+	c_phone CHAR(16),
+	c_since TIMESTAMP,
+	c_credit CHAR(2),
+	c_credit_lim DECIMAL(12, 2),
+	c_discount DECIMAL(4,4),
+	c_balance DECIMAL(12,2),
+	c_ytd_payment DECIMAL(12,2),
+	c_payment_cnt INT,
+	c_delivery_cnt INT,
 	c_data VARCHAR(500),
 	PRIMARY KEY(c_w_id, c_d_id, c_id)
 )`
@@ -557,18 +566,18 @@ CREATE TABLE IF NOT EXISTS stock (
 	s_i_id INT NOT NULL,
 	s_w_id INT NOT NULL,
 	s_quantity INT,
-	s_dist_01 CHAR(24), 
+	s_dist_01 CHAR(24),
 	s_dist_02 CHAR(24),
 	s_dist_03 CHAR(24),
-	s_dist_04 CHAR(24), 
-	s_dist_05 CHAR(24), 
-	s_dist_06 CHAR(24), 
-	s_dist_07 CHAR(24), 
-	s_dist_08 CHAR(24), 
-	s_dist_09 CHAR(24), 
-	s_dist_10 CHAR(24), 
-	s_ytd INT, 
-	s_order_cnt INT, 
+	s_dist_04 CHAR(24),
+	s_dist_05 CHAR(24),
+	s_dist_06 CHAR(24),
+	s_dist_07 CHAR(24),
+	s_dist_08 CHAR(24),
+	s_dist_09 CHAR(24),
+	s_dist_10 CHAR(24),
+	s_ytd INT,
+	s_order_cnt INT,
 	s_remote_cnt INT,
 	s_data VARCHAR(50),
 	PRIMARY KEY(s_w_id, s_i_id)
@@ -592,7 +601,7 @@ CREATE TABLE IF NOT EXISTS item (
 		}
 
 		if w.useFK {
-			query = `		
+			query = `
 alter table district add constraint d_warehouse_fkey
     foreign key (d_w_id)
     references warehouse (w_id)`

@@ -77,9 +77,10 @@ type Config struct {
 	MaxMeasureLatency time.Duration
 
 	// for prepare sub-command only
-	OutputType      string
-	OutputDir       string
-	SpecifiedTables string
+	OutputType        string
+	OutputDir         string
+	SpecifiedTables   string
+	UseClusteredIndex bool
 
 	// connection, retry count when commiting statement fails, default 0
 	PrepareRetryCount    int
@@ -146,7 +147,7 @@ func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 		db:                  db,
 		cfg:                 cfg,
 		initLoadTime:        time.Now().Format(timeFormat),
-		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK, cfg.Warehouses, cfg.PartitionType),
+		ddlManager:          newDDLManager(cfg.Parts, cfg.UseFK, cfg.Warehouses, cfg.PartitionType, cfg.UseClusteredIndex),
 		rtMeasurement:       measurement.NewMeasurement(resetMaxLat),
 		waitTimeMeasurement: measurement.NewMeasurement(resetMaxLat),
 	}

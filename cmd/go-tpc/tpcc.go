@@ -105,6 +105,7 @@ func registerTpcc(root *cobra.Command) {
 	}
 	cmdPrepare.PersistentFlags().BoolVar(&tpccConfig.NoCheck, "no-check", false, "TPCC prepare check, default false")
 	cmdPrepare.PersistentFlags().BoolVar(&tpccConfig.UseFK, "use-fk", false, "TPCC using foreign key, default false")
+	cmdPrepare.PersistentFlags().BoolVar(&tpccConfig.UseClusteredIndex, "use-clustered-index", true, "TPCC use clustered index, default true")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputType, "output-type", "", "Output file type."+
 		" If empty, then load data to db. Current only support csv")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output-dir", "", "Output directory for generating file if specified")

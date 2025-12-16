@@ -56,8 +56,8 @@ func RenderTable(headers []string, values [][]string) {
 		return
 	}
 	tb := tablewriter.NewWriter(os.Stdout)
-	tb.SetHeader(headers)
-	tb.AppendBulk(values)
+	tb.Header(headers)
+	tb.Bulk(values)
 	tb.Render()
 }
 

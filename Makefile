@@ -31,7 +31,7 @@ build: mod
 	$(GOBUILD) -o ./bin/go-tpc cmd/go-tpc/*
 
 vet:
-	go vet ./...
+	$(GO) vet ./...
 
 mod:
 	@echo "go mod tidy"

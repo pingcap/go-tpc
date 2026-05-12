@@ -2,6 +2,7 @@ package tpcc
 
 import (
 	"context"
+	"fmt"
 )
 
 const stockLevelCount = `SELECT /*+ TIDB_INLJ(order_line,stock) */ COUNT(DISTINCT (s_i_id)) stock_count FROM order_line, stock 
@@ -9,6 +10,10 @@ WHERE ol_w_id = ? AND ol_d_id = ? AND ol_o_id < ? AND ol_o_id >= ? - 20 AND s_w_
 const stockLevelSelectDistrict = `SELECT d_next_o_id FROM district WHERE d_w_id = ? AND d_id = ?`
 
 func (w *Workloader) runStockLevel(ctx context.Context, thread int) error {
+	if w.cfg.StoredProcs {
+		return w.runStockLevelProc(ctx, thread)
+	}
+
 	s := getTPCCState(ctx)
 
 	tx, err := w.beginTx(ctx)
@@ -37,4 +42,19 @@ func (w *Workloader) runStockLevel(ctx context.Context, thread int) error {
 	}
 
 	return tx.Commit()
+}
+
+// runStockLevelProc dispatches STOCK_LEVEL as `CALL tpcc_stock_level(...)`.
+func (w *Workloader) runStockLevelProc(ctx context.Context, thread int) error {
+	s := getTPCCState(ctx)
+	wID := randInt(s.R, 1, w.cfg.Warehouses)
+	dID := randInt(s.R, 1, 10)
+	threshold := randInt(s.R, 10, 20)
+
+	stmt := s.procStmts[tpccCallStockLevel]
+	_, err := stmt.ExecContext(ctx, wID, dID, threshold)
+	if err != nil {
+		return fmt.Errorf("CALL tpcc_stock_level failed: %v", err)
+	}
+	return nil
 }

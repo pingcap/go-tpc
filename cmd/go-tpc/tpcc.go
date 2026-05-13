@@ -125,6 +125,7 @@ func registerTpcc(root *cobra.Command) {
 	cmdRun.PersistentFlags().DurationVar(&tpccConfig.MaxMeasureLatency, "max-measure-latency", measurement.DefaultMaxLatency, "max measure latency in millisecond")
 	cmdRun.PersistentFlags().IntSliceVar(&tpccConfig.Weight, "weight", []int{45, 43, 4, 4, 4}, "Weight for NewOrder, Payment, OrderStatus, Delivery, StockLevel")
 	cmdRun.Flags().DurationVar(&tpccConfig.ConnRefreshInterval, "conn-refresh-interval", 0, "automatically refresh database connections at specified intervals to balance traffic across new replicas (0 = disabled, e.g., 10s)")
+	cmdRun.PersistentFlags().BoolVar(&tpccConfig.StoredProcs, "stored-procs", false, "Use PL/pgSQL stored procedures for the 5 TPC-C transactions (postgres driver only)")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",

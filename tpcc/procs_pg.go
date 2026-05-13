@@ -131,14 +131,26 @@ BEGIN
 
     -- Second pass: stock lookup, stock update, order_line insert.
     FOR i IN 1..p_ol_cnt LOOP
-        -- District-specific stock distribution column (s_dist_01 .. s_dist_10).
-        EXECUTE format(
-            'SELECT s_quantity, s_data, s_dist_%s FROM stock '
-            'WHERE s_w_id = $1 AND s_i_id = $2 FOR UPDATE',
-            to_char(p_d_id, 'FM00')
-        )
-        INTO v_s_quantity, v_s_data, v_s_dist
-        USING p_w_id, p_ol_i_id[i];
+        -- District-specific stock distribution column picked via CASE so the
+        -- statement stays static and PL/pgSQL can cache its plan (an EXECUTE
+        -- format() variant would re-plan every call).
+        SELECT s_quantity, s_data,
+               CASE p_d_id
+                   WHEN  1 THEN s_dist_01
+                   WHEN  2 THEN s_dist_02
+                   WHEN  3 THEN s_dist_03
+                   WHEN  4 THEN s_dist_04
+                   WHEN  5 THEN s_dist_05
+                   WHEN  6 THEN s_dist_06
+                   WHEN  7 THEN s_dist_07
+                   WHEN  8 THEN s_dist_08
+                   WHEN  9 THEN s_dist_09
+                   WHEN 10 THEN s_dist_10
+               END
+          INTO v_s_quantity, v_s_data, v_s_dist
+          FROM stock
+         WHERE s_w_id = p_w_id AND s_i_id = p_ol_i_id[i]
+           FOR UPDATE;
 
         v_s_quantity := v_s_quantity - p_ol_quantity[i];
         IF v_s_quantity < 10 THEN

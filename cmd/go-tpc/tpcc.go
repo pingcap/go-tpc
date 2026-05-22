@@ -18,7 +18,7 @@ import (
 
 var tpccConfig tpcc.Config
 
-func executeTpcc(action string) {
+func executeTpcc(action string) error {
 	if pprofAddr != "" {
 		go func() {
 			if err := http.ListenAndServe(pprofAddr, http.DefaultServeMux); err != nil {
@@ -81,10 +81,13 @@ func executeTpcc(action string) {
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
 
-	executeWorkload(timeoutCtx, w, threads, action)
+	if err := executeWorkload(timeoutCtx, w, threads, action); err != nil {
+		return err
+	}
 
 	fmt.Println("Finished")
 	w.OutputStats(true)
+	return nil
 }
 
 func registerTpcc(root *cobra.Command) {
@@ -99,8 +102,9 @@ func registerTpcc(root *cobra.Command) {
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for TPCC",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("prepare")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
+			return executeTpcc("prepare")
 		},
 	}
 	cmdPrepare.PersistentFlags().BoolVar(&tpccConfig.NoCheck, "no-check", false, "TPCC prepare check, default false")
@@ -117,8 +121,9 @@ func registerTpcc(root *cobra.Command) {
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("run")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
+			return executeTpcc("run")
 		},
 	}
 	cmdRun.PersistentFlags().BoolVar(&tpccConfig.Wait, "wait", false, "including keying & thinking time described on TPC-C Standard Specification")
@@ -129,16 +134,18 @@ func registerTpcc(root *cobra.Command) {
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",
 		Short: "Cleanup data for the workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("cleanup")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
+			return executeTpcc("cleanup")
 		},
 	}
 
 	var cmdCheck = &cobra.Command{
 		Use:   "check",
 		Short: "Check data consistency for the workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("check")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
+			return executeTpcc("check")
 		},
 	}
 

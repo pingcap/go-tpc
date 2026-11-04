@@ -37,7 +37,7 @@ By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn add
 ```bash
   -D, --db string           Database name (default "test")
   -H, --host string         Database host (default "127.0.0.1")
-  -p, --password string     Database password
+  -p, --password string     Database password (defaults to GO_TPC_PASSWORD, then MYSQL_PWD for mysql)
   -P, --port int            Database port (default 4000)
   -U, --user string         Database user (default "root")
 
@@ -53,6 +53,45 @@ For example:
 ```bash
 ./bin/go-tpc -H 127.0.0.1 -P 3306 -D tpcc ...
 ```
+
+### Passwords
+
+Set `GO_TPC_PASSWORD` to supply a password without including it in the process command line. For example, in Bash:
+
+```bash
+read -r -s -p 'Database password: ' GO_TPC_PASSWORD
+printf '\n'
+export GO_TPC_PASSWORD
+./bin/go-tpc tpcc --warehouses 4 run
+unset GO_TPC_PASSWORD
+```
+
+An explicitly supplied `-p` / `--password` takes precedence, including an empty value. Otherwise, go-tpc uses `GO_TPC_PASSWORD`; if that variable is unset, the MySQL driver also accepts `MYSQL_PWD`. Setting `GO_TPC_PASSWORD` to an empty value prevents the `MYSQL_PWD` fallback. Environment variables keep passwords out of argv, but processes with sufficient OS permissions can still read them.
+
+### TLS connections
+
+For MySQL and TiDB, the default is `tls=preferred`, matching the MySQL client's `--ssl-mode=PREFERRED`: use TLS when the server supports it, without verifying its certificate, and fall back to an unencrypted connection otherwise. This preserves compatibility with local TiDB installations that do not enable TLS. Use certificate verification when connecting over an untrusted network:
+
+```bash
+# Verify the server certificate and hostname using a CA file.
+./bin/go-tpc tpcc run -H db.example.com --ssl-ca /path/to/ca.pem
+# Verify using system root certificates.
+./bin/go-tpc tpcc run -H db.example.com --conn-params tls=true
+```
+
+For mutual TLS, pass both `--ssl-cert /path/to/client.pem` and `--ssl-key /path/to/client-key.pem`. MySQL uses system root certificates when these flags are supplied without `--ssl-ca`.
+
+PostgreSQL also supports `--ssl-ca`, `--ssl-cert`, and `--ssl-key`. A CA file selects `sslmode=verify-full` and `sslrootcert`; the client certificate and key map to `sslcert` and `sslkey` and must be supplied together:
+
+```bash
+./bin/go-tpc tpcc prepare -d postgres -U myuser -D test -H db.example.com -P 5432 --ssl-ca /path/to/ca.pem
+# Equivalent connection parameters:
+./bin/go-tpc tpcc prepare -d postgres -U myuser -D test -H db.example.com -P 5432 --conn-params 'sslmode=verify-full&sslrootcert=/path/to/ca.pem'
+```
+
+Supplying only a client certificate/key pair does not change PostgreSQL's SSL mode. Without an explicit mode or CA flag, the bundled lib/pq driver defaults to `require`, which requires encryption but does not verify the server certificate. Parameters explicitly supplied through `--conn-params` override the corresponding TLS flag mappings for both drivers.
+
+The PostgreSQL examples below use `sslmode=disable` only for local databases without TLS. For a server with TLS enabled, replace that option with `--ssl-ca /path/to/ca.pem` or the `sslmode=verify-full` parameters above. The examples can also omit `-p` when using `GO_TPC_PASSWORD`.
 
 ### TPC-C
 
@@ -111,8 +150,10 @@ For example:
 # Specified tables when generating csv files
 ./bin/go-tpc tpcc --warehouses 4 prepare -T 100 --output-type csv --output-dir data --tables history,orders
 # Start pprof
-./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof :10111
+./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof 127.0.0.1:10111
 ```
+
+The TPC-C `--pprof` and `--metrics-addr` endpoints have no authentication or TLS. Bind them to a loopback address such as `127.0.0.1:10111` (pprof) or `127.0.0.1:10112` (metrics) for local access. If remote monitoring requires a public or wildcard bind such as `:10112`, restrict access with firewall rules or a trusted network. go-tpc warns when an endpoint is bound beyond loopback. The pprof command-line endpoint `/debug/pprof/cmdline` is disabled; CPU, heap, goroutine, and other runtime profiles remain available.
 
 If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
 

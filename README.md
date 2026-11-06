@@ -37,7 +37,7 @@ By default, go-tpc uses `root::@tcp(127.0.0.1:4000)/test` as the default dsn add
 ```bash
   -D, --db string           Database name (default "test")
   -H, --host string         Database host (default "127.0.0.1")
-  -p, --password string     Database password (defaults to GO_TPC_PASSWORD, then MYSQL_PWD for mysql)
+  -p, --password string     Database password (defaults to GO_TPC_PASSWORD when not explicitly set)
   -P, --port int            Database port (default 4000)
   -U, --user string         Database user (default "root")
 
@@ -66,7 +66,7 @@ export GO_TPC_PASSWORD
 unset GO_TPC_PASSWORD
 ```
 
-An explicitly supplied `-p` / `--password` takes precedence, including an empty value. Otherwise, go-tpc uses `GO_TPC_PASSWORD`; if that variable is unset, the MySQL driver also accepts `MYSQL_PWD`. Setting `GO_TPC_PASSWORD` to an empty value prevents the `MYSQL_PWD` fallback. Environment variables keep passwords out of argv, but processes with sufficient OS permissions can still read them.
+An explicitly supplied `-p` / `--password` takes precedence, including an empty value. Otherwise, go-tpc uses `GO_TPC_PASSWORD`. Environment variables keep passwords out of argv, but processes with sufficient OS permissions can still read them.
 
 ### TLS connections
 
@@ -79,19 +79,13 @@ For MySQL and TiDB, the default is `tls=preferred`, matching the MySQL client's 
 ./bin/go-tpc tpcc run -H db.example.com --conn-params tls=true
 ```
 
-For mutual TLS, pass both `--ssl-cert /path/to/client.pem` and `--ssl-key /path/to/client-key.pem`. MySQL uses system root certificates when these flags are supplied without `--ssl-ca`.
-
-PostgreSQL also supports `--ssl-ca`, `--ssl-cert`, and `--ssl-key`. A CA file selects `sslmode=verify-full` and `sslrootcert`; the client certificate and key map to `sslcert` and `sslkey` and must be supplied together:
+PostgreSQL TLS is configured through `--conn-params`; the `--ssl-*` flags apply only to MySQL. The bundled lib/pq driver's default `sslmode=require` requires encryption but does not verify the server hostname. Use `verify-full` to verify the server certificate and hostname:
 
 ```bash
-./bin/go-tpc tpcc prepare -d postgres -U myuser -D test -H db.example.com -P 5432 --ssl-ca /path/to/ca.pem
-# Equivalent connection parameters:
 ./bin/go-tpc tpcc prepare -d postgres -U myuser -D test -H db.example.com -P 5432 --conn-params 'sslmode=verify-full&sslrootcert=/path/to/ca.pem'
 ```
 
-Supplying only a client certificate/key pair does not change PostgreSQL's SSL mode. Without an explicit mode or CA flag, the bundled lib/pq driver defaults to `require`, which requires encryption but does not verify the server certificate. Parameters explicitly supplied through `--conn-params` override the corresponding TLS flag mappings for both drivers.
-
-The PostgreSQL examples below use `sslmode=disable` only for local databases without TLS. For a server with TLS enabled, replace that option with `--ssl-ca /path/to/ca.pem` or the `sslmode=verify-full` parameters above. The examples can also omit `-p` when using `GO_TPC_PASSWORD`.
+The PostgreSQL examples below use `sslmode=disable` only for local databases without TLS. For connections over an untrusted network, use the `verify-full` parameters above. The examples can also omit `-p` when using `GO_TPC_PASSWORD`.
 
 ### TPC-C
 
@@ -153,7 +147,7 @@ The PostgreSQL examples below use `sslmode=disable` only for local databases wit
 ./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof 127.0.0.1:10111
 ```
 
-The TPC-C `--pprof` and `--metrics-addr` endpoints have no authentication or TLS. Bind them to a loopback address such as `127.0.0.1:10111` (pprof) or `127.0.0.1:10112` (metrics) for local access. If remote monitoring requires a public or wildcard bind such as `:10112`, restrict access with firewall rules or a trusted network. go-tpc warns when an endpoint is bound beyond loopback. The pprof command-line endpoint `/debug/pprof/cmdline` is disabled; CPU, heap, goroutine, and other runtime profiles remain available.
+The TPC-C `--pprof` and `--metrics-addr` endpoints are disabled unless explicitly configured, and have no authentication or TLS. Bind them to a loopback address such as `127.0.0.1:10111` (pprof) or `127.0.0.1:10112` (metrics) for local access. If remote monitoring requires a public or wildcard bind such as `:10112`, restrict access with firewall rules or a trusted network. go-tpc warns when an endpoint is bound beyond loopback. The pprof command-line endpoint `/debug/pprof/cmdline` is disabled; CPU, heap, goroutine, and other runtime profiles remain available.
 
 If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
 

@@ -102,8 +102,7 @@ func newDB(targets []string, driver string, user string, password string, dbName
 	hash.Write([]byte(dbName))
 	hash.Write([]byte(connParams))
 
-	customTLS := len(sslCA) > 0 || len(sslCert) > 0 || len(sslKey) > 0
-	if driver == mysqlDriver && customTLS {
+	if driver == mysqlDriver && (len(sslCA) > 0 || len(sslCert) > 0 || len(sslKey) > 0) {
 		registerMysqlTLSConfig()
 	}
 
@@ -112,7 +111,7 @@ func newDB(targets []string, driver string, user string, password string, dbName
 		switch driver {
 		case mysqlDriver:
 			var tlsName string = "preferred"
-			if customTLS {
+			if len(sslCA) > 0 {
 				tlsName = customTlsName
 			}
 			// allow multiple statements in one query to allow q15 on the TPC-H
@@ -123,42 +122,15 @@ func newDB(targets []string, driver string, user string, password string, dbName
 			names[i] = dsn
 			drv = &mysql.MySQLDriver{}
 		case pgDriver:
-			if (len(sslCert) > 0) != (len(sslKey) > 0) {
-				return nil, fmt.Errorf("incomplete key pair configuration")
+			if len(sslCA) > 0 || len(sslKey) > 0 || len(sslCert) > 0 {
+				panic("postgresql driver doesn't support TLS yet")
 			}
-			params := url.Values{}
-			if len(sslCA) > 0 {
-				params.Set("sslmode", "verify-full")
-				params.Set("sslrootcert", sslCA)
-			}
-			if len(sslCert) > 0 {
-				params.Set("sslcert", sslCert)
-				params.Set("sslkey", sslKey)
-			}
-			overrides, err := url.ParseQuery(connParams)
-			if err != nil {
-				return nil, fmt.Errorf("invalid connection parameters: %w", err)
-			}
-			// lib/pq takes the first value of a repeated URL parameter.
-			// Omit mapped values when conn-params explicitly overrides them.
-			for key := range overrides {
-				params.Del(key)
-			}
-			query := params.Encode()
+
+			dsn := fmt.Sprintf("postgres://%s@%s/%s", url.UserPassword(user, password).String(), addr, dbName)
 			if len(connParams) > 0 {
-				if query != "" {
-					query += "&"
-				}
-				query += connParams
+				dsn = dsn + "?" + connParams
 			}
-			dsn := url.URL{
-				Scheme:   "postgres",
-				User:     url.UserPassword(user, password),
-				Host:     addr,
-				Path:     "/" + dbName,
-				RawQuery: query,
-			}
-			names[i] = dsn.String()
+			names[i] = dsn
 			drv = &pq.Driver{}
 		default:
 			panic(fmt.Errorf("unknown driver: %q", driver))
@@ -230,11 +202,7 @@ func main() {
 		Short: "Benchmark database with different workloads",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if !cmd.Flags().Changed("password") {
-				if value, ok := os.LookupEnv("GO_TPC_PASSWORD"); ok {
-					password = value
-				} else if driver == mysqlDriver {
-					password = os.Getenv("MYSQL_PWD")
-				}
+				password = os.Getenv("GO_TPC_PASSWORD")
 			}
 			if len(targets) == 0 {
 				targets = makeTargets(hosts, ports)
@@ -247,7 +215,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringSliceVarP(&hosts, "host", "H", []string{"127.0.0.1"}, "Database host")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "U", "root", "Database user")
-	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password (defaults to GO_TPC_PASSWORD, then MYSQL_PWD for mysql, when not explicitly set)")
+	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password (defaults to GO_TPC_PASSWORD when not explicitly set)")
 	rootCmd.PersistentFlags().IntSliceVarP(&ports, "port", "P", []int{4000}, "Database port")
 	rootCmd.PersistentFlags().IntVarP(&statusPort, "statusPort", "S", 10080, "Database status port")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 1, "Thread concurrency")
@@ -266,9 +234,9 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&outputStyle, "output", util.OutputStylePlain, "output style, valid values can be { plain | table | json }")
 	rootCmd.PersistentFlags().StringSliceVar(&targets, "targets", nil, "Target database addresses")
 	rootCmd.PersistentFlags().MarkHidden("targets")
-	rootCmd.PersistentFlags().StringVar(&sslCA, "ssl-ca", "", "Path to trusted CA certificates in PEM format for mysql or postgres")
-	rootCmd.PersistentFlags().StringVar(&sslCert, "ssl-cert", "", "Path to a client X509 certificate in PEM format for mysql or postgres (requires --ssl-key)")
-	rootCmd.PersistentFlags().StringVar(&sslKey, "ssl-key", "", "Path to a client private key in PEM format for mysql or postgres (requires --ssl-cert)")
+	rootCmd.PersistentFlags().StringVar(&sslCA, "ssl-ca", "", "Path of file that contains list of trusted SSL CAs for connection")
+	rootCmd.PersistentFlags().StringVar(&sslCert, "ssl-cert", "", "Path of file that contains X509 certificate in PEM format for connection")
+	rootCmd.PersistentFlags().StringVar(&sslKey, "ssl-key", "", "Path of file that contains X509 key in PEM format for connection")
 
 	cobra.EnablePrefixMatching = true
 
@@ -327,26 +295,27 @@ func registerMysqlTLSConfig() {
 		panic("incomplete key pair configuration")
 	}
 
-	// Leave RootCAs nil to use system roots when no CA file is supplied.
-	var certPool *x509.CertPool
-	if len(sslCA) > 0 {
-		ca, err := os.ReadFile(sslCA)
-		if err != nil {
-			panic(fmt.Errorf("could not read CA certificate, err %v", err))
-		}
-		certPool = x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(ca) {
-			panic("failed to append CA certs")
-		}
+	// Create a certificate pool from CA
+	certPool := x509.NewCertPool()
+	ca, err := os.ReadFile(sslCA)
+	if err != nil {
+		panic(fmt.Errorf("could not read CA certificate, err %v", err))
+	}
+
+	// Append the certificates from the CA
+	if !certPool.AppendCertsFromPEM(ca) {
+		panic("failed to append CA certs")
 	}
 
 	tlsConfig := &tls.Config{
 		MinVersion:   tls.VersionTLS12,
 		Certificates: certificates,
 		RootCAs:      certPool,
+		ClientCAs:    certPool,
 	}
 
-	if err := mysql.RegisterTLSConfig(customTlsName, tlsConfig); err != nil {
+	err = mysql.RegisterTLSConfig(customTlsName, tlsConfig)
+	if err != nil {
 		panic(fmt.Errorf("failed to register TLS config, err %v", err))
 	}
 }

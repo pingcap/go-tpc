@@ -42,11 +42,11 @@ func executeTpcc(action string) {
 	if pprofAddr != "" {
 		mux := http.NewServeMux()
 		// Use a private mux to exclude Cmdline, which exposes argv passwords.
-		// Index still serves named runtime profiles such as heap and goroutine.
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		// Keep Go's GET-only routes; Index still serves named runtime profiles.
+		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 		startHTTPServer("pprof", pprofAddr, mux)
 	}
 	if metricsAddr != "" {

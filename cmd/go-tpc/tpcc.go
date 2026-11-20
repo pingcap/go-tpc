@@ -41,9 +41,14 @@ func startHTTPServer(name, addr string, handler http.Handler) {
 func executeTpcc(action string) {
 	if pprofAddr != "" {
 		mux := http.NewServeMux()
-		// Use a private mux to exclude Cmdline, which exposes argv passwords.
+		// Use a private mux so /debug/pprof/cmdline stays disabled by default,
+		// avoiding accidental exposure of argv passwords such as -p.
 		// Keep Go's GET-only routes; Index still serves named runtime profiles.
 		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+		if pprofEnableCmdline {
+			fmt.Fprintln(os.Stderr, "Warning: /debug/pprof/cmdline is enabled and exposes process arguments (including any -p/--password value); prefer GO_TPC_PASSWORD and restrict access to this endpoint.")
+			mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
+		}
 		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
 		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)

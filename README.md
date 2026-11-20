@@ -147,7 +147,7 @@ The PostgreSQL examples below use `sslmode=disable` only for local databases wit
 ./bin/go-tpc tpcc --warehouses 4 prepare --output-type csv --output-dir data --pprof 127.0.0.1:10111
 ```
 
-The TPC-C `--pprof` and `--metrics-addr` endpoints are disabled unless explicitly configured, and have no authentication or TLS. Bind them to a loopback address such as `127.0.0.1:10111` (pprof) or `127.0.0.1:10112` (metrics) for local access. If remote monitoring requires a public or wildcard bind such as `:10112`, restrict access with firewall rules or a trusted network. go-tpc warns when an endpoint is bound beyond loopback. The pprof command-line endpoint `/debug/pprof/cmdline` is disabled; CPU, heap, goroutine, and other runtime profiles remain available.
+The TPC-C `--pprof` and `--metrics-addr` endpoints are disabled unless explicitly configured, and have no authentication or TLS. Bind them to a loopback address such as `127.0.0.1:10111` (pprof) or `127.0.0.1:10112` (metrics) for local access. If remote monitoring requires a public or wildcard bind such as `:10112`, restrict access with firewall rules or a trusted network. go-tpc warns when an endpoint is bound beyond loopback. The pprof command-line endpoint `/debug/pprof/cmdline` is disabled by default to avoid exposing command-line secrets such as `-p`; CPU, heap, goroutine, and other runtime profiles remain available. Pass `--pprof-enable-cmdline` to opt in if a caller requires `/debug/pprof/cmdline` (prefer `GO_TPC_PASSWORD` and restrict access when enabling it).
 
 If you want to import tpcc data into TiDB, please refer to [import-to-tidb](docs/import-to-tidb.md).
 

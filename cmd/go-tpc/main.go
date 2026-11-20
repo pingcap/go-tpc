@@ -29,31 +29,32 @@ import (
 )
 
 var (
-	dbName         string
-	hosts          []string
-	ports          []int
-	statusPort     int
-	user           string
-	password       string
-	threads        int
-	acThreads      int
-	driver         string
-	totalTime      time.Duration
-	totalCount     int
-	dropData       bool
-	ignoreError    bool
-	outputInterval time.Duration
-	isolationLevel int
-	silence        bool
-	pprofAddr      string
-	metricsAddr    string
-	maxProcs       int
-	connParams     string
-	outputStyle    string
-	targets        []string
-	sslCA          string
-	sslCert        string
-	sslKey         string
+	dbName             string
+	hosts              []string
+	ports              []int
+	statusPort         int
+	user               string
+	password           string
+	threads            int
+	acThreads          int
+	driver             string
+	totalTime          time.Duration
+	totalCount         int
+	dropData           bool
+	ignoreError        bool
+	outputInterval     time.Duration
+	isolationLevel     int
+	silence            bool
+	pprofAddr          string
+	pprofEnableCmdline bool
+	metricsAddr        string
+	maxProcs           int
+	connParams         string
+	outputStyle        string
+	targets            []string
+	sslCA              string
+	sslCert            string
+	sslKey             string
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -211,6 +212,7 @@ func main() {
 	}
 	rootCmd.PersistentFlags().IntVar(&maxProcs, "max-procs", 0, "runtime.GOMAXPROCS")
 	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Address of pprof endpoint")
+	rootCmd.PersistentFlags().BoolVar(&pprofEnableCmdline, "pprof-enable-cmdline", false, "Expose /debug/pprof/cmdline on the pprof endpoint (may expose command-line secrets such as -p)")
 	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", "", "Address of metrics endpoint")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringSliceVarP(&hosts, "host", "H", []string{"127.0.0.1"}, "Database host")

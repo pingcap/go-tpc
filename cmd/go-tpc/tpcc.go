@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"os"
 	"runtime"
 	"time"
@@ -18,26 +19,43 @@ import (
 
 var tpccConfig tpcc.Config
 
+func startHTTPServer(name, addr string, handler http.Handler) {
+	if host, _, err := net.SplitHostPort(addr); err == nil && host != "localhost" && !net.ParseIP(host).IsLoopback() {
+		fmt.Fprintf(os.Stderr, "Warning: %s endpoint at %s has no authentication; bind to 127.0.0.1 to restrict access to this machine.\n", name, addr)
+	}
+	go func() {
+		s := http.Server{
+			Addr:              addr,
+			Handler:           handler,
+			ReadHeaderTimeout: 5 * time.Second,
+			IdleTimeout:       60 * time.Second,
+			// Leave WriteTimeout unset to allow long CPU profiles and traces.
+		}
+		if err := s.ListenAndServe(); err != nil {
+			fmt.Printf("Failed to listen %s: %v\n", name, err)
+			os.Exit(1)
+		}
+	}()
+}
+
 func executeTpcc(action string) {
 	if pprofAddr != "" {
-		go func() {
-			if err := http.ListenAndServe(pprofAddr, http.DefaultServeMux); err != nil {
-				fmt.Printf("Failed to listen pprofAddr: %v\n", err)
-				os.Exit(1)
-			}
-		}()
+		mux := http.NewServeMux()
+		// Use a private mux so /debug/pprof/cmdline stays disabled by default,
+		// avoiding accidental exposure of argv passwords such as -p.
+		// Keep Go's GET-only routes; Index still serves named runtime profiles.
+		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+		if pprofEnableCmdline {
+			fmt.Fprintln(os.Stderr, "Warning: /debug/pprof/cmdline is enabled and exposes process arguments (including any -p/--password value); prefer GO_TPC_PASSWORD and restrict access to this endpoint.")
+			mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
+		}
+		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
+		startHTTPServer("pprof", pprofAddr, mux)
 	}
 	if metricsAddr != "" {
-		go func() {
-			s := http.Server{
-				Addr:    metricsAddr,
-				Handler: promhttp.Handler(),
-			}
-			if err := s.ListenAndServe(); err != nil {
-				fmt.Printf("Failed to listen metricsAddr: %v\n", err)
-				os.Exit(1)
-			}
-		}()
+		startHTTPServer("metrics", metricsAddr, promhttp.Handler())
 	}
 	if maxProcs != 0 {
 		runtime.GOMAXPROCS(maxProcs)

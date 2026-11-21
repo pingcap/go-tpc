@@ -9,6 +9,7 @@ import (
 	sqldrv "database/sql/driver"
 	"encoding/hex"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -28,31 +29,32 @@ import (
 )
 
 var (
-	dbName         string
-	hosts          []string
-	ports          []int
-	statusPort     int
-	user           string
-	password       string
-	threads        int
-	acThreads      int
-	driver         string
-	totalTime      time.Duration
-	totalCount     int
-	dropData       bool
-	ignoreError    bool
-	outputInterval time.Duration
-	isolationLevel int
-	silence        bool
-	pprofAddr      string
-	metricsAddr    string
-	maxProcs       int
-	connParams     string
-	outputStyle    string
-	targets        []string
-	sslCA          string
-	sslCert        string
-	sslKey         string
+	dbName             string
+	hosts              []string
+	ports              []int
+	statusPort         int
+	user               string
+	password           string
+	threads            int
+	acThreads          int
+	driver             string
+	totalTime          time.Duration
+	totalCount         int
+	dropData           bool
+	ignoreError        bool
+	outputInterval     time.Duration
+	isolationLevel     int
+	silence            bool
+	pprofAddr          string
+	pprofEnableCmdline bool
+	metricsAddr        string
+	maxProcs           int
+	connParams         string
+	outputStyle        string
+	targets            []string
+	sslCA              string
+	sslCert            string
+	sslKey             string
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -125,7 +127,7 @@ func newDB(targets []string, driver string, user string, password string, dbName
 				panic("postgresql driver doesn't support TLS yet")
 			}
 
-			dsn := fmt.Sprintf("postgres://%s:%s@%s/%s", user, password, addr, dbName)
+			dsn := fmt.Sprintf("postgres://%s@%s/%s", url.UserPassword(user, password).String(), addr, dbName)
 			if len(connParams) > 0 {
 				dsn = dsn + "?" + connParams
 			}
@@ -200,6 +202,9 @@ func main() {
 		Use:   "go-tpc",
 		Short: "Benchmark database with different workloads",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if !cmd.Flags().Changed("password") {
+				password = os.Getenv("GO_TPC_PASSWORD")
+			}
 			if len(targets) == 0 {
 				targets = makeTargets(hosts, ports)
 			}
@@ -207,11 +212,12 @@ func main() {
 	}
 	rootCmd.PersistentFlags().IntVar(&maxProcs, "max-procs", 0, "runtime.GOMAXPROCS")
 	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Address of pprof endpoint")
+	rootCmd.PersistentFlags().BoolVar(&pprofEnableCmdline, "pprof-enable-cmdline", false, "Expose /debug/pprof/cmdline on the pprof endpoint (may expose command-line secrets such as -p)")
 	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", "", "Address of metrics endpoint")
 	rootCmd.PersistentFlags().StringVarP(&dbName, "db", "D", "test", "Database name")
 	rootCmd.PersistentFlags().StringSliceVarP(&hosts, "host", "H", []string{"127.0.0.1"}, "Database host")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "U", "root", "Database user")
-	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password")
+	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password (defaults to GO_TPC_PASSWORD when not explicitly set)")
 	rootCmd.PersistentFlags().IntSliceVarP(&ports, "port", "P", []int{4000}, "Database port")
 	rootCmd.PersistentFlags().IntVarP(&statusPort, "statusPort", "S", 10080, "Database status port")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 1, "Thread concurrency")
@@ -226,7 +232,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted,
 2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
 5: Snapshot, 6: Serializable, 7: Linerizable`)
-	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables, e.g. for TiDB --conn-params tidb_isolation_read_engines='tiflash', For PostgreSQL: --conn-params sslmode=disable")
+	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "Connection parameters, e.g. for TiDB: tidb_isolation_read_engines='tiflash'; for PostgreSQL: sslmode=verify-full to verify certificates, sslmode=disable only for local databases without TLS")
 	rootCmd.PersistentFlags().StringVar(&outputStyle, "output", util.OutputStylePlain, "output style, valid values can be { plain | table | json }")
 	rootCmd.PersistentFlags().StringSliceVar(&targets, "targets", nil, "Target database addresses")
 	rootCmd.PersistentFlags().MarkHidden("targets")

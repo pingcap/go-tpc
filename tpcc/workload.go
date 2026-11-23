@@ -197,12 +197,7 @@ func (w *Workloader) InitThread(ctx context.Context, threadID int) context.Conte
 // CleanupThread implements Workloader interface
 func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	s := getTPCCState(ctx)
-	closeStmts(s.newOrderStmts)
-	closeStmts(s.paymentStmts)
-	closeStmts(s.deliveryStmts)
-	closeStmts(s.stockLevelStmt)
-	closeStmts(s.orderStatusStmts)
-	// TODO: close stmts for delivery, order status, and stock level
+	s.closePreparedStatements()
 	if s.Conn != nil {
 		s.Conn.Close()
 	}
@@ -231,6 +226,20 @@ func getTPCCState(ctx context.Context) *tpccState {
 	return s
 }
 
+func (s *tpccState) closePreparedStatements() {
+	closeStmts(s.newOrderStmts)
+	closeStmts(s.paymentStmts)
+	closeStmts(s.deliveryStmts)
+	closeStmts(s.stockLevelStmt)
+	closeStmts(s.orderStatusStmts)
+
+	s.newOrderStmts = nil
+	s.paymentStmts = nil
+	s.deliveryStmts = nil
+	s.stockLevelStmt = nil
+	s.orderStatusStmts = nil
+}
+
 // Run implements Workloader interface
 func (w *Workloader) Run(ctx context.Context, threadID int) (err error) {
 	defer func() {
@@ -249,6 +258,7 @@ func (w *Workloader) Run(ctx context.Context, threadID int) (err error) {
 				err = fmt.Errorf("panic during connection refresh (thread %d): %v", threadID, r)
 			}
 		}()
+		s.closePreparedStatements()
 		return s.RefreshConn(ctx)
 	}
 

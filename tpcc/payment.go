@@ -64,6 +64,10 @@ type paymentData struct {
 }
 
 func (w *Workloader) runPayment(ctx context.Context, thread int) error {
+	if w.cfg.StoredProcs {
+		return w.runPaymentProc(ctx, thread)
+	}
+
 	s := getTPCCState(ctx)
 
 	d := paymentData{
@@ -179,4 +183,51 @@ func (w *Workloader) runPayment(ctx context.Context, thread int) error {
 	}
 
 	return tx.Commit()
+}
+
+// runPaymentProc dispatches PAYMENT as `CALL tpcc_payment(...)`. By-last-name
+// vs by-id lookup is selected by passing one of c_id / c_last as NULL.
+func (w *Workloader) runPaymentProc(ctx context.Context, thread int) error {
+	s := getTPCCState(ctx)
+
+	d := paymentData{
+		wID:     randInt(s.R, 1, w.cfg.Warehouses),
+		dID:     randInt(s.R, 1, districtPerWarehouse),
+		hAmount: float64(randInt(s.R, 100, 500000)) / float64(100.0),
+	}
+
+	if s.R.Intn(100) < 60 {
+		d.cLast = randCLast(s.R, s.Buf)
+	} else {
+		d.cID = randCustomerID(s.R)
+	}
+
+	if w.cfg.Warehouses == 1 || s.R.Intn(100) < 85 {
+		d.cWID = d.wID
+		d.cDID = d.dID
+	} else {
+		d.cWID = w.otherWarehouse(ctx, d.wID)
+		d.cDID = randInt(s.R, 1, districtPerWarehouse)
+	}
+
+	// Pass NULL for whichever lookup key wasn't picked.
+	var cIDArg interface{}
+	var cLastArg interface{}
+	if d.cID == 0 {
+		cIDArg = nil
+		cLastArg = d.cLast
+	} else {
+		cIDArg = d.cID
+		cLastArg = nil
+	}
+
+	stmt := s.procStmts[tpccCallPayment]
+	_, err := stmt.ExecContext(ctx,
+		d.wID, d.dID, d.cWID, d.cDID, d.hAmount,
+		cIDArg, cLastArg, time.Now().Format(timeFormat),
+	)
+	if err != nil {
+		return fmt.Errorf("CALL tpcc_payment failed: %v", err)
+	}
+	return nil
 }

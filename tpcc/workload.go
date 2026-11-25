@@ -44,6 +44,9 @@ type tpccState struct {
 	stockLevelStmt   map[string]*sql.Stmt
 	paymentStmts     map[string]*sql.Stmt
 
+	// Stored-procedure CALL statements, populated when cfg.StoredProcs is on.
+	procStmts map[string]*sql.Stmt
+
 	// for automatic connection refresh
 	lastConnRefresh time.Time
 }
@@ -91,6 +94,12 @@ type Config struct {
 
 	// automatic connection refresh interval to balance traffic across new replicas
 	ConnRefreshInterval time.Duration
+
+	// StoredProcs enables PL/pgSQL stored-procedure mode (postgres driver only).
+	// Each of the five TPC-C transactions is then dispatched as a single
+	// `CALL tpcc_xxx(...)` server-side. Procedures are installed via CREATE
+	// OR REPLACE on the first Run() call.
+	StoredProcs bool
 }
 
 // Workloader is TPCC workload
@@ -106,6 +115,11 @@ type Workloader struct {
 
 	txns []txn
 
+	// installProcsOnce installs the PL/pgSQL stored procedures lazily on the
+	// first Run() call when --stored-procs is set.
+	installProcsOnce sync.Once
+	installProcsErr  error
+
 	// stats
 	rtMeasurement       *measurement.Measurement
 	waitTimeMeasurement *measurement.Measurement
@@ -115,6 +129,10 @@ type Workloader struct {
 func NewWorkloader(db *sql.DB, cfg *Config) (workload.Workloader, error) {
 	if db == nil && cfg.OutputType == "" {
 		panic(fmt.Errorf("failed to connect to database when loading data"))
+	}
+
+	if cfg.StoredProcs && cfg.Driver != "postgres" {
+		panic(fmt.Errorf("--stored-procs is only supported on driver=postgres (got %q)", cfg.Driver))
 	}
 
 	if cfg.Parts > cfg.Warehouses {
@@ -202,6 +220,7 @@ func (w *Workloader) CleanupThread(ctx context.Context, threadID int) {
 	closeStmts(s.deliveryStmts)
 	closeStmts(s.stockLevelStmt)
 	closeStmts(s.orderStatusStmts)
+	closeStmts(s.procStmts)
 	// TODO: close stmts for delivery, order status, and stock level
 	if s.Conn != nil {
 		s.Conn.Close()
@@ -267,6 +286,18 @@ func (w *Workloader) Run(ctx context.Context, threadID int) (err error) {
 		s.lastConnRefresh = time.Now()
 		refreshConn = true
 	}
+	// Install PL/pgSQL stored procedures lazily on the first Run() call.
+	// CREATE OR REPLACE is idempotent, so this is safe even if other threads
+	// arrived first.
+	if w.cfg.StoredProcs {
+		w.installProcsOnce.Do(func() {
+			w.installProcsErr = installStoredProcsPG(ctx, s.Conn)
+		})
+		if w.installProcsErr != nil {
+			return fmt.Errorf("install stored procs: %w", w.installProcsErr)
+		}
+	}
+
 	if s.newOrderStmts == nil || refreshConn {
 		s.newOrderStmts = map[string]*sql.Stmt{
 			newOrderSelectCustomer: prepareStmt(w.cfg.Driver, ctx, s.Conn, newOrderSelectCustomer),
@@ -317,6 +348,17 @@ func (w *Workloader) Run(ctx context.Context, threadID int) (err error) {
 		s.stockLevelStmt = map[string]*sql.Stmt{
 			stockLevelSelectDistrict: prepareStmt(w.cfg.Driver, ctx, s.Conn, stockLevelSelectDistrict),
 			stockLevelCount:          prepareStmt(w.cfg.Driver, ctx, s.Conn, stockLevelCount),
+		}
+
+		if w.cfg.StoredProcs {
+			// CALL strings already use $N placeholders, so we don't translate.
+			s.procStmts = map[string]*sql.Stmt{
+				tpccCallNewOrder:    prepareStmt(w.cfg.Driver, ctx, s.Conn, tpccCallNewOrder),
+				tpccCallPayment:     prepareStmt(w.cfg.Driver, ctx, s.Conn, tpccCallPayment),
+				tpccCallOrderStatus: prepareStmt(w.cfg.Driver, ctx, s.Conn, tpccCallOrderStatus),
+				tpccCallDelivery:    prepareStmt(w.cfg.Driver, ctx, s.Conn, tpccCallDelivery),
+				tpccCallStockLevel:  prepareStmt(w.cfg.Driver, ctx, s.Conn, tpccCallStockLevel),
+			}
 		}
 	}
 

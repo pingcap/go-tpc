@@ -30,6 +30,10 @@ type orderStatusData struct {
 }
 
 func (w *Workloader) runOrderStatus(ctx context.Context, thread int) error {
+	if w.cfg.StoredProcs {
+		return w.runOrderStatusProc(ctx, thread)
+	}
+
 	s := getTPCCState(ctx)
 	d := orderStatusData{
 		wID: randInt(s.R, 1, w.cfg.Warehouses),
@@ -115,4 +119,36 @@ func (w *Workloader) runOrderStatus(ctx context.Context, thread int) error {
 	}
 
 	return tx.Commit()
+}
+
+// runOrderStatusProc dispatches ORDER_STATUS as `CALL tpcc_order_status(...)`.
+func (w *Workloader) runOrderStatusProc(ctx context.Context, thread int) error {
+	s := getTPCCState(ctx)
+	d := orderStatusData{
+		wID: randInt(s.R, 1, w.cfg.Warehouses),
+		dID: randInt(s.R, 1, districtPerWarehouse),
+	}
+
+	if s.R.Intn(100) < 60 {
+		d.cLast = randCLast(s.R, s.Buf)
+	} else {
+		d.cID = randCustomerID(s.R)
+	}
+
+	var cIDArg interface{}
+	var cLastArg interface{}
+	if d.cID == 0 {
+		cIDArg = nil
+		cLastArg = d.cLast
+	} else {
+		cIDArg = d.cID
+		cLastArg = nil
+	}
+
+	stmt := s.procStmts[tpccCallOrderStatus]
+	_, err := stmt.ExecContext(ctx, d.wID, d.dID, cIDArg, cLastArg)
+	if err != nil {
+		return fmt.Errorf("CALL tpcc_order_status failed: %v", err)
+	}
+	return nil
 }

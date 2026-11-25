@@ -34,6 +34,10 @@ const (
 )
 
 func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
+	if w.cfg.StoredProcs {
+		return w.runDeliveryProc(ctx, thread)
+	}
+
 	s := getTPCCState(ctx)
 
 	d := deliveryData{
@@ -170,4 +174,18 @@ func (w *Workloader) runDelivery(ctx context.Context, thread int) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// runDeliveryProc dispatches DELIVERY as `CALL tpcc_delivery(...)`.
+func (w *Workloader) runDeliveryProc(ctx context.Context, thread int) error {
+	s := getTPCCState(ctx)
+	wID := randInt(s.R, 1, w.cfg.Warehouses)
+	oCarrierID := randInt(s.R, 1, 10)
+
+	stmt := s.procStmts[tpccCallDelivery]
+	_, err := stmt.ExecContext(ctx, wID, oCarrierID, time.Now().Format(timeFormat))
+	if err != nil {
+		return fmt.Errorf("CALL tpcc_delivery failed: %v", err)
+	}
+	return nil
 }

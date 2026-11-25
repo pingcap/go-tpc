@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const (
@@ -118,6 +120,10 @@ type newOrderData struct {
 }
 
 func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
+	if w.cfg.StoredProcs {
+		return w.runNewOrderProc(ctx, thread)
+	}
+
 	s := getTPCCState(ctx)
 
 	// refer 2.4.1
@@ -308,4 +314,67 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		return fmt.Errorf("exec %s failed %v", insertOrderLineSQL, err)
 	}
 	return tx.Commit()
+}
+
+// runNewOrderProc is the stored-procedure-mode variant of runNewOrder. It
+// generates the same random inputs but dispatches the whole transaction as
+// a single `CALL tpcc_new_order(...)`. The procedure handles the
+// 1%-rollback case internally via in-band ROLLBACK, so the caller just
+// runs the CALL outside of an explicit transaction (autocommit) and any
+// failure surfaces as a normal SQL error.
+func (w *Workloader) runNewOrderProc(ctx context.Context, thread int) error {
+	s := getTPCCState(ctx)
+
+	d := newOrderData{
+		wID:    randInt(s.R, 1, w.cfg.Warehouses),
+		dID:    randInt(s.R, 1, districtPerWarehouse),
+		cID:    randCustomerID(s.R),
+		oOlCnt: randInt(s.R, 5, 15),
+	}
+	rbk := randInt(s.R, 1, 100)
+	allLocal := 1
+
+	supplyW := make([]int32, d.oOlCnt)
+	itemIDs := make([]int32, d.oOlCnt)
+	quantities := make([]int32, d.oOlCnt)
+
+	seen := make(map[int]struct{}, d.oOlCnt)
+	for i := 0; i < d.oOlCnt; i++ {
+		var iID int
+		if i == d.oOlCnt-1 && rbk == 1 {
+			iID = -1
+		} else {
+			for {
+				id := randItemID(s.R)
+				if _, ok := seen[id]; ok {
+					continue
+				}
+				seen[id] = struct{}{}
+				iID = id
+				break
+			}
+		}
+		itemIDs[i] = int32(iID)
+
+		var supply int
+		if w.cfg.Warehouses == 1 || randInt(s.R, 1, 100) != 1 {
+			supply = d.wID
+		} else {
+			supply = w.otherWarehouse(ctx, d.wID)
+			allLocal = 0
+		}
+		supplyW[i] = int32(supply)
+		quantities[i] = int32(randInt(s.R, 1, 10))
+	}
+
+	stmt := s.procStmts[tpccCallNewOrder]
+	_, err := stmt.ExecContext(ctx,
+		d.wID, d.dID, d.cID, d.oOlCnt,
+		pq.Array(supplyW), pq.Array(itemIDs), pq.Array(quantities),
+		time.Now().Format(timeFormat), allLocal,
+	)
+	if err != nil {
+		return fmt.Errorf("CALL tpcc_new_order failed: %v", err)
+	}
+	return nil
 }
